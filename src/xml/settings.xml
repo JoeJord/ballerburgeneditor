@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<settings>
+
+    <include file="/hgb/lib/xml/settings.default"/>
+
+    <set name="appName" value="Ballerburgen Editor"/>
+    <set name="appVersion" value="v0.1"/>
+    <set name="appIcon" value="/gfx/icon.png"/>
+    <set name="appFrame" value="true"/>
+
+    <set name="infoCopyright" value="Copyright (c) 2026 by Josef Jordan"/>
+    <set name="infoIcon" value="/gfx/info.png"/>
+    <set name="infoUrl" value=""/>
+
+    <!--<set name="infoHtmlPath" value="" />
+    <set name="infoHtmlMsg" value="help.aboutpage" />
+    <set name="infoHtmlWidth" value="400" />
+    <set name="infoHtmlHeight" value="250" />-->
+
+    <set name="standard_width" value="600"/>
+    <set name="standard_height" value="400"/>
+
+    <set name="fileConfig" value="config.xml"/>
+    <set name="fileMenu" value="/xml/menu.xml"/>
+    <set name="fileMessages" value="/xml/messages.xml"/>
+    <set name="fileLog" value=""/>
+
+    <!--<set name="progressColorNormal" value="0" />
+    <set name="progressColorFinished" value="1113888" />-->
+
+    <set name="fileDescription" value="HGBase-Dateien"/>
+    <set name="fileExtensions" value="txt;xml"/>
+    <set name="filePath" value="hgb/lib"/>
+    <set name="fileRecentList" value="4"/>
+
+    <set name="titleWasChanged" value=" * "/>
+    <!--<set name="titleHideUnnamed" value="1" />-->
+
+    <set name="updateUrl" value="http://www.hagru.at/update/hgbase.version.txt"/>
+
+</settings>

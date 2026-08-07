@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<messages>
+
+    <include file="/hgb/lib/xml/messages.xml"/>
+
+    <language code="lan.de">
+
+    </language>
+
+
+    <language code="lan.en">
+
+    </language>
+
+</messages>
+
