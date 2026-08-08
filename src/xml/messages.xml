@@ -6,6 +6,10 @@
     <language code="lan.de">
 
         <msg code="filetype_description">Ballerburg-Burgdatei</msg>
+        <msg code="castle.previous">Vorherige Burg</msg>
+        <msg code="castle.next">N&#228;chste Burg</msg>
+        <msg code="castle.position">Burg %s / %s</msg>
+        <msg code="castle.none">Keine Burg</msg>
 
     </language>
 
@@ -13,8 +17,11 @@
     <language code="lan.en">
 
         <msg code="filetype_description">Ballerburg castle file</msg>
+        <msg code="castle.previous">Previous castle</msg>
+        <msg code="castle.next">Next castle</msg>
+        <msg code="castle.position">Castle %s / %s</msg>
+        <msg code="castle.none">No castle</msg>
 
     </language>
 
 </messages>
-
