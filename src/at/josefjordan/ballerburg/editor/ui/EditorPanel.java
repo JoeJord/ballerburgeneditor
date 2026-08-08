@@ -96,6 +96,9 @@ public class EditorPanel extends HGBasePanel {
         }
         maximumY = Math.max(maximumY, areaTop(castle.throne(),
                 new Size(BurgenFileFormat.THRONE_WIDTH, BurgenFileFormat.THRONE_HEIGHT)));
+        for (Point cannon : castle.cannons()) {
+            maximumY = Math.max(maximumY, cannon.y() + 12);
+        }
         maximumY = Math.max(maximumY, areaTop(castle.money(), castle.moneyRoom()));
         maximumY = Math.max(maximumY, areaTop(castle.powder(), castle.powderRoom()));
         maximumY = Math.max(maximumY, areaTop(castle.balls(), castle.ballRoom()));
@@ -135,6 +138,17 @@ public class EditorPanel extends HGBasePanel {
         drawArea(g, castle.money(), castle.moneyRoom(), left, bottom, scale);
         drawArea(g, castle.powder(), castle.powderRoom(), left, bottom, scale);
         drawArea(g, castle.balls(), castle.ballRoom(), left, bottom, scale);
+
+        drawSprite(g, Sprites.KING, castle.throne(), left, bottom, scale);
+        for (Point cannon : castle.cannons()) {
+            drawSprite(g, Sprites.CANNON, cannon, left, bottom, scale);
+        }
+        drawResources(g, Sprites.MONEY, castle.money(), castle.moneyRoom(),
+                7, 10, divideRoundedUp(castle.resources().money(), 150), left, bottom, scale);
+        drawResources(g, Sprites.POWDER, castle.powder(), castle.powderRoom(),
+                9, 9, divideRoundedUp(castle.resources().powder(), 30), left, bottom, scale);
+        drawResources(g, Sprites.BALL, castle.balls(), castle.ballRoom(),
+                6, 6, castle.resources().balls(), left, bottom, scale);
     }
 
     private int areaTop(Point position, Size size) {
@@ -147,6 +161,29 @@ public class EditorPanel extends HGBasePanel {
                 size.width() * scale, size.height() * scale);
         g.setColor(Color.WHITE);
         g.fill(area);
+    }
+
+    private void drawSprite(Graphics2D g, int[] sprite, Point position,
+                            double left, double bottom, double scale) {
+        Sprites.draw(g, sprite, left + position.x() * scale,
+                bottom - position.y() * scale, scale);
+    }
+
+    private void drawResources(Graphics2D g, int[] sprite, Point position, Size room,
+                               int stepX, int stepY, int count,
+                               double left, double bottom, double scale) {
+        int remaining = Math.max(0, count);
+        for (int y = 0; remaining > 0 && y < room.height(); y += stepY) {
+            for (int x = 0; remaining > 0 && x < room.width(); x += stepX) {
+                drawSprite(g, sprite, new Point(position.x() + x, position.y() + y),
+                        left, bottom, scale);
+                remaining--;
+            }
+        }
+    }
+
+    private int divideRoundedUp(int value, int divisor) {
+        return value <= 0 ? 0 : (value + divisor - 1) / divisor;
     }
 
     private Color colorFor(FillStyle style) {
