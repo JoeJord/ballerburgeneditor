@@ -10,6 +10,8 @@ public final class BurgenFileFormat {
     public static final int CANNON_POSITION_COUNT = 10;
     public static final int RESERVED_VALUE_COUNT = 4;
     public static final int COORDINATE_COMPONENT_COUNT = 2;
+    public static final int THRONE_WIDTH = 30;
+    public static final int THRONE_HEIGHT = 25;
 
     private BurgenFileFormat() {
     }

@@ -6,6 +6,8 @@ import at.josefjordan.ballerburg.editor.model.BurgDocument.DrawingCommand;
 import at.josefjordan.ballerburg.editor.model.BurgDocument.FillStyle;
 import at.josefjordan.ballerburg.editor.model.BurgDocument.Point;
 import at.josefjordan.ballerburg.editor.model.BurgDocument.Polygon;
+import at.josefjordan.ballerburg.editor.model.BurgDocument.Size;
+import at.josefjordan.ballerburg.editor.model.BurgenFileFormat;
 import hgb.gui.HGBasePanel;
 
 import java.awt.BasicStroke;
@@ -14,6 +16,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.geom.Path2D;
+import java.awt.geom.Rectangle2D;
 
 public class EditorPanel extends HGBasePanel {
     private BurgDocument document;
@@ -91,6 +94,11 @@ public class EditorPanel extends HGBasePanel {
                 }
             }
         }
+        maximumY = Math.max(maximumY, areaTop(castle.throne(),
+                new Size(BurgenFileFormat.THRONE_WIDTH, BurgenFileFormat.THRONE_HEIGHT)));
+        maximumY = Math.max(maximumY, areaTop(castle.money(), castle.moneyRoom()));
+        maximumY = Math.max(maximumY, areaTop(castle.powder(), castle.powderRoom()));
+        maximumY = Math.max(maximumY, areaTop(castle.balls(), castle.ballRoom()));
 
         double margin = 24.0;
         double scale = Math.min((getWidth() - 2.0 * margin) / Math.max(1, castle.width()),
@@ -121,6 +129,24 @@ public class EditorPanel extends HGBasePanel {
                 g.draw(path);
             }
         }
+
+        drawArea(g, castle.throne(),
+                new Size(BurgenFileFormat.THRONE_WIDTH, BurgenFileFormat.THRONE_HEIGHT), left, bottom, scale);
+        drawArea(g, castle.money(), castle.moneyRoom(), left, bottom, scale);
+        drawArea(g, castle.powder(), castle.powderRoom(), left, bottom, scale);
+        drawArea(g, castle.balls(), castle.ballRoom(), left, bottom, scale);
+    }
+
+    private int areaTop(Point position, Size size) {
+        return position.y() + size.height();
+    }
+
+    private void drawArea(Graphics2D g, Point position, Size size, double left, double bottom, double scale) {
+        Rectangle2D area = new Rectangle2D.Double(left + position.x() * scale,
+                bottom - (position.y() + size.height()) * scale,
+                size.width() * scale, size.height() * scale);
+        g.setColor(Color.WHITE);
+        g.fill(area);
     }
 
     private Color colorFor(FillStyle style) {
