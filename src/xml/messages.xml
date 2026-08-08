@@ -5,10 +5,14 @@
 
     <language code="lan.de">
 
+        <msg code="filetype_description">Ballerburg-Burgdatei</msg>
+
     </language>
 
 
     <language code="lan.en">
+
+        <msg code="filetype_description">Ballerburg castle file</msg>
 
     </language>
 

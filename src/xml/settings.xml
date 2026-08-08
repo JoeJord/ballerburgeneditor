@@ -28,9 +28,9 @@
     <!--<set name="progressColorNormal" value="0" />
     <set name="progressColorFinished" value="1113888" />-->
 
-    <set name="fileDescription" value="HGBase-Dateien"/>
-    <set name="fileExtensions" value="txt;xml"/>
-    <set name="filePath" value="hgb/lib"/>
+    <set name="fileDescription" value="filetype_description"/>
+    <set name="fileExtensions" value="dat"/>
+    <set name="filePath" value=""/>
     <set name="fileRecentList" value="4"/>
 
     <set name="titleWasChanged" value=" * "/>
