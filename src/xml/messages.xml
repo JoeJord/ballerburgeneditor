@@ -10,6 +10,11 @@
         <msg code="castle.next">N&#228;chste Burg</msg>
         <msg code="castle.position">Burg %s / %s</msg>
         <msg code="castle.none">Keine Burg</msg>
+        <msg code="properties.title">Eigenschaften</msg>
+        <msg code="properties.money">Geld</msg>
+        <msg code="properties.powder">Pulver</msg>
+        <msg code="properties.balls">Kugeln</msg>
+        <msg code="properties.people">Volk</msg>
 
     </language>
 
@@ -21,6 +26,11 @@
         <msg code="castle.next">Next castle</msg>
         <msg code="castle.position">Castle %s / %s</msg>
         <msg code="castle.none">No castle</msg>
+        <msg code="properties.title">Properties</msg>
+        <msg code="properties.money">Money</msg>
+        <msg code="properties.powder">Powder</msg>
+        <msg code="properties.balls">Cannonballs</msg>
+        <msg code="properties.people">People</msg>
 
     </language>
 

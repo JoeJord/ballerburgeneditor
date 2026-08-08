@@ -48,6 +48,7 @@ public class MainFrame extends HGBaseFrame {
     private void initializeEditor() {
         editorPanel = new EditorPanel();
         editorPanel.setSelectionListener(this::updateCastleNavigation);
+        editorPanel.setChangeListener(() -> setChanged(true));
         addCastleNavigationToToolbar();
         setPanel(editorPanel);
         updateCastleNavigation();
