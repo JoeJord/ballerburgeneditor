@@ -41,7 +41,7 @@ public class MainFrame extends HGBaseFrame {
      */
     public static void main(String[] args) {
         MainFrame mainFrame = new MainFrame("/xml/settings.xml");
-        mainFrame.setMenu(new HGBaseMenu(mainFrame));
+        mainFrame.setMenu(new EditorMenu(mainFrame));
         mainFrame.initializeEditor();
     }
 
@@ -95,6 +95,18 @@ public class MainFrame extends HGBaseFrame {
             nextCastleButton.setToolTipText(HGBaseText.getText("castle.next"));
             updateCastleNavigation();
         }
+    }
+
+    public void addCastle() {
+        editorPanel.addCastle();
+    }
+
+    public void deleteCastle() {
+        editorPanel.deleteCastle();
+    }
+
+    public boolean hasCastle() {
+        return editorPanel != null && editorPanel.getCastleCount() > 0;
     }
 
     @Override

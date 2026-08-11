@@ -15,6 +15,8 @@
         <msg code="properties.powder">Pulver</msg>
         <msg code="properties.balls">Kugeln</msg>
         <msg code="properties.people">Volk</msg>
+        <msg code="edit.add_castle">Burg hinzuf&#252;gen</msg>
+        <msg code="edit.delete_castle">Burg entfernen</msg>
 
     </language>
 
@@ -31,6 +33,8 @@
         <msg code="properties.powder">Powder</msg>
         <msg code="properties.balls">Cannonballs</msg>
         <msg code="properties.people">People</msg>
+        <msg code="edit.add_castle">Add castle</msg>
+        <msg code="edit.delete_castle">Delete castle</msg>
 
     </language>
 

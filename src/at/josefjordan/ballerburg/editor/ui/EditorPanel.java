@@ -2,7 +2,9 @@ package at.josefjordan.ballerburg.editor.ui;
 
 import at.josefjordan.ballerburg.editor.model.BurgDocument;
 import at.josefjordan.ballerburg.editor.model.BurgDocument.Castle;
+import at.josefjordan.ballerburg.editor.model.BurgDocument.Point;
 import at.josefjordan.ballerburg.editor.model.BurgDocument.Resources;
+import at.josefjordan.ballerburg.editor.model.BurgDocument.Size;
 import hgb.gui.HGBasePanel;
 
 import javax.swing.JSplitPane;
@@ -49,6 +51,30 @@ public class EditorPanel extends HGBasePanel {
 
     public int getCastleCount() {
         return document == null ? 0 : document.castles().size();
+    }
+
+    public boolean addCastle() {
+        if (document == null) {
+            return false;
+        }
+        List<Castle> castles = new ArrayList<>(document.castles());
+        castleIndex = castleIndex < 0 ? castles.size() : castleIndex + 1;
+        castles.add(castleIndex, createEmptyCastle());
+        document = new BurgDocument(castles);
+        documentChanged();
+        return true;
+    }
+
+    public boolean deleteCastle() {
+        if (document == null || castleIndex < 0 || castleIndex >= getCastleCount()) {
+            return false;
+        }
+        List<Castle> castles = new ArrayList<>(document.castles());
+        castles.remove(castleIndex);
+        document = new BurgDocument(castles);
+        castleIndex = Math.min(castleIndex, castles.size() - 1);
+        documentChanged();
+        return true;
     }
 
     public void showPreviousCastle() {
@@ -107,5 +133,21 @@ public class EditorPanel extends HGBasePanel {
         if (selectionListener != null) {
             selectionListener.run();
         }
+    }
+
+    private void documentChanged() {
+        updateSelectedCastle();
+        notifySelectionChanged();
+        if (changeListener != null) {
+            changeListener.run();
+        }
+    }
+
+    private Castle createEmptyCastle() {
+        Point origin = new Point(0, 0);
+        Size emptySize = new Size(0, 0);
+        return new Castle(0, List.of(), origin, origin, origin, origin, origin,
+                emptySize, emptySize, emptySize, new Resources(0, 0, 0, 0),
+                List.of(0, 0, 0, 0), List.of());
     }
 }

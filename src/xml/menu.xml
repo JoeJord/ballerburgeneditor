@@ -11,6 +11,10 @@
         <item/>
         <item id="file.exit" type="action"/>
     </menu>
+    <menu id="edit">
+        <item id="edit.delete_castle" type="action"/>
+        <item id="edit.add_castle" type="action"/>
+    </menu>
     <menu id="settings">
         <menu id="settings.lan">
             <item id="lan.de;lan.en" option="language" type="radio"/>
@@ -29,6 +33,9 @@
         <item id="file.exit"/>
         <item id="file.new"/>
         <item id="file.save"/>
+        <item/>
+        <item id="edit.delete_castle"/>
+        <item id="edit.add_castle"/>
     </toolbar>
     <images path="/hgb/gui/gfx">
         <image id="null" file="null.png"/>
@@ -42,5 +49,9 @@
         <image id="edit.paste" file="paste.png"/>
         <image id="help.about" file="about.png"/>
         <image id="updating" file="updating.gif"/>
+    </images>
+    <images path="/gfx/tools">
+        <image id="edit.delete_castle" file="delete_castle.png"/>
+        <image id="edit.add_castle" file="add_castle.png"/>
     </images>
 </menuconfig>
