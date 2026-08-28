@@ -1,4 +1,4 @@
-package at.josefjordan.ballerburg.editor.ui;
+package at.josefjordan.ballerburg.editor.ui.editor;
 
 import at.josefjordan.ballerburg.editor.model.BurgDocument.Castle;
 import at.josefjordan.ballerburg.editor.model.BurgDocument.Resources;

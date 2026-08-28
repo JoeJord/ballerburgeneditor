@@ -3,9 +3,9 @@ package at.josefjordan.ballerburg.editor.ui;
 import at.josefjordan.ballerburg.editor.io.BurgenReader;
 import at.josefjordan.ballerburg.editor.io.BurgenWriter;
 import at.josefjordan.ballerburg.editor.model.BurgDocument;
+import at.josefjordan.ballerburg.editor.ui.editor.EditorPanel;
 import hgb.gui.HGBaseDialog;
 import hgb.gui.HGBaseFrame;
-import hgb.gui.menu.HGBaseMenu;
 import hgb.lib.HGBaseTools;
 import hgb.lib.HGBaseText;
 
@@ -41,7 +41,7 @@ public class MainFrame extends HGBaseFrame {
      */
     public static void main(String[] args) {
         MainFrame mainFrame = new MainFrame("/xml/settings.xml");
-        mainFrame.setMenu(new EditorMenu(mainFrame));
+        mainFrame.setMenu(new MainMenu(mainFrame));
         mainFrame.initializeEditor();
     }
 

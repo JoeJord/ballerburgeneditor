@@ -7,11 +7,11 @@ import hgb.gui.menu.HGBaseMenu;
 
 import java.io.File;
 
-public class EditorMenu extends HGBaseMenu {
+public class MainMenu extends HGBaseMenu {
     private static final String ADD_CASTLE = "edit.add_castle";
     private static final String DELETE_CASTLE = "edit.delete_castle";
 
-    public EditorMenu(MainFrame frame) {
+    public MainMenu(MainFrame frame) {
         super(frame);
         registerAction(ADD_CASTLE, new AddCastleAction(frame));
         registerAction(DELETE_CASTLE, new DeleteCastleAction(frame));
