@@ -125,7 +125,7 @@ public class EditorPanel extends HGBasePanel {
         List<Castle> castles = new ArrayList<>(document.castles());
         castles.set(castleIndex, updatedCastle);
         document = new BurgDocument(castles);
-        castleView.setCastle(updatedCastle);
+        castleView.updateCastle(updatedCastle);
         if (changeListener != null) {
             changeListener.run();
         }
@@ -160,7 +160,7 @@ public class EditorPanel extends HGBasePanel {
         List<Castle> castles = new ArrayList<>(document.castles());
         castles.set(castleIndex, updatedCastle);
         document = new BurgDocument(castles);
-        castleView.setCastle(updatedCastle);
+        castleView.updateCastle(updatedCastle);
         if (changeListener != null) {
             changeListener.run();
         }
@@ -196,7 +196,7 @@ public class EditorPanel extends HGBasePanel {
         List<Castle> castles = new ArrayList<>(document.castles());
         castles.set(castleIndex, updatedCastle);
         document = new BurgDocument(castles);
-        castleView.setCastle(updatedCastle);
+        castleView.updateCastle(updatedCastle);
         if (changeListener != null) {
             changeListener.run();
         }

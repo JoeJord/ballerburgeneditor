@@ -45,7 +45,8 @@ final class CastleMouseHandler extends MouseAdapter {
         }
 
         int maximumY = calculateMaximumY(castle);
-        double scale = calculateScale(castle, maximumY);
+        double baseScale = calculateScale(castle, maximumY);
+        double scale = baseScale * panel.getZoomFactor();
         if (scale <= 0) {
             return;
         }
@@ -64,7 +65,7 @@ final class CastleMouseHandler extends MouseAdapter {
                     draggingPolygonIndex = polygonIndex;
                     draggingPointIndex = pointIndex;
                     draggingEntirePolygon = false;
-                    dragScale = scale;
+                    dragScale = baseScale;
                     dragLeft = left;
                     dragBottom = bottom;
                     return;
@@ -75,7 +76,7 @@ final class CastleMouseHandler extends MouseAdapter {
                     draggingPolygonIndex = polygonIndex;
                     draggingPointIndex = -1;
                     draggingEntirePolygon = true;
-                    dragScale = scale;
+                    dragScale = baseScale;
                     dragLeft = left;
                     dragBottom = bottom;
                     dragStartPoint = clickPoint;
@@ -109,11 +110,13 @@ final class CastleMouseHandler extends MouseAdapter {
             return;
         }
 
+        double currentScale = dragScale * panel.getZoomFactor();
+
         if (draggingEntirePolygon) {
             // Drag the entire polygon
             Point2D dragPoint = e.getPoint();
-            double deltaX = (dragPoint.getX() - dragStartPoint.getX()) / dragScale;
-            double deltaY = (dragStartPoint.getY() - dragPoint.getY()) / dragScale;
+            double deltaX = (dragPoint.getX() - dragStartPoint.getX()) / currentScale;
+            double deltaY = (dragStartPoint.getY() - dragPoint.getY()) / currentScale;
             
             List<Point> newPoints = new ArrayList<>();
             for (Point originalPoint : originalPoints) {
@@ -139,8 +142,10 @@ final class CastleMouseHandler extends MouseAdapter {
         } else if (draggingPointIndex >= 0) {
             // Drag a single point
             Point2D dragPoint = e.getPoint();
-            int newX = (int) Math.round((dragPoint.getX() - dragLeft) / dragScale);
-            int newY = (int) Math.round((dragBottom - dragPoint.getY()) / dragScale);
+            double currentLeft = (panel.getWidth() - castle.width() * currentScale) / 2.0;
+            double currentBottom = (panel.getHeight() + calculateMaximumY(castle) * currentScale) / 2.0;
+            int newX = (int) Math.round((dragPoint.getX() - currentLeft) / currentScale);
+            int newY = (int) Math.round((currentBottom - dragPoint.getY()) / currentScale);
             
             Point newPoint = new Point(newX, newY);
             panel.getEditorPanel().updatePolygonPoint(draggingPolygonIndex, draggingPointIndex, newPoint);
