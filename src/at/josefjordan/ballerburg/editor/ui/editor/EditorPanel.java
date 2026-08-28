@@ -21,10 +21,16 @@ public class EditorPanel extends HGBasePanel {
     private int castleIndex = -1;
     private Runnable selectionListener;
     private Runnable changeListener;
+    private Runnable zoomListener;
 
     public EditorPanel() {
         super(new BorderLayout());
         castleView.setEditorPanel(this);
+        castleView.setZoomListener(() -> {
+            if (zoomListener != null) {
+                zoomListener.run();
+            }
+        });
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, castleView, propertyPalette);
         splitPane.setContinuousLayout(true);
         splitPane.setResizeWeight(1.0);
@@ -92,6 +98,14 @@ public class EditorPanel extends HGBasePanel {
 
     public void setChangeListener(Runnable changeListener) {
         this.changeListener = changeListener;
+    }
+
+    public void setZoomListener(Runnable zoomListener) {
+        this.zoomListener = zoomListener;
+    }
+
+    public double getZoomFactor() {
+        return castleView.getZoomFactor();
     }
 
     public void updatePolygonPoint(int polygonIndex, int pointIndex, Point newPoint) {

@@ -50,9 +50,11 @@ public class MainFrame extends HGBaseFrame {
         editorPanel = new EditorPanel();
         editorPanel.setSelectionListener(this::updateCastleNavigation);
         editorPanel.setChangeListener(() -> setChanged(true));
+        editorPanel.setZoomListener(this::updateZoomDisplay);
         addCastleNavigationToToolbar();
         setPanel(editorPanel);
         updateCastleNavigation();
+        updateZoomDisplay();
     }
 
     private void addCastleNavigationToToolbar() {
@@ -95,6 +97,14 @@ public class MainFrame extends HGBaseFrame {
             previousCastleButton.setToolTipText(HGBaseText.getText("castle.previous"));
             nextCastleButton.setToolTipText(HGBaseText.getText("castle.next"));
             updateCastleNavigation();
+        }
+    }
+
+    private void updateZoomDisplay() {
+        if (getStatusBar() != null) {
+            double zoomFactor = editorPanel.getZoomFactor();
+            int zoomPercent = (int) Math.round(zoomFactor * 100);
+            ((StatusBar) getStatusBar()).setZoomLevel(zoomPercent + "%");
         }
     }
 

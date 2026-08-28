@@ -23,6 +23,7 @@ final class CastleViewPanel extends HGBasePanel {
     private Polygon selectedPolygon;
     private EditorPanel editorPanel;
     private double zoomFactor = 1.0;
+    private Runnable zoomListener;
 
     CastleViewPanel() {
         addMouseListener(new CastleMouseHandler(this));
@@ -33,10 +34,15 @@ final class CastleViewPanel extends HGBasePanel {
         this.editorPanel = editorPanel;
     }
 
+    void setZoomListener(Runnable zoomListener) {
+        this.zoomListener = zoomListener;
+    }
+
     void setCastle(Castle castle) {
         this.castle = castle;
         selectedPolygon = null;
         zoomFactor = 1.0;
+        notifyZoomChanged();
         repaint();
     }
 
@@ -67,11 +73,18 @@ final class CastleViewPanel extends HGBasePanel {
     void adjustZoom(double multiplier) {
         zoomFactor *= multiplier;
         zoomFactor = Math.max(0.1, Math.min(10.0, zoomFactor));
+        notifyZoomChanged();
         repaint();
     }
 
     double getZoomFactor() {
         return zoomFactor;
+    }
+
+    private void notifyZoomChanged() {
+        if (zoomListener != null) {
+            zoomListener.run();
+        }
     }
 
     @Override
