@@ -86,9 +86,24 @@ final class CastleMouseHandler extends MouseAdapter {
             }
         }
         
-        // If not clicking on a point or inside selected polygon, select the polygon
+        // If not clicking on selected polygon, check if clicking on any polygon
         Polygon clickedPolygon = findClickedPolygon(castle, left, bottom, scale, clickPoint);
-        panel.setSelectedPolygon(clickedPolygon);
+        if (clickedPolygon != null) {
+            panel.setSelectedPolygon(clickedPolygon);
+            int polygonIndex = findPolygonIndex(castle, clickedPolygon);
+            if (polygonIndex >= 0) {
+                draggingPolygonIndex = polygonIndex;
+                draggingPointIndex = -1;
+                draggingEntirePolygon = true;
+                dragScale = baseScale;
+                dragLeft = left;
+                dragBottom = bottom;
+                dragStartPoint = clickPoint;
+                originalPoints = new ArrayList<>(clickedPolygon.points());
+            }
+        } else {
+            panel.setSelectedPolygon(null);
+        }
     }
 
     @Override
