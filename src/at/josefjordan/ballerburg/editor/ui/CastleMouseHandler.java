@@ -12,15 +12,20 @@ import java.awt.event.MouseEvent;
 import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
 import java.awt.event.MouseMotionAdapter;
+import java.util.ArrayList;
+import java.util.List;
 
 /** Handles mouse interactions for the castle view (selection, editing, etc.). */
 final class CastleMouseHandler extends MouseAdapter {
     private final CastleViewPanel panel;
     private int draggingPolygonIndex = -1;
     private int draggingPointIndex = -1;
+    private boolean draggingEntirePolygon = false;
     private double dragScale = 0;
     private double dragLeft = 0;
     private double dragBottom = 0;
+    private Point2D dragStartPoint;
+    private List<Point> originalPoints;
 
     CastleMouseHandler(CastleViewPanel panel) {
         this.panel = panel;
@@ -58,15 +63,29 @@ final class CastleMouseHandler extends MouseAdapter {
                 if (pointIndex >= 0) {
                     draggingPolygonIndex = polygonIndex;
                     draggingPointIndex = pointIndex;
+                    draggingEntirePolygon = false;
                     dragScale = scale;
                     dragLeft = left;
                     dragBottom = bottom;
                     return;
                 }
+                // Check if clicking inside the selected polygon (but not on a point)
+                Path2D path = createPolygonPath(selectedPolygon, left, bottom, scale);
+                if (path.contains(clickPoint)) {
+                    draggingPolygonIndex = polygonIndex;
+                    draggingPointIndex = -1;
+                    draggingEntirePolygon = true;
+                    dragScale = scale;
+                    dragLeft = left;
+                    dragBottom = bottom;
+                    dragStartPoint = clickPoint;
+                    originalPoints = new ArrayList<>(selectedPolygon.points());
+                    return;
+                }
             }
         }
         
-        // If not clicking on a point, select the polygon
+        // If not clicking on a point or inside selected polygon, select the polygon
         Polygon clickedPolygon = findClickedPolygon(castle, left, bottom, scale, clickPoint);
         panel.setSelectedPolygon(clickedPolygon);
     }
@@ -75,10 +94,13 @@ final class CastleMouseHandler extends MouseAdapter {
     public void mouseReleased(MouseEvent e) {
         draggingPolygonIndex = -1;
         draggingPointIndex = -1;
+        draggingEntirePolygon = false;
+        dragStartPoint = null;
+        originalPoints = null;
     }
 
     private void handleDrag(MouseEvent e) {
-        if (draggingPolygonIndex < 0 || draggingPointIndex < 0) {
+        if (draggingPolygonIndex < 0) {
             return;
         }
         
@@ -87,23 +109,53 @@ final class CastleMouseHandler extends MouseAdapter {
             return;
         }
 
-        Point2D dragPoint = e.getPoint();
-        int newX = (int) Math.round((dragPoint.getX() - dragLeft) / dragScale);
-        int newY = (int) Math.round((dragBottom - dragPoint.getY()) / dragScale);
-        
-        Point newPoint = new Point(newX, newY);
-        panel.getEditorPanel().updatePolygonPoint(draggingPolygonIndex, draggingPointIndex, newPoint);
-        
-        // Update the selected polygon reference to the new polygon
-        Castle updatedCastle = panel.getCastle();
-        int currentPolygonIndex = 0;
-        for (DrawingCommand command : updatedCastle.drawing()) {
-            if (command instanceof Polygon polygon) {
-                if (currentPolygonIndex == draggingPolygonIndex) {
-                    panel.setSelectedPolygon(polygon);
-                    break;
+        if (draggingEntirePolygon) {
+            // Drag the entire polygon
+            Point2D dragPoint = e.getPoint();
+            double deltaX = (dragPoint.getX() - dragStartPoint.getX()) / dragScale;
+            double deltaY = (dragStartPoint.getY() - dragPoint.getY()) / dragScale;
+            
+            List<Point> newPoints = new ArrayList<>();
+            for (Point originalPoint : originalPoints) {
+                int newX = (int) Math.round(originalPoint.x() + deltaX);
+                int newY = (int) Math.round(originalPoint.y() + deltaY);
+                newPoints.add(new Point(newX, newY));
+            }
+            
+            panel.getEditorPanel().updatePolygonPoints(draggingPolygonIndex, newPoints);
+            
+            // Update the selected polygon reference to the new polygon
+            Castle updatedCastle = panel.getCastle();
+            int currentPolygonIndex = 0;
+            for (DrawingCommand command : updatedCastle.drawing()) {
+                if (command instanceof Polygon polygon) {
+                    if (currentPolygonIndex == draggingPolygonIndex) {
+                        panel.setSelectedPolygon(polygon);
+                        break;
+                    }
+                    currentPolygonIndex++;
                 }
-                currentPolygonIndex++;
+            }
+        } else if (draggingPointIndex >= 0) {
+            // Drag a single point
+            Point2D dragPoint = e.getPoint();
+            int newX = (int) Math.round((dragPoint.getX() - dragLeft) / dragScale);
+            int newY = (int) Math.round((dragBottom - dragPoint.getY()) / dragScale);
+            
+            Point newPoint = new Point(newX, newY);
+            panel.getEditorPanel().updatePolygonPoint(draggingPolygonIndex, draggingPointIndex, newPoint);
+            
+            // Update the selected polygon reference to the new polygon
+            Castle updatedCastle = panel.getCastle();
+            int currentPolygonIndex = 0;
+            for (DrawingCommand command : updatedCastle.drawing()) {
+                if (command instanceof Polygon polygon) {
+                    if (currentPolygonIndex == draggingPolygonIndex) {
+                        panel.setSelectedPolygon(polygon);
+                        break;
+                    }
+                    currentPolygonIndex++;
+                }
             }
         }
     }
