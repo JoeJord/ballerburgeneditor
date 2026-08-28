@@ -42,6 +42,7 @@ public class MainFrame extends HGBaseFrame {
     public static void main(String[] args) {
         MainFrame mainFrame = new MainFrame("/xml/settings.xml");
         mainFrame.setMenu(new MainMenu(mainFrame));
+        mainFrame.setStatusBar(new StatusBar());
         mainFrame.initializeEditor();
     }
 
