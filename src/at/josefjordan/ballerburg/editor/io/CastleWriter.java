@@ -1,12 +1,12 @@
 package at.josefjordan.ballerburg.editor.io;
 
-import at.josefjordan.ballerburg.editor.model.BurgDocument;
-import at.josefjordan.ballerburg.editor.model.BurgDocument.Castle;
-import at.josefjordan.ballerburg.editor.model.BurgDocument.DrawingCommand;
-import at.josefjordan.ballerburg.editor.model.BurgDocument.FillStyle;
-import at.josefjordan.ballerburg.editor.model.BurgDocument.Point;
-import at.josefjordan.ballerburg.editor.model.BurgDocument.Polygon;
-import at.josefjordan.ballerburg.editor.model.BurgenFileFormat;
+import at.josefjordan.ballerburg.editor.model.CastleDocument;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.Castle;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.DrawingCommand;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.FillStyle;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.Point;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.Polygon;
+import at.josefjordan.ballerburg.editor.model.CastleFileFormat;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -16,12 +16,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** Writes a canonical BALLER.DAT file using CP437 and CRLF line endings. */
-public final class BurgenWriter {
+public final class CastleWriter {
     private static final String NEW_LINE = "\r\n";
     private static final int FIRST_CASTLE_NUMBER = 1;
 
-    public void write(Path path, BurgDocument document) throws IOException {
-        try (BufferedWriter writer = Files.newBufferedWriter(path, BurgenReader.CHARSET)) {
+    public void write(Path path, CastleDocument document) throws IOException {
+        try (BufferedWriter writer = Files.newBufferedWriter(path, CastleReader.CHARSET)) {
             writer.write("* BALLER.DAT written by Ballerburgen Editor *");
             writer.write(NEW_LINE);
             writer.write(NEW_LINE);
@@ -32,7 +32,7 @@ public final class BurgenWriter {
                 writeCastle(writer, castle);
                 writer.write(NEW_LINE);
             }
-            writer.write(BurgenFileFormat.FILE_TERMINATOR + " * end of castle data *");
+            writer.write(CastleFileFormat.FILE_TERMINATOR + " * end of castle data *");
             writer.write(NEW_LINE);
         }
     }
@@ -52,15 +52,15 @@ public final class BurgenWriter {
         List<Integer> drawing = new ArrayList<>();
         for (DrawingCommand command : castle.drawing()) {
             if (command instanceof FillStyle fill) {
-                drawing.add(BurgenFileFormat.FILL_STYLE_COMMAND);
+                drawing.add(CastleFileFormat.FILL_STYLE_COMMAND);
                 drawing.add(fill.style());
                 drawing.add(fill.index());
             } else if (command instanceof Polygon polygon) {
                 drawing.addAll(points(polygon.points()));
-                drawing.add(BurgenFileFormat.POLYGON_TERMINATOR);
+                drawing.add(CastleFileFormat.POLYGON_TERMINATOR);
             }
         }
-        drawing.add(BurgenFileFormat.CASTLE_TERMINATOR);
+        drawing.add(CastleFileFormat.CASTLE_TERMINATOR);
         writeLine(writer, drawing);
     }
 
@@ -69,7 +69,7 @@ public final class BurgenWriter {
     }
 
     private List<Integer> points(List<Point> points) {
-        List<Integer> values = new ArrayList<>(points.size() * BurgenFileFormat.COORDINATE_COMPONENT_COUNT);
+        List<Integer> values = new ArrayList<>(points.size() * CastleFileFormat.COORDINATE_COMPONENT_COUNT);
         for (Point point : points) {
             values.add(point.x());
             values.add(point.y());
@@ -79,7 +79,7 @@ public final class BurgenWriter {
 
     private List<Integer> cannonPoints(List<Point> cannons) {
         List<Point> positions = new ArrayList<>(cannons);
-        while (positions.size() < BurgenFileFormat.CANNON_POSITION_COUNT) {
+        while (positions.size() < CastleFileFormat.CANNON_POSITION_COUNT) {
             positions.add(new Point(-1, -1));
         }
         return points(positions);

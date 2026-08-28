@@ -1,10 +1,10 @@
 package at.josefjordan.ballerburg.editor.ui.editor;
 
-import at.josefjordan.ballerburg.editor.model.BurgDocument;
-import at.josefjordan.ballerburg.editor.model.BurgDocument.Castle;
-import at.josefjordan.ballerburg.editor.model.BurgDocument.Point;
-import at.josefjordan.ballerburg.editor.model.BurgDocument.Resources;
-import at.josefjordan.ballerburg.editor.model.BurgDocument.Size;
+import at.josefjordan.ballerburg.editor.model.CastleDocument;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.Castle;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.Point;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.Resources;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.Size;
 import hgb.gui.HGBasePanel;
 
 import javax.swing.JSplitPane;
@@ -17,7 +17,7 @@ import java.util.List;
 public class EditorPanel extends HGBasePanel {
     private final CastleViewPanel castleView = new CastleViewPanel();
     private final PropertyPalettePanel propertyPalette = new PropertyPalettePanel();
-    private BurgDocument document;
+    private CastleDocument document;
     private int castleIndex = -1;
     private Runnable selectionListener;
     private Runnable changeListener;
@@ -35,11 +35,11 @@ public class EditorPanel extends HGBasePanel {
         updateSelectedCastle();
     }
 
-    public BurgDocument getDocument() {
+    public CastleDocument getDocument() {
         return document;
     }
 
-    public void setDocument(BurgDocument document) {
+    public void setDocument(CastleDocument document) {
         this.document = document;
         castleIndex = document == null || document.castles().isEmpty() ? -1 : 0;
         updateSelectedCastle();
@@ -61,7 +61,7 @@ public class EditorPanel extends HGBasePanel {
         List<Castle> castles = new ArrayList<>(document.castles());
         castleIndex = castleIndex < 0 ? castles.size() : castleIndex + 1;
         castles.add(castleIndex, createEmptyCastle());
-        document = new BurgDocument(castles);
+        document = new CastleDocument(castles);
         documentChanged();
         return true;
     }
@@ -72,7 +72,7 @@ public class EditorPanel extends HGBasePanel {
         }
         List<Castle> castles = new ArrayList<>(document.castles());
         castles.remove(castleIndex);
-        document = new BurgDocument(castles);
+        document = new CastleDocument(castles);
         castleIndex = Math.min(castleIndex, castles.size() - 1);
         documentChanged();
         return true;
@@ -99,16 +99,16 @@ public class EditorPanel extends HGBasePanel {
             return;
         }
         Castle oldCastle = document.castles().get(castleIndex);
-        List<BurgDocument.DrawingCommand> oldDrawing = oldCastle.drawing();
+        List<CastleDocument.DrawingCommand> oldDrawing = oldCastle.drawing();
         
         int currentPolygonIndex = 0;
-        List<BurgDocument.DrawingCommand> newDrawing = new ArrayList<>();
-        for (BurgDocument.DrawingCommand command : oldDrawing) {
-            if (command instanceof BurgDocument.Polygon polygon) {
+        List<CastleDocument.DrawingCommand> newDrawing = new ArrayList<>();
+        for (CastleDocument.DrawingCommand command : oldDrawing) {
+            if (command instanceof CastleDocument.Polygon polygon) {
                 if (currentPolygonIndex == polygonIndex) {
                     List<Point> newPoints = new ArrayList<>(polygon.points());
                     newPoints.set(pointIndex, newPoint);
-                    newDrawing.add(new BurgDocument.Polygon(newPoints));
+                    newDrawing.add(new CastleDocument.Polygon(newPoints));
                 } else {
                     newDrawing.add(polygon);
                 }
@@ -124,7 +124,7 @@ public class EditorPanel extends HGBasePanel {
                 oldCastle.reserved(), newDrawing);
         List<Castle> castles = new ArrayList<>(document.castles());
         castles.set(castleIndex, updatedCastle);
-        document = new BurgDocument(castles);
+        document = new CastleDocument(castles);
         castleView.updateCastle(updatedCastle);
         if (changeListener != null) {
             changeListener.run();
@@ -136,14 +136,14 @@ public class EditorPanel extends HGBasePanel {
             return;
         }
         Castle oldCastle = document.castles().get(castleIndex);
-        List<BurgDocument.DrawingCommand> oldDrawing = oldCastle.drawing();
+        List<CastleDocument.DrawingCommand> oldDrawing = oldCastle.drawing();
         
         int currentPolygonIndex = 0;
-        List<BurgDocument.DrawingCommand> newDrawing = new ArrayList<>();
-        for (BurgDocument.DrawingCommand command : oldDrawing) {
-            if (command instanceof BurgDocument.Polygon polygon) {
+        List<CastleDocument.DrawingCommand> newDrawing = new ArrayList<>();
+        for (CastleDocument.DrawingCommand command : oldDrawing) {
+            if (command instanceof CastleDocument.Polygon polygon) {
                 if (currentPolygonIndex == polygonIndex) {
-                    newDrawing.add(new BurgDocument.Polygon(newPoints));
+                    newDrawing.add(new CastleDocument.Polygon(newPoints));
                 } else {
                     newDrawing.add(polygon);
                 }
@@ -159,7 +159,7 @@ public class EditorPanel extends HGBasePanel {
                 oldCastle.reserved(), newDrawing);
         List<Castle> castles = new ArrayList<>(document.castles());
         castles.set(castleIndex, updatedCastle);
-        document = new BurgDocument(castles);
+        document = new CastleDocument(castles);
         castleView.updateCastle(updatedCastle);
         if (changeListener != null) {
             changeListener.run();
@@ -195,7 +195,7 @@ public class EditorPanel extends HGBasePanel {
                 oldCastle.reserved(), oldCastle.drawing());
         List<Castle> castles = new ArrayList<>(document.castles());
         castles.set(castleIndex, updatedCastle);
-        document = new BurgDocument(castles);
+        document = new CastleDocument(castles);
         castleView.updateCastle(updatedCastle);
         if (changeListener != null) {
             changeListener.run();

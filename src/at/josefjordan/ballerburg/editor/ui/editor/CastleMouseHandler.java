@@ -1,11 +1,11 @@
 package at.josefjordan.ballerburg.editor.ui.editor;
 
-import at.josefjordan.ballerburg.editor.model.BurgDocument.Castle;
-import at.josefjordan.ballerburg.editor.model.BurgDocument.DrawingCommand;
-import at.josefjordan.ballerburg.editor.model.BurgDocument.Point;
-import at.josefjordan.ballerburg.editor.model.BurgDocument.Polygon;
-import at.josefjordan.ballerburg.editor.model.BurgDocument.Size;
-import at.josefjordan.ballerburg.editor.model.BurgenFileFormat;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.Castle;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.DrawingCommand;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.Point;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.Polygon;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.Size;
+import at.josefjordan.ballerburg.editor.model.CastleFileFormat;
 
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -175,7 +175,7 @@ final class CastleMouseHandler extends MouseAdapter {
             }
         }
         maximumY = Math.max(maximumY, areaTop(castle.throne(),
-                new Size(BurgenFileFormat.THRONE_WIDTH, BurgenFileFormat.THRONE_HEIGHT)));
+                new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT)));
         for (Point cannon : castle.cannons()) {
             maximumY = Math.max(maximumY, cannon.y() + 12);
         }

@@ -1,14 +1,14 @@
 package at.josefjordan.ballerburg.editor.io;
 
-import at.josefjordan.ballerburg.editor.model.BurgDocument;
-import at.josefjordan.ballerburg.editor.model.BurgDocument.Castle;
-import at.josefjordan.ballerburg.editor.model.BurgDocument.DrawingCommand;
-import at.josefjordan.ballerburg.editor.model.BurgDocument.FillStyle;
-import at.josefjordan.ballerburg.editor.model.BurgDocument.Point;
-import at.josefjordan.ballerburg.editor.model.BurgDocument.Polygon;
-import at.josefjordan.ballerburg.editor.model.BurgDocument.Resources;
-import at.josefjordan.ballerburg.editor.model.BurgDocument.Size;
-import at.josefjordan.ballerburg.editor.model.BurgenFileFormat;
+import at.josefjordan.ballerburg.editor.model.CastleDocument;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.Castle;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.DrawingCommand;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.FillStyle;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.Point;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.Polygon;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.Resources;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.Size;
+import at.josefjordan.ballerburg.editor.model.CastleFileFormat;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -20,19 +20,19 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /** Reads the CP437 encoded, comment-aware BALLER.DAT format. */
-public final class BurgenReader {
+public final class CastleReader {
     public static final Charset CHARSET = Charset.forName("IBM437");
     private static final Pattern INTEGER = Pattern.compile("[+-]?\\d+");
 
-    public BurgDocument read(Path path) throws IOException {
+    public CastleDocument read(Path path) throws IOException {
         String source = Files.readString(path, CHARSET);
         Cursor cursor = new Cursor(readNumbers(removeComments(source)));
         List<Castle> castles = new ArrayList<>();
         while (true) {
-            int width = cursor.next("castle width or " + BurgenFileFormat.FILE_TERMINATOR + " file terminator");
-            if (width == BurgenFileFormat.FILE_TERMINATOR) {
+            int width = cursor.next("castle width or " + CastleFileFormat.FILE_TERMINATOR + " file terminator");
+            if (width == CastleFileFormat.FILE_TERMINATOR) {
                 cursor.requireEnd();
-                return new BurgDocument(castles);
+                return new CastleDocument(castles);
             }
             if (width < 0) {
                 throw cursor.error("Invalid castle width " + width);
@@ -53,7 +53,7 @@ public final class BurgenReader {
         Size ballRoom = readSize(cursor);
         Resources resources = new Resources(cursor.next("start money"), cursor.next("start powder"),
                 cursor.next("start balls"), cursor.next("start people"));
-        List<Integer> reserved = readValues(cursor, BurgenFileFormat.RESERVED_VALUE_COUNT, "reserved value");
+        List<Integer> reserved = readValues(cursor, CastleFileFormat.RESERVED_VALUE_COUNT, "reserved value");
         List<DrawingCommand> drawing = readDrawing(cursor);
         return new Castle(width, cannons, throne, flag, money, powder, balls, moneyRoom, powderRoom,
                 ballRoom, resources, reserved, drawing);
@@ -63,18 +63,18 @@ public final class BurgenReader {
         List<DrawingCommand> commands = new ArrayList<>();
         while (true) {
             int command = cursor.next("drawing command");
-            if (command == BurgenFileFormat.CASTLE_TERMINATOR) {
+            if (command == CastleFileFormat.CASTLE_TERMINATOR) {
                 return commands;
             }
-            if (command == BurgenFileFormat.FILL_STYLE_COMMAND) {
+            if (command == CastleFileFormat.FILL_STYLE_COMMAND) {
                 commands.add(new FillStyle(cursor.next("fill style"), cursor.next("fill index")));
             } else if (command >= 0) {
                 List<Point> points = new ArrayList<>();
                 points.add(new Point(command, cursor.next("polygon y coordinate")));
                 while (true) {
                     int x = cursor.next("polygon x coordinate or "
-                            + BurgenFileFormat.POLYGON_TERMINATOR + " terminator");
-                    if (x == BurgenFileFormat.POLYGON_TERMINATOR) {
+                            + CastleFileFormat.POLYGON_TERMINATOR + " terminator");
+                    if (x == CastleFileFormat.POLYGON_TERMINATOR) {
                         break;
                     }
                     if (x < 0) {
@@ -99,7 +99,7 @@ public final class BurgenReader {
 
     private List<Point> readCannons(Cursor cursor) throws IOException {
         Point unusedPosition = new Point(-1, -1);
-        List<Point> cannons = readPoints(cursor, BurgenFileFormat.CANNON_POSITION_COUNT);
+        List<Point> cannons = readPoints(cursor, CastleFileFormat.CANNON_POSITION_COUNT);
         cannons.removeIf(unusedPosition::equals);
         return cannons;
     }
@@ -181,7 +181,7 @@ public final class BurgenReader {
 
         private void requireEnd() throws IOException {
             if (index != numbers.size()) {
-                throw error("Data found after " + BurgenFileFormat.FILE_TERMINATOR + " file terminator");
+                throw error("Data found after " + CastleFileFormat.FILE_TERMINATOR + " file terminator");
             }
         }
 

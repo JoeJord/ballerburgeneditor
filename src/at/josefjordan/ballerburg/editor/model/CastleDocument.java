@@ -3,8 +3,8 @@ package at.josefjordan.ballerburg.editor.model;
 import java.util.List;
 
 /** The editable contents of a BALLER.DAT file. */
-public record BurgDocument(List<Castle> castles) {
-    public BurgDocument {
+public record CastleDocument(List<Castle> castles) {
+    public CastleDocument {
         castles = List.copyOf(castles);
     }
 
@@ -24,13 +24,13 @@ public record BurgDocument(List<Castle> castles) {
             cannons = List.copyOf(cannons);
             reserved = List.copyOf(reserved);
             drawing = List.copyOf(drawing);
-            if (cannons.size() > BurgenFileFormat.CANNON_POSITION_COUNT) {
+            if (cannons.size() > CastleFileFormat.CANNON_POSITION_COUNT) {
                 throw new IllegalArgumentException("A castle may contain at most "
-                        + BurgenFileFormat.CANNON_POSITION_COUNT + " cannon positions");
+                        + CastleFileFormat.CANNON_POSITION_COUNT + " cannon positions");
             }
-            if (reserved.size() != BurgenFileFormat.RESERVED_VALUE_COUNT) {
+            if (reserved.size() != CastleFileFormat.RESERVED_VALUE_COUNT) {
                 throw new IllegalArgumentException("A castle must contain exactly "
-                        + BurgenFileFormat.RESERVED_VALUE_COUNT + " reserved values");
+                        + CastleFileFormat.RESERVED_VALUE_COUNT + " reserved values");
             }
         }
     }

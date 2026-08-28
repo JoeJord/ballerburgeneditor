@@ -1,12 +1,12 @@
 package at.josefjordan.ballerburg.editor.ui.editor;
 
-import at.josefjordan.ballerburg.editor.model.BurgDocument.Castle;
-import at.josefjordan.ballerburg.editor.model.BurgDocument.DrawingCommand;
-import at.josefjordan.ballerburg.editor.model.BurgDocument.FillStyle;
-import at.josefjordan.ballerburg.editor.model.BurgDocument.Point;
-import at.josefjordan.ballerburg.editor.model.BurgDocument.Polygon;
-import at.josefjordan.ballerburg.editor.model.BurgDocument.Size;
-import at.josefjordan.ballerburg.editor.model.BurgenFileFormat;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.Castle;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.DrawingCommand;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.FillStyle;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.Point;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.Polygon;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.Size;
+import at.josefjordan.ballerburg.editor.model.CastleFileFormat;
 import hgb.gui.HGBasePanel;
 
 import java.awt.BasicStroke;
@@ -99,7 +99,7 @@ final class CastleViewPanel extends HGBasePanel {
             }
         }
         maximumY = Math.max(maximumY, areaTop(castle.throne(),
-                new Size(BurgenFileFormat.THRONE_WIDTH, BurgenFileFormat.THRONE_HEIGHT)));
+                new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT)));
         for (Point cannon : castle.cannons()) {
             maximumY = Math.max(maximumY, cannon.y() + 12);
         }
@@ -146,7 +146,7 @@ final class CastleViewPanel extends HGBasePanel {
         }
 
         drawArea(g, castle.throne(),
-                new Size(BurgenFileFormat.THRONE_WIDTH, BurgenFileFormat.THRONE_HEIGHT), left, bottom, scale);
+                new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT), left, bottom, scale);
         drawArea(g, castle.money(), castle.moneyRoom(), left, bottom, scale);
         drawArea(g, castle.powder(), castle.powderRoom(), left, bottom, scale);
         drawArea(g, castle.balls(), castle.ballRoom(), left, bottom, scale);

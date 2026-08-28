@@ -1,8 +1,8 @@
 package at.josefjordan.ballerburg.editor.ui;
 
-import at.josefjordan.ballerburg.editor.io.BurgenReader;
-import at.josefjordan.ballerburg.editor.io.BurgenWriter;
-import at.josefjordan.ballerburg.editor.model.BurgDocument;
+import at.josefjordan.ballerburg.editor.io.CastleReader;
+import at.josefjordan.ballerburg.editor.io.CastleWriter;
+import at.josefjordan.ballerburg.editor.model.CastleDocument;
 import at.josefjordan.ballerburg.editor.ui.editor.EditorPanel;
 import hgb.gui.HGBaseDialog;
 import hgb.gui.HGBaseFrame;
@@ -118,7 +118,7 @@ public class MainFrame extends HGBaseFrame {
     @Override
     public int onFileOpen(File file) {
         try {
-            BurgDocument document = new BurgenReader().read(file.toPath());
+            CastleDocument document = new CastleReader().read(file.toPath());
             editorPanel.setDocument(document);
             return 0;
         } catch (IOException | IllegalArgumentException exception) {
@@ -129,12 +129,12 @@ public class MainFrame extends HGBaseFrame {
 
     @Override
     public int onFileSave(File file) {
-        BurgDocument document = editorPanel.getDocument();
+        CastleDocument document = editorPanel.getDocument();
         if (document == null) {
             return HGBaseTools.INVALID;
         }
         try {
-            new BurgenWriter().write(file.toPath(), document);
+            new CastleWriter().write(file.toPath(), document);
             return 0;
         } catch (IOException exception) {
             HGBaseDialog.printError(exception, this);

@@ -1,7 +1,7 @@
 package at.josefjordan.ballerburg.editor.ui.editor;
 
-import at.josefjordan.ballerburg.editor.model.BurgDocument.Castle;
-import at.josefjordan.ballerburg.editor.model.BurgDocument.Resources;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.Castle;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.Resources;
 import hgb.gui.HGBasePanel;
 import hgb.lib.HGBaseText;
 
