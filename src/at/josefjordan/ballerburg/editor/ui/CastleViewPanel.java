@@ -20,10 +20,27 @@ import java.awt.geom.Rectangle2D;
 /** Draws one castle without owning or modifying editor state. */
 final class CastleViewPanel extends HGBasePanel {
     private Castle castle;
+    private Polygon selectedPolygon;
+
+    CastleViewPanel() {
+        addMouseListener(new CastleMouseHandler(this));
+    }
 
     void setCastle(Castle castle) {
         this.castle = castle;
+        selectedPolygon = null;
         repaint();
+    }
+
+    Castle getCastle() {
+        return castle;
+    }
+
+    void setSelectedPolygon(Polygon polygon) {
+        if (polygon != selectedPolygon) {
+            selectedPolygon = polygon;
+            repaint();
+        }
     }
 
     @Override
@@ -86,6 +103,14 @@ final class CastleViewPanel extends HGBasePanel {
                 g.fill(path);
                 g.setColor(new Color(45, 45, 45));
                 g.draw(path);
+                if (polygon == selectedPolygon) {
+                    g.setColor(new Color(255, 100, 100));
+                    for (Point point : polygon.points()) {
+                        double screenX = left + point.x() * scale;
+                        double screenY = bottom - point.y() * scale;
+                        g.fill(new Rectangle2D.Double(screenX - 3, screenY - 3, 6, 6));
+                    }
+                }
             }
         }
 
