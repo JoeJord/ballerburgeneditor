@@ -24,6 +24,7 @@ public class EditorPanel extends HGBasePanel {
 
     public EditorPanel() {
         super(new BorderLayout());
+        castleView.setEditorPanel(this);
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, castleView, propertyPalette);
         splitPane.setContinuousLayout(true);
         splitPane.setResizeWeight(1.0);
@@ -91,6 +92,43 @@ public class EditorPanel extends HGBasePanel {
 
     public void setChangeListener(Runnable changeListener) {
         this.changeListener = changeListener;
+    }
+
+    public void updatePolygonPoint(int polygonIndex, int pointIndex, Point newPoint) {
+        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
+            return;
+        }
+        Castle oldCastle = document.castles().get(castleIndex);
+        List<BurgDocument.DrawingCommand> oldDrawing = oldCastle.drawing();
+        
+        int currentPolygonIndex = 0;
+        List<BurgDocument.DrawingCommand> newDrawing = new ArrayList<>();
+        for (BurgDocument.DrawingCommand command : oldDrawing) {
+            if (command instanceof BurgDocument.Polygon polygon) {
+                if (currentPolygonIndex == polygonIndex) {
+                    List<Point> newPoints = new ArrayList<>(polygon.points());
+                    newPoints.set(pointIndex, newPoint);
+                    newDrawing.add(new BurgDocument.Polygon(newPoints));
+                } else {
+                    newDrawing.add(polygon);
+                }
+                currentPolygonIndex++;
+            } else {
+                newDrawing.add(command);
+            }
+        }
+        
+        Castle updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
+                oldCastle.flag(), oldCastle.money(), oldCastle.powder(), oldCastle.balls(),
+                oldCastle.moneyRoom(), oldCastle.powderRoom(), oldCastle.ballRoom(), oldCastle.resources(),
+                oldCastle.reserved(), newDrawing);
+        List<Castle> castles = new ArrayList<>(document.castles());
+        castles.set(castleIndex, updatedCastle);
+        document = new BurgDocument(castles);
+        castleView.setCastle(updatedCastle);
+        if (changeListener != null) {
+            changeListener.run();
+        }
     }
 
     private void setCastleIndex(int index) {

@@ -11,17 +11,29 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
+import java.awt.event.MouseMotionAdapter;
 
 /** Handles mouse interactions for the castle view (selection, editing, etc.). */
 final class CastleMouseHandler extends MouseAdapter {
     private final CastleViewPanel panel;
+    private int draggingPolygonIndex = -1;
+    private int draggingPointIndex = -1;
+    private double dragScale = 0;
+    private double dragLeft = 0;
+    private double dragBottom = 0;
 
     CastleMouseHandler(CastleViewPanel panel) {
         this.panel = panel;
+        panel.addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                handleDrag(e);
+            }
+        });
     }
 
     @Override
-    public void mouseClicked(MouseEvent e) {
+    public void mousePressed(MouseEvent e) {
         Castle castle = panel.getCastle();
         if (castle == null) {
             return;
@@ -36,9 +48,64 @@ final class CastleMouseHandler extends MouseAdapter {
         double bottom = (panel.getHeight() + maximumY * scale) / 2.0;
 
         Point2D clickPoint = e.getPoint();
+        
+        // First check if clicking on a point of the selected polygon
+        Polygon selectedPolygon = panel.getSelectedPolygon();
+        if (selectedPolygon != null) {
+            int polygonIndex = findPolygonIndex(castle, selectedPolygon);
+            if (polygonIndex >= 0) {
+                int pointIndex = findClickedPointIndex(selectedPolygon, left, bottom, scale, clickPoint);
+                if (pointIndex >= 0) {
+                    draggingPolygonIndex = polygonIndex;
+                    draggingPointIndex = pointIndex;
+                    dragScale = scale;
+                    dragLeft = left;
+                    dragBottom = bottom;
+                    return;
+                }
+            }
+        }
+        
+        // If not clicking on a point, select the polygon
         Polygon clickedPolygon = findClickedPolygon(castle, left, bottom, scale, clickPoint);
-
         panel.setSelectedPolygon(clickedPolygon);
+    }
+
+    @Override
+    public void mouseReleased(MouseEvent e) {
+        draggingPolygonIndex = -1;
+        draggingPointIndex = -1;
+    }
+
+    private void handleDrag(MouseEvent e) {
+        if (draggingPolygonIndex < 0 || draggingPointIndex < 0) {
+            return;
+        }
+        
+        Castle castle = panel.getCastle();
+        if (castle == null) {
+            return;
+        }
+
+        Point2D dragPoint = e.getPoint();
+        int newX = (int) Math.round((dragPoint.getX() - dragLeft) / dragScale);
+        int newY = (int) Math.round((dragBottom - dragPoint.getY()) / dragScale);
+        
+        Point newPoint = new Point(newX, newY);
+        panel.getEditorPanel().updatePolygonPoint(draggingPolygonIndex, draggingPointIndex, newPoint);
+        
+        // Update the selected polygon reference to the new polygon
+        Castle updatedCastle = panel.getCastle();
+        int currentPolygonIndex = 0;
+        for (DrawingCommand command : updatedCastle.drawing()) {
+            if (command instanceof Polygon polygon) {
+                if (currentPolygonIndex == draggingPolygonIndex) {
+                    panel.setSelectedPolygon(polygon);
+                    break;
+                }
+                currentPolygonIndex++;
+            }
+        }
     }
 
     private int calculateMaximumY(Castle castle) {
@@ -93,5 +160,32 @@ final class CastleMouseHandler extends MouseAdapter {
 
     private int areaTop(Point position, Size size) {
         return position.y() + size.height();
+    }
+
+    private int findPolygonIndex(Castle castle, Polygon targetPolygon) {
+        int index = 0;
+        for (DrawingCommand command : castle.drawing()) {
+            if (command instanceof Polygon polygon) {
+                if (polygon == targetPolygon) {
+                    return index;
+                }
+                index++;
+            }
+        }
+        return -1;
+    }
+
+    private int findClickedPointIndex(Polygon polygon, double left, double bottom, double scale, Point2D clickPoint) {
+        final double hitRadius = 6.0;
+        for (int i = 0; i < polygon.points().size(); i++) {
+            Point point = polygon.points().get(i);
+            double screenX = left + point.x() * scale;
+            double screenY = bottom - point.y() * scale;
+            double distance = clickPoint.distance(screenX, screenY);
+            if (distance <= hitRadius) {
+                return i;
+            }
+        }
+        return -1;
     }
 }

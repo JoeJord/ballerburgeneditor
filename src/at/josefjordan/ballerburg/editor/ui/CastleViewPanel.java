@@ -21,9 +21,14 @@ import java.awt.geom.Rectangle2D;
 final class CastleViewPanel extends HGBasePanel {
     private Castle castle;
     private Polygon selectedPolygon;
+    private EditorPanel editorPanel;
 
     CastleViewPanel() {
         addMouseListener(new CastleMouseHandler(this));
+    }
+
+    void setEditorPanel(EditorPanel editorPanel) {
+        this.editorPanel = editorPanel;
     }
 
     void setCastle(Castle castle) {
@@ -36,11 +41,19 @@ final class CastleViewPanel extends HGBasePanel {
         return castle;
     }
 
+    EditorPanel getEditorPanel() {
+        return editorPanel;
+    }
+
     void setSelectedPolygon(Polygon polygon) {
         if (polygon != selectedPolygon) {
             selectedPolygon = polygon;
             repaint();
         }
+    }
+
+    Polygon getSelectedPolygon() {
+        return selectedPolygon;
     }
 
     @Override
