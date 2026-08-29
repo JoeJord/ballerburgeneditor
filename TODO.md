@@ -13,6 +13,7 @@
  - Set/drag/remove balls
  - Set/drag/remove money
  - Set/drag/remove wind vane
+ - Undo/Redo
 
 ## File Handling
  - Coordinates lower 0 are not allowed ⇒ rebase before saving
