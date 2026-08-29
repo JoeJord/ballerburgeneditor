@@ -244,6 +244,49 @@ public class EditorPanel extends HGBasePanel {
         return selectedPolygon != null && selectedPolygon.points().size() > 3;
     }
 
+    public boolean hasSelectedPoint() {
+        return castleView.getSelectedPointIndex() >= 0;
+    }
+
+    public boolean removePolygon() {
+        CastleDocument.Polygon selectedPolygon = castleView.getSelectedPolygon();
+        if (selectedPolygon == null) {
+            return false;
+        }
+
+        int polygonIndex = findPolygonIndex(selectedPolygon);
+        if (polygonIndex < 0) {
+            return false;
+        }
+
+        Castle oldCastle = document.castles().get(castleIndex);
+        List<CastleDocument.DrawingCommand> newDrawing = new ArrayList<>();
+        for (CastleDocument.DrawingCommand command : oldCastle.drawing()) {
+            if (!(command instanceof CastleDocument.Polygon polygon) || polygon != selectedPolygon) {
+                newDrawing.add(command);
+            }
+        }
+
+        Castle updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
+                oldCastle.flag(), oldCastle.money(), oldCastle.powder(), oldCastle.balls(),
+                oldCastle.moneyRoom(), oldCastle.powderRoom(), oldCastle.ballRoom(), oldCastle.resources(),
+                oldCastle.reserved(), newDrawing);
+        List<Castle> castles = new ArrayList<>(document.castles());
+        castles.set(castleIndex, updatedCastle);
+        document = new CastleDocument(castles);
+        castleView.updateCastle(updatedCastle);
+        castleView.setSelectedPolygon(null);
+        if (changeListener != null) {
+            changeListener.run();
+        }
+        notifySelectionChanged();
+        return true;
+    }
+
+    public boolean hasSelectedPolygon() {
+        return castleView.getSelectedPolygon() != null;
+    }
+
     public void onPointSelectionChanged() {
         notifySelectionChanged();
     }

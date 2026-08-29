@@ -5,17 +5,21 @@ import hgb.gui.menu.IMenuAction;
 
 import java.awt.event.ActionEvent;
 
-public class RemovePolygonPointAction implements IMenuAction {
+public class RemoveAction implements IMenuAction {
     private final MainFrame frame;
 
-    public RemovePolygonPointAction(MainFrame frame) {
+    public RemoveAction(MainFrame frame) {
         this.frame = frame;
     }
 
     @Override
     public void perform(String id, ActionEvent e) {
         if (frame.getFile() != null) {
-            frame.removePolygonPoint();
+            if (frame.hasSelectedPolygonPoint()) {
+                frame.removePolygonPoint();
+            } else if (frame.hasSelectedPolygon()) {
+                frame.removePolygon();
+            }
         }
     }
 }

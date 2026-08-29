@@ -123,12 +123,24 @@ public class MainFrame extends HGBaseFrame {
         editorPanel.removePolygonPoint();
     }
 
+    public void removePolygon() {
+        editorPanel.removePolygon();
+    }
+
     public boolean hasCastle() {
         return editorPanel != null && editorPanel.getCastleCount() > 0;
     }
 
     public boolean hasSelectedPolygonPoint() {
         return editorPanel != null && editorPanel.hasSelectedPolygonPoint();
+    }
+
+    public boolean hasSelectedPolygon() {
+        return editorPanel != null && editorPanel.hasSelectedPolygon();
+    }
+
+    public boolean hasSelectedPoint() {
+        return editorPanel != null && editorPanel.hasSelectedPoint();
     }
 
     @Override

@@ -17,7 +17,7 @@
         <msg code="properties.people">Volk</msg>
         <msg code="edit.add_castle">Burg hinzuf&#252;gen</msg>
         <msg code="edit.delete_castle">Burg entfernen</msg>
-        <msg code="edit.remove_polygon_point">Punkt entfernen</msg>
+        <msg code="edit.remove">Entfernen</msg>
 
     </language>
 
@@ -36,7 +36,7 @@
         <msg code="properties.people">People</msg>
         <msg code="edit.add_castle">Add castle</msg>
         <msg code="edit.delete_castle">Delete castle</msg>
-        <msg code="edit.remove_polygon_point">Remove point</msg>
+        <msg code="edit.remove">Remove</msg>
 
     </language>
 

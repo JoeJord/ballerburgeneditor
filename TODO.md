@@ -5,7 +5,7 @@
  - Zoom in status bar adjustable
  - Show coordinates in status bar
  - Add polygon point
- - Add/remove polygon
+ - Add polygon
  - Drag cannon
  - Add/remove cannons
  - Set/drag/remove throne
