@@ -14,6 +14,7 @@
     <menu id="edit">
         <item id="edit.delete_castle" type="action"/>
         <item id="edit.add_castle" type="action"/>
+        <item id="edit.remove_polygon_point" type="action" shortcut="del"/>
     </menu>
     <menu id="settings">
         <menu id="settings.lan">
@@ -36,6 +37,7 @@
         <item/>
         <item id="edit.delete_castle"/>
         <item id="edit.add_castle"/>
+        <item id="edit.remove_polygon_point"/>
     </toolbar>
     <images path="/hgb/gui/gfx">
         <image id="null" file="null.png"/>
@@ -53,5 +55,6 @@
     <images path="/gfx/tools">
         <image id="edit.delete_castle" file="delete_castle.png"/>
         <image id="edit.add_castle" file="add_castle.png"/>
+        <image id="edit.remove_polygon_point" file="remove_polygon_point.png"/>
     </images>
 </menuconfig>

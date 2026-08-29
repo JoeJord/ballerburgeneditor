@@ -180,6 +180,74 @@ public class EditorPanel extends HGBasePanel {
         }
     }
 
+    public boolean removePolygonPoint() {
+        CastleDocument.Polygon selectedPolygon = castleView.getSelectedPolygon();
+        if (selectedPolygon == null || selectedPolygon.points().size() <= 3) {
+            return false;
+        }
+        
+        int selectedPointIndex = castleView.getSelectedPointIndex();
+        if (selectedPointIndex < 0) {
+            return false;
+        }
+        
+        int polygonIndex = findPolygonIndex(selectedPolygon);
+        if (polygonIndex < 0) {
+            return false;
+        }
+        
+        List<Point> newPoints = new ArrayList<>(selectedPolygon.points());
+        newPoints.remove(selectedPointIndex);
+        updatePolygonPoints(polygonIndex, newPoints);
+        
+        // Update the selected polygon reference to the new polygon
+        Castle updatedCastle = document.castles().get(castleIndex);
+        int currentPolygonIndex = 0;
+        for (CastleDocument.DrawingCommand command : updatedCastle.drawing()) {
+            if (command instanceof CastleDocument.Polygon polygon) {
+                if (currentPolygonIndex == polygonIndex) {
+                    castleView.setSelectedPolygon(polygon);
+                    break;
+                }
+                currentPolygonIndex++;
+            }
+        }
+        
+        // Clear the selected point after removal
+        castleView.setSelectedPointIndex(-1);
+        onPointSelectionChanged();
+        return true;
+    }
+
+    private int findPolygonIndex(CastleDocument.Polygon targetPolygon) {
+        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
+            return -1;
+        }
+        Castle castle = document.castles().get(castleIndex);
+        int index = 0;
+        for (CastleDocument.DrawingCommand command : castle.drawing()) {
+            if (command instanceof CastleDocument.Polygon polygon) {
+                if (polygon == targetPolygon) {
+                    return index;
+                }
+                index++;
+            }
+        }
+        return -1;
+    }
+
+    public boolean hasSelectedPolygonPoint() {
+        if (castleView.getSelectedPointIndex() < 0) {
+            return false;
+        }
+        CastleDocument.Polygon selectedPolygon = castleView.getSelectedPolygon();
+        return selectedPolygon != null && selectedPolygon.points().size() > 3;
+    }
+
+    public void onPointSelectionChanged() {
+        notifySelectionChanged();
+    }
+
     private void setCastleIndex(int index) {
         if (index >= 0 && index < getCastleCount() && index != castleIndex) {
             castleIndex = index;

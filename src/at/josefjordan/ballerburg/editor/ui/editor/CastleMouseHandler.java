@@ -68,6 +68,8 @@ final class CastleMouseHandler extends MouseAdapter {
                     dragScale = baseScale;
                     dragLeft = left;
                     dragBottom = bottom;
+                    panel.setSelectedPointIndex(pointIndex);
+                    panel.getEditorPanel().onPointSelectionChanged();
                     return;
                 }
                 // Check if clicking inside the selected polygon (but not on a point)
@@ -81,6 +83,8 @@ final class CastleMouseHandler extends MouseAdapter {
                     dragBottom = bottom;
                     dragStartPoint = clickPoint;
                     originalPoints = new ArrayList<>(selectedPolygon.points());
+                    panel.setSelectedPointIndex(-1);
+                    panel.getEditorPanel().onPointSelectionChanged();
                     return;
                 }
             }
@@ -90,6 +94,8 @@ final class CastleMouseHandler extends MouseAdapter {
         Polygon clickedPolygon = findClickedPolygon(castle, left, bottom, scale, clickPoint);
         if (clickedPolygon != null) {
             panel.setSelectedPolygon(clickedPolygon);
+            panel.setSelectedPointIndex(-1);
+            panel.getEditorPanel().onPointSelectionChanged();
             int polygonIndex = findPolygonIndex(castle, clickedPolygon);
             if (polygonIndex >= 0) {
                 draggingPolygonIndex = polygonIndex;
@@ -103,6 +109,8 @@ final class CastleMouseHandler extends MouseAdapter {
             }
         } else {
             panel.setSelectedPolygon(null);
+            panel.setSelectedPointIndex(-1);
+            panel.getEditorPanel().onPointSelectionChanged();
         }
     }
 

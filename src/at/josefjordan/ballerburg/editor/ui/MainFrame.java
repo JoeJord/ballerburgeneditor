@@ -90,6 +90,9 @@ public class MainFrame extends HGBaseFrame {
         castlePositionLabel.setText(count == 0
                 ? HGBaseText.getText("castle.none")
                 : HGBaseText.getText("castle.position", String.valueOf(index + 1), String.valueOf(count)));
+        if (getMenu() != null) {
+            getMenu().setFileMenuStates();
+        }
     }
 
     private void actualizeCastleNavigationText() {
@@ -116,8 +119,16 @@ public class MainFrame extends HGBaseFrame {
         editorPanel.deleteCastle();
     }
 
+    public void removePolygonPoint() {
+        editorPanel.removePolygonPoint();
+    }
+
     public boolean hasCastle() {
         return editorPanel != null && editorPanel.getCastleCount() > 0;
+    }
+
+    public boolean hasSelectedPolygonPoint() {
+        return editorPanel != null && editorPanel.hasSelectedPolygonPoint();
     }
 
     @Override

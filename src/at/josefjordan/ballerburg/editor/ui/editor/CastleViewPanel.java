@@ -21,6 +21,7 @@ import java.awt.geom.Rectangle2D;
 final class CastleViewPanel extends HGBasePanel {
     private Castle castle;
     private Polygon selectedPolygon;
+    private int selectedPointIndex = -1;
     private EditorPanel editorPanel;
     private double zoomFactor = 1.0;
     private Runnable zoomListener;
@@ -68,6 +69,17 @@ final class CastleViewPanel extends HGBasePanel {
 
     Polygon getSelectedPolygon() {
         return selectedPolygon;
+    }
+
+    int getSelectedPointIndex() {
+        return selectedPointIndex;
+    }
+
+    void setSelectedPointIndex(int index) {
+        if (selectedPointIndex != index) {
+            selectedPointIndex = index;
+            repaint();
+        }
     }
 
     void adjustZoom(double multiplier) {
@@ -148,11 +160,17 @@ final class CastleViewPanel extends HGBasePanel {
                 g.setColor(new Color(45, 45, 45));
                 g.draw(path);
                 if (polygon == selectedPolygon) {
-                    g.setColor(new Color(255, 100, 100));
-                    for (Point point : polygon.points()) {
+                    for (int i = 0; i < polygon.points().size(); i++) {
+                        Point point = polygon.points().get(i);
                         double screenX = left + point.x() * scale;
                         double screenY = bottom - point.y() * scale;
-                        g.fill(new Rectangle2D.Double(screenX - 3, screenY - 3, 6, 6));
+                        if (i == selectedPointIndex) {
+                            g.setColor(new Color(255, 255, 0));
+                            g.fill(new Rectangle2D.Double(screenX - 4, screenY - 4, 8, 8));
+                        } else {
+                            g.setColor(new Color(255, 100, 100));
+                            g.fill(new Rectangle2D.Double(screenX - 3, screenY - 3, 6, 6));
+                        }
                     }
                 }
             }
