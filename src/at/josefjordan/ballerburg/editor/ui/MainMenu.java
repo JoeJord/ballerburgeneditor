@@ -29,7 +29,8 @@ public class MainMenu extends HGBaseMenu {
         boolean hasCastle = hasOpenCastleFile && frame.hasCastle();
         boolean hasSelectedPolygon = hasCastle && frame.hasSelectedPolygon();
         boolean hasSelectedPolygonPoint = hasCastle && frame.hasSelectedPolygonPoint();
-        boolean canRemove = hasSelectedPolygonPoint || (hasSelectedPolygon && !frame.hasSelectedPoint());
+        boolean hasSelectedCannon = hasCastle && frame.hasSelectedCannon();
+        boolean canRemove = hasSelectedPolygonPoint || (hasSelectedPolygon && !frame.hasSelectedPoint()) || hasSelectedCannon;
         HGBaseGuiTools.setEnabledNullSafe(getMenuItem(ADD_CASTLE), hasOpenCastleFile);
         HGBaseGuiTools.setEnabledNullSafe(getToolbarItem(ADD_CASTLE), hasOpenCastleFile);
         HGBaseGuiTools.setEnabledNullSafe(getMenuItem(DELETE_CASTLE), hasCastle);

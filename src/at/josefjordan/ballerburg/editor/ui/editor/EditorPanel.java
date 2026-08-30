@@ -312,6 +312,44 @@ public class EditorPanel extends HGBasePanel {
         return castleView.getSelectedPolygon() != null;
     }
 
+    public boolean hasSelectedCannon() {
+        return castleView.getSelectedCannonIndex() >= 0;
+    }
+
+    public boolean removeCannon() {
+        int selectedCannonIndex = castleView.getSelectedCannonIndex();
+        if (selectedCannonIndex < 0) {
+            return false;
+        }
+
+        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
+            return false;
+        }
+
+        Castle oldCastle = document.castles().get(castleIndex);
+        if (selectedCannonIndex < 0 || selectedCannonIndex >= oldCastle.cannons().size()) {
+            return false;
+        }
+
+        List<Point> newCannons = new ArrayList<>(oldCastle.cannons());
+        newCannons.remove(selectedCannonIndex);
+
+        Castle updatedCastle = new Castle(oldCastle.width(), newCannons, oldCastle.throne(),
+                oldCastle.flag(), oldCastle.money(), oldCastle.powder(), oldCastle.balls(),
+                oldCastle.moneyRoom(), oldCastle.powderRoom(), oldCastle.ballRoom(), oldCastle.resources(),
+                oldCastle.reserved(), oldCastle.drawing());
+        List<Castle> castles = new ArrayList<>(document.castles());
+        castles.set(castleIndex, updatedCastle);
+        document = new CastleDocument(castles);
+        castleView.updateCastle(updatedCastle);
+        castleView.setSelectedCannonIndex(-1);
+        if (changeListener != null) {
+            changeListener.run();
+        }
+        notifySelectionChanged();
+        return true;
+    }
+
     public void onPointSelectionChanged() {
         notifySelectionChanged();
     }

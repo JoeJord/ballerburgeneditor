@@ -143,6 +143,14 @@ public class MainFrame extends HGBaseFrame {
         return editorPanel != null && editorPanel.hasSelectedPoint();
     }
 
+    public boolean hasSelectedCannon() {
+        return editorPanel != null && editorPanel.hasSelectedCannon();
+    }
+
+    public void removeCannon() {
+        editorPanel.removeCannon();
+    }
+
     @Override
     public void actualizeText() {
         super.actualizeText();
