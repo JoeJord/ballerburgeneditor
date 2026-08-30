@@ -147,8 +147,16 @@ public class MainFrame extends HGBaseFrame {
         return editorPanel != null && editorPanel.hasSelectedCannon();
     }
 
+    public boolean hasSelectedThrone() {
+        return editorPanel != null && editorPanel.hasSelectedThrone();
+    }
+
     public void removeCannon() {
         editorPanel.removeCannon();
+    }
+
+    public void removeThrone() {
+        editorPanel.removeThrone();
     }
 
     @Override

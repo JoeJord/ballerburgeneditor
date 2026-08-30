@@ -205,6 +205,25 @@ public class EditorPanel extends HGBasePanel {
         }
     }
 
+    public void updateThronePosition(Point newPosition) {
+        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
+            return;
+        }
+        Castle oldCastle = document.castles().get(castleIndex);
+
+        Castle updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), newPosition,
+                oldCastle.flag(), oldCastle.money(), oldCastle.powder(), oldCastle.balls(),
+                oldCastle.moneyRoom(), oldCastle.powderRoom(), oldCastle.ballRoom(), oldCastle.resources(),
+                oldCastle.reserved(), oldCastle.drawing());
+        List<Castle> castles = new ArrayList<>(document.castles());
+        castles.set(castleIndex, updatedCastle);
+        document = new CastleDocument(castles);
+        castleView.updateCastle(updatedCastle);
+        if (changeListener != null) {
+            changeListener.run();
+        }
+    }
+
     public boolean removePolygonPoint() {
         CastleDocument.Polygon selectedPolygon = castleView.getSelectedPolygon();
         if (selectedPolygon == null || selectedPolygon.points().size() <= 3) {
@@ -316,6 +335,10 @@ public class EditorPanel extends HGBasePanel {
         return castleView.getSelectedCannonIndex() >= 0;
     }
 
+    public boolean hasSelectedThrone() {
+        return castleView.isSelectedThrone();
+    }
+
     public boolean removeCannon() {
         int selectedCannonIndex = castleView.getSelectedCannonIndex();
         if (selectedCannonIndex < 0) {
@@ -343,6 +366,34 @@ public class EditorPanel extends HGBasePanel {
         document = new CastleDocument(castles);
         castleView.updateCastle(updatedCastle);
         castleView.setSelectedCannonIndex(-1);
+        if (changeListener != null) {
+            changeListener.run();
+        }
+        notifySelectionChanged();
+        return true;
+    }
+
+    public boolean removeThrone() {
+        if (!castleView.isSelectedThrone()) {
+            return false;
+        }
+
+        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
+            return false;
+        }
+
+        Castle oldCastle = document.castles().get(castleIndex);
+        Point unusedPosition = new Point(Integer.MIN_VALUE, Integer.MIN_VALUE);
+
+        Castle updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), unusedPosition,
+                oldCastle.flag(), oldCastle.money(), oldCastle.powder(), oldCastle.balls(),
+                oldCastle.moneyRoom(), oldCastle.powderRoom(), oldCastle.ballRoom(), oldCastle.resources(),
+                oldCastle.reserved(), oldCastle.drawing());
+        List<Castle> castles = new ArrayList<>(document.castles());
+        castles.set(castleIndex, updatedCastle);
+        document = new CastleDocument(castles);
+        castleView.updateCastle(updatedCastle);
+        castleView.setSelectedThrone(false);
         if (changeListener != null) {
             changeListener.run();
         }

@@ -23,6 +23,7 @@ final class CastleViewPanel extends HGBasePanel {
     private Polygon selectedPolygon;
     private int selectedPointIndex = -1;
     private int selectedCannonIndex = -1;
+    private boolean selectedThrone = false;
     private EditorPanel editorPanel;
     private double zoomFactor = 1.0;
     private Runnable zoomListener;
@@ -44,6 +45,7 @@ final class CastleViewPanel extends HGBasePanel {
         this.castle = castle;
         selectedPolygon = null;
         selectedCannonIndex = -1;
+        selectedThrone = false;
         zoomFactor = 1.0;
         notifyZoomChanged();
         repaint();
@@ -95,6 +97,17 @@ final class CastleViewPanel extends HGBasePanel {
         }
     }
 
+    boolean isSelectedThrone() {
+        return selectedThrone;
+    }
+
+    void setSelectedThrone(boolean selected) {
+        if (selectedThrone != selected) {
+            selectedThrone = selected;
+            repaint();
+        }
+    }
+
     void adjustZoom(double multiplier) {
         zoomFactor *= multiplier;
         zoomFactor = Math.max(0.1, Math.min(10.0, zoomFactor));
@@ -136,8 +149,10 @@ final class CastleViewPanel extends HGBasePanel {
                 }
             }
         }
-        maximumY = Math.max(maximumY, areaTop(castle.throne(),
-                new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT)));
+        if (castle.throne().x() != Integer.MIN_VALUE && castle.throne().y() != Integer.MIN_VALUE) {
+            maximumY = Math.max(maximumY, areaTop(castle.throne(),
+                    new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT)));
+        }
         for (Point cannon : castle.cannons()) {
             maximumY = Math.max(maximumY, cannon.y() + 12);
         }
@@ -189,12 +204,23 @@ final class CastleViewPanel extends HGBasePanel {
             }
         }
 
-        drawArea(g, castle.throne(),
-                new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT), left, bottom, scale);
+        if (castle.throne().x() != Integer.MIN_VALUE && castle.throne().y() != Integer.MIN_VALUE) {
+            drawArea(g, castle.throne(),
+                    new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT), left, bottom, scale);
+            if (selectedThrone) {
+                Rectangle2D throneRect = new Rectangle2D.Double(left + castle.throne().x() * scale,
+                        bottom - (castle.throne().y() + CastleFileFormat.THRONE_HEIGHT) * scale,
+                        CastleFileFormat.THRONE_WIDTH * scale, CastleFileFormat.THRONE_HEIGHT * scale);
+                g.setColor(new Color(255, 255, 0));
+                g.setStroke(new BasicStroke(2.0f));
+                g.draw(throneRect);
+                g.setStroke(new BasicStroke(1.0f));
+            }
+            drawSprite(g, Sprites.KING, castle.throne(), left, bottom, scale);
+        }
         drawArea(g, castle.money(), castle.moneyRoom(), left, bottom, scale);
         drawArea(g, castle.powder(), castle.powderRoom(), left, bottom, scale);
         drawArea(g, castle.balls(), castle.ballRoom(), left, bottom, scale);
-        drawSprite(g, Sprites.KING, castle.throne(), left, bottom, scale);
         for (int i = 0; i < castle.cannons().size(); i++) {
             Point cannon = castle.cannons().get(i);
             drawSprite(g, Sprites.CANNON, cannon, left, bottom, scale);

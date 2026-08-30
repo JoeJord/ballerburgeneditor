@@ -21,6 +21,8 @@ public class RemoveAction implements IMenuAction {
                 frame.removePolygon();
             } else if (frame.hasSelectedCannon()) {
                 frame.removeCannon();
+            } else if (frame.hasSelectedThrone()) {
+                frame.removeThrone();
             }
         }
     }

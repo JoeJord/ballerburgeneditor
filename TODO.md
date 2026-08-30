@@ -7,7 +7,7 @@
  - Add polygon point
  - Add polygon
  - Add cannons
- - Set/drag/remove throne
+ - Add throne
  - Set/drag/remove powder
  - Set/drag/remove balls
  - Set/drag/remove money

@@ -24,6 +24,8 @@ final class CastleMouseHandler extends MouseAdapter {
     private boolean draggingEntirePolygon = false;
     private int draggingCannonIndex = -1;
     private Point2D cannonDragOffset;
+    private boolean draggingThrone = false;
+    private Point2D throneDragOffset;
     private double dragScale = 0;
     private double dragLeft = 0;
     private double dragBottom = 0;
@@ -58,12 +60,32 @@ final class CastleMouseHandler extends MouseAdapter {
 
         Point2D clickPoint = e.getPoint();
 
+        // First check if clicking on the throne
+        if (isThroneClicked(castle, left, bottom, scale, clickPoint)) {
+            panel.setSelectedThrone(true);
+            panel.setSelectedPolygon(null);
+            panel.setSelectedPointIndex(-1);
+            panel.setSelectedCannonIndex(-1);
+            panel.getEditorPanel().onPointSelectionChanged();
+            panel.getEditorPanel().onCannonSelectionChanged();
+            draggingThrone = true;
+            dragScale = baseScale;
+            dragLeft = left;
+            dragBottom = bottom;
+            Point throne = castle.throne();
+            double throneScreenX = left + throne.x() * scale;
+            double throneScreenY = bottom - throne.y() * scale;
+            throneDragOffset = new Point2D.Double(clickPoint.getX() - throneScreenX, clickPoint.getY() - throneScreenY);
+            return;
+        }
+
         // First check if clicking on a cannon
         int clickedCannonIndex = findClickedCannonIndex(castle, left, bottom, scale, clickPoint);
         if (clickedCannonIndex >= 0) {
             panel.setSelectedCannonIndex(clickedCannonIndex);
             panel.setSelectedPolygon(null);
             panel.setSelectedPointIndex(-1);
+            panel.setSelectedThrone(false);
             panel.getEditorPanel().onCannonSelectionChanged();
             draggingCannonIndex = clickedCannonIndex;
             dragScale = baseScale;
@@ -92,6 +114,7 @@ final class CastleMouseHandler extends MouseAdapter {
                     dragBottom = bottom;
                     panel.setSelectedPointIndex(pointIndex);
                     panel.setSelectedCannonIndex(-1);
+                    panel.setSelectedThrone(false);
                     panel.getEditorPanel().onPointSelectionChanged();
                     panel.getEditorPanel().onCannonSelectionChanged();
                     return;
@@ -109,6 +132,7 @@ final class CastleMouseHandler extends MouseAdapter {
                     originalPoints = new ArrayList<>(selectedPolygon.points());
                     panel.setSelectedPointIndex(-1);
                     panel.setSelectedCannonIndex(-1);
+                    panel.setSelectedThrone(false);
                     panel.getEditorPanel().onPointSelectionChanged();
                     panel.getEditorPanel().onCannonSelectionChanged();
                     return;
@@ -122,6 +146,7 @@ final class CastleMouseHandler extends MouseAdapter {
             panel.setSelectedPolygon(clickedPolygon);
             panel.setSelectedPointIndex(-1);
             panel.setSelectedCannonIndex(-1);
+            panel.setSelectedThrone(false);
             panel.getEditorPanel().onPointSelectionChanged();
             panel.getEditorPanel().onCannonSelectionChanged();
             int polygonIndex = findPolygonIndex(castle, clickedPolygon);
@@ -139,6 +164,7 @@ final class CastleMouseHandler extends MouseAdapter {
             panel.setSelectedPolygon(null);
             panel.setSelectedPointIndex(-1);
             panel.setSelectedCannonIndex(-1);
+            panel.setSelectedThrone(false);
             panel.getEditorPanel().onPointSelectionChanged();
             panel.getEditorPanel().onCannonSelectionChanged();
         }
@@ -151,12 +177,14 @@ final class CastleMouseHandler extends MouseAdapter {
         draggingEntirePolygon = false;
         draggingCannonIndex = -1;
         cannonDragOffset = null;
+        draggingThrone = false;
+        throneDragOffset = null;
         dragStartPoint = null;
         originalPoints = null;
     }
 
     private void handleDrag(MouseEvent e) {
-        if (draggingPolygonIndex < 0 && draggingCannonIndex < 0) {
+        if (draggingPolygonIndex < 0 && draggingCannonIndex < 0 && !draggingThrone) {
             return;
         }
 
@@ -166,6 +194,19 @@ final class CastleMouseHandler extends MouseAdapter {
         }
 
         double currentScale = dragScale * panel.getZoomFactor();
+
+        if (draggingThrone) {
+            // Drag the throne
+            Point2D dragPoint = e.getPoint();
+            double currentLeft = (panel.getWidth() - castle.width() * currentScale) / 2.0;
+            double currentBottom = (panel.getHeight() + calculateMaximumY(castle) * currentScale) / 2.0;
+            int newX = (int) Math.round((dragPoint.getX() - throneDragOffset.getX() - currentLeft) / currentScale);
+            int newY = (int) Math.round((currentBottom - (dragPoint.getY() - throneDragOffset.getY())) / currentScale);
+
+            Point newPoint = new Point(newX, newY);
+            panel.getEditorPanel().updateThronePosition(newPoint);
+            return;
+        }
 
         if (draggingCannonIndex >= 0) {
             // Drag a cannon
@@ -242,8 +283,10 @@ final class CastleMouseHandler extends MouseAdapter {
                 }
             }
         }
-        maximumY = Math.max(maximumY, areaTop(castle.throne(),
-                new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT)));
+        if (castle.throne().x() != Integer.MIN_VALUE && castle.throne().y() != Integer.MIN_VALUE) {
+            maximumY = Math.max(maximumY, areaTop(castle.throne(),
+                    new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT)));
+        }
         for (Point cannon : castle.cannons()) {
             maximumY = Math.max(maximumY, cannon.y() + 12);
         }
@@ -323,5 +366,16 @@ final class CastleMouseHandler extends MouseAdapter {
             }
         }
         return -1;
+    }
+
+    private boolean isThroneClicked(Castle castle, double left, double bottom, double scale, Point2D clickPoint) {
+        Point throne = castle.throne();
+        if (throne.x() == Integer.MIN_VALUE || throne.y() == Integer.MIN_VALUE) {
+            return false;
+        }
+        Rectangle2D throneRect = new Rectangle2D.Double(left + throne.x() * scale,
+                bottom - (throne.y() + CastleFileFormat.THRONE_HEIGHT) * scale,
+                CastleFileFormat.THRONE_WIDTH * scale, CastleFileFormat.THRONE_HEIGHT * scale);
+        return throneRect.contains(clickPoint);
     }
 }
