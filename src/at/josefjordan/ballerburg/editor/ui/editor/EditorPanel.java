@@ -339,6 +339,14 @@ public class EditorPanel extends HGBasePanel {
         return castleView.isSelectedThrone();
     }
 
+    public boolean hasSelectedResourceArea() {
+        return castleView.getSelectedResourceArea() != null;
+    }
+
+    public String getSelectedResourceArea() {
+        return castleView.getSelectedResourceArea();
+    }
+
     public boolean removeCannon() {
         int selectedCannonIndex = castleView.getSelectedCannonIndex();
         if (selectedCannonIndex < 0) {
@@ -394,6 +402,57 @@ public class EditorPanel extends HGBasePanel {
         document = new CastleDocument(castles);
         castleView.updateCastle(updatedCastle);
         castleView.setSelectedThrone(false);
+        if (changeListener != null) {
+            changeListener.run();
+        }
+        notifySelectionChanged();
+        return true;
+    }
+
+    public boolean removeResourceArea() {
+        String selectedResourceArea = castleView.getSelectedResourceArea();
+        if (selectedResourceArea == null) {
+            return false;
+        }
+
+        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
+            return false;
+        }
+
+        Castle oldCastle = document.castles().get(castleIndex);
+        Point unusedPosition = new Point(Integer.MIN_VALUE, Integer.MIN_VALUE);
+        Size emptySize = new Size(0, 0);
+        Resources oldResources = oldCastle.resources();
+
+        Castle updatedCastle;
+        if ("money".equals(selectedResourceArea)) {
+            Resources newResources = new Resources(0, oldResources.powder(), oldResources.balls(), oldResources.people());
+            updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
+                    oldCastle.flag(), unusedPosition, oldCastle.powder(), oldCastle.balls(),
+                    emptySize, oldCastle.powderRoom(), oldCastle.ballRoom(), newResources,
+                    oldCastle.reserved(), oldCastle.drawing());
+        } else if ("powder".equals(selectedResourceArea)) {
+            Resources newResources = new Resources(oldResources.money(), 0, oldResources.balls(), oldResources.people());
+            updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
+                    oldCastle.flag(), oldCastle.money(), unusedPosition, oldCastle.balls(),
+                    oldCastle.moneyRoom(), emptySize, oldCastle.ballRoom(), newResources,
+                    oldCastle.reserved(), oldCastle.drawing());
+        } else if ("balls".equals(selectedResourceArea)) {
+            Resources newResources = new Resources(oldResources.money(), oldResources.powder(), 0, oldResources.people());
+            updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
+                    oldCastle.flag(), oldCastle.money(), oldCastle.powder(), unusedPosition,
+                    oldCastle.moneyRoom(), oldCastle.powderRoom(), emptySize, newResources,
+                    oldCastle.reserved(), oldCastle.drawing());
+        } else {
+            return false;
+        }
+
+        List<Castle> castles = new ArrayList<>(document.castles());
+        castles.set(castleIndex, updatedCastle);
+        document = new CastleDocument(castles);
+        castleView.updateCastle(updatedCastle);
+        propertyPalette.setCastle(updatedCastle);
+        castleView.setSelectedResourceArea(null);
         if (changeListener != null) {
             changeListener.run();
         }

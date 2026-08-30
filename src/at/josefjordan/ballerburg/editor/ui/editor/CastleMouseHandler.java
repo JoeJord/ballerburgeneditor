@@ -60,12 +60,26 @@ final class CastleMouseHandler extends MouseAdapter {
 
         Point2D clickPoint = e.getPoint();
 
+        // First check if clicking on resource areas
+        String clickedResourceArea = findClickedResourceArea(castle, left, bottom, scale, clickPoint);
+        if (clickedResourceArea != null) {
+            panel.setSelectedResourceArea(clickedResourceArea);
+            panel.setSelectedPolygon(null);
+            panel.setSelectedPointIndex(-1);
+            panel.setSelectedCannonIndex(-1);
+            panel.setSelectedThrone(false);
+            panel.getEditorPanel().onPointSelectionChanged();
+            panel.getEditorPanel().onCannonSelectionChanged();
+            return;
+        }
+
         // First check if clicking on the throne
         if (isThroneClicked(castle, left, bottom, scale, clickPoint)) {
             panel.setSelectedThrone(true);
             panel.setSelectedPolygon(null);
             panel.setSelectedPointIndex(-1);
             panel.setSelectedCannonIndex(-1);
+            panel.setSelectedResourceArea(null);
             panel.getEditorPanel().onPointSelectionChanged();
             panel.getEditorPanel().onCannonSelectionChanged();
             draggingThrone = true;
@@ -86,6 +100,7 @@ final class CastleMouseHandler extends MouseAdapter {
             panel.setSelectedPolygon(null);
             panel.setSelectedPointIndex(-1);
             panel.setSelectedThrone(false);
+            panel.setSelectedResourceArea(null);
             panel.getEditorPanel().onCannonSelectionChanged();
             draggingCannonIndex = clickedCannonIndex;
             dragScale = baseScale;
@@ -115,6 +130,7 @@ final class CastleMouseHandler extends MouseAdapter {
                     panel.setSelectedPointIndex(pointIndex);
                     panel.setSelectedCannonIndex(-1);
                     panel.setSelectedThrone(false);
+                    panel.setSelectedResourceArea(null);
                     panel.getEditorPanel().onPointSelectionChanged();
                     panel.getEditorPanel().onCannonSelectionChanged();
                     return;
@@ -133,6 +149,7 @@ final class CastleMouseHandler extends MouseAdapter {
                     panel.setSelectedPointIndex(-1);
                     panel.setSelectedCannonIndex(-1);
                     panel.setSelectedThrone(false);
+                    panel.setSelectedResourceArea(null);
                     panel.getEditorPanel().onPointSelectionChanged();
                     panel.getEditorPanel().onCannonSelectionChanged();
                     return;
@@ -147,6 +164,7 @@ final class CastleMouseHandler extends MouseAdapter {
             panel.setSelectedPointIndex(-1);
             panel.setSelectedCannonIndex(-1);
             panel.setSelectedThrone(false);
+            panel.setSelectedResourceArea(null);
             panel.getEditorPanel().onPointSelectionChanged();
             panel.getEditorPanel().onCannonSelectionChanged();
             int polygonIndex = findPolygonIndex(castle, clickedPolygon);
@@ -165,6 +183,7 @@ final class CastleMouseHandler extends MouseAdapter {
             panel.setSelectedPointIndex(-1);
             panel.setSelectedCannonIndex(-1);
             panel.setSelectedThrone(false);
+            panel.setSelectedResourceArea(null);
             panel.getEditorPanel().onPointSelectionChanged();
             panel.getEditorPanel().onCannonSelectionChanged();
         }
@@ -377,5 +396,33 @@ final class CastleMouseHandler extends MouseAdapter {
                 bottom - (throne.y() + CastleFileFormat.THRONE_HEIGHT) * scale,
                 CastleFileFormat.THRONE_WIDTH * scale, CastleFileFormat.THRONE_HEIGHT * scale);
         return throneRect.contains(clickPoint);
+    }
+
+    private String findClickedResourceArea(Castle castle, double left, double bottom, double scale, Point2D clickPoint) {
+        // Check money area
+        Rectangle2D moneyRect = new Rectangle2D.Double(left + castle.money().x() * scale,
+                bottom - (castle.money().y() + castle.moneyRoom().height()) * scale,
+                castle.moneyRoom().width() * scale, castle.moneyRoom().height() * scale);
+        if (moneyRect.contains(clickPoint)) {
+            return "money";
+        }
+
+        // Check powder area
+        Rectangle2D powderRect = new Rectangle2D.Double(left + castle.powder().x() * scale,
+                bottom - (castle.powder().y() + castle.powderRoom().height()) * scale,
+                castle.powderRoom().width() * scale, castle.powderRoom().height() * scale);
+        if (powderRect.contains(clickPoint)) {
+            return "powder";
+        }
+
+        // Check balls area
+        Rectangle2D ballsRect = new Rectangle2D.Double(left + castle.balls().x() * scale,
+                bottom - (castle.balls().y() + castle.ballRoom().height()) * scale,
+                castle.ballRoom().width() * scale, castle.ballRoom().height() * scale);
+        if (ballsRect.contains(clickPoint)) {
+            return "balls";
+        }
+
+        return null;
     }
 }

@@ -151,12 +151,20 @@ public class MainFrame extends HGBaseFrame {
         return editorPanel != null && editorPanel.hasSelectedThrone();
     }
 
+    public boolean hasSelectedResourceArea() {
+        return editorPanel != null && editorPanel.hasSelectedResourceArea();
+    }
+
     public void removeCannon() {
         editorPanel.removeCannon();
     }
 
     public void removeThrone() {
         editorPanel.removeThrone();
+    }
+
+    public void removeResourceArea() {
+        editorPanel.removeResourceArea();
     }
 
     @Override

@@ -8,9 +8,9 @@
  - Add polygon
  - Add cannons
  - Add throne
- - Set/drag/remove powder
- - Set/drag/remove balls
- - Set/drag/remove money
+ - Add/drag powder
+ - Add/drag balls
+ - Add/drag money
  - Set/drag/remove wind vane
  - Undo/Redo
 

@@ -24,6 +24,7 @@ final class CastleViewPanel extends HGBasePanel {
     private int selectedPointIndex = -1;
     private int selectedCannonIndex = -1;
     private boolean selectedThrone = false;
+    private String selectedResourceArea = null; // "money", "powder", or "balls"
     private EditorPanel editorPanel;
     private double zoomFactor = 1.0;
     private Runnable zoomListener;
@@ -46,6 +47,7 @@ final class CastleViewPanel extends HGBasePanel {
         selectedPolygon = null;
         selectedCannonIndex = -1;
         selectedThrone = false;
+        selectedResourceArea = null;
         zoomFactor = 1.0;
         notifyZoomChanged();
         repaint();
@@ -104,6 +106,17 @@ final class CastleViewPanel extends HGBasePanel {
     void setSelectedThrone(boolean selected) {
         if (selectedThrone != selected) {
             selectedThrone = selected;
+            repaint();
+        }
+    }
+
+    String getSelectedResourceArea() {
+        return selectedResourceArea;
+    }
+
+    void setSelectedResourceArea(String resourceArea) {
+        if (!java.util.Objects.equals(selectedResourceArea, resourceArea)) {
+            selectedResourceArea = resourceArea;
             repaint();
         }
     }
@@ -219,8 +232,17 @@ final class CastleViewPanel extends HGBasePanel {
             drawSprite(g, Sprites.KING, castle.throne(), left, bottom, scale);
         }
         drawArea(g, castle.money(), castle.moneyRoom(), left, bottom, scale);
+        if ("money".equals(selectedResourceArea)) {
+            drawCornerPoints(g, castle.money(), castle.moneyRoom(), left, bottom, scale);
+        }
         drawArea(g, castle.powder(), castle.powderRoom(), left, bottom, scale);
+        if ("powder".equals(selectedResourceArea)) {
+            drawCornerPoints(g, castle.powder(), castle.powderRoom(), left, bottom, scale);
+        }
         drawArea(g, castle.balls(), castle.ballRoom(), left, bottom, scale);
+        if ("balls".equals(selectedResourceArea)) {
+            drawCornerPoints(g, castle.balls(), castle.ballRoom(), left, bottom, scale);
+        }
         for (int i = 0; i < castle.cannons().size(); i++) {
             Point cannon = castle.cannons().get(i);
             drawSprite(g, Sprites.CANNON, cannon, left, bottom, scale);
@@ -291,5 +313,25 @@ final class CastleViewPanel extends HGBasePanel {
         double screenWidth = CastleFileFormat.CANNON_WIDTH * scale;
         double screenHeight = 12 * scale;
         return new Rectangle2D.Double(screenX, screenY - 11 * scale, screenWidth, screenHeight);
+    }
+
+    private void drawCornerPoints(Graphics2D g, Point position, Size size, double left, double bottom, double scale) {
+        double x = left + position.x() * scale;
+        double y = bottom - (position.y() + size.height()) * scale;
+        double width = size.width() * scale;
+        double height = size.height() * scale;
+        
+        // Bottom-left corner
+        g.setColor(new Color(255, 100, 100));
+        g.fill(new Rectangle2D.Double(x - 3, (y + height) - 3, 6, 6));
+        
+        // Bottom-right corner
+        g.fill(new Rectangle2D.Double((x + width) - 3, (y + height) - 3, 6, 6));
+        
+        // Top-left corner
+        g.fill(new Rectangle2D.Double(x - 3, y - 3, 6, 6));
+        
+        // Top-right corner
+        g.fill(new Rectangle2D.Double((x + width) - 3, y - 3, 6, 6));
     }
 }
