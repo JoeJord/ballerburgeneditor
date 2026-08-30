@@ -151,7 +151,7 @@ public class EditorPanel extends HGBasePanel {
         }
         Castle oldCastle = document.castles().get(castleIndex);
         List<CastleDocument.DrawingCommand> oldDrawing = oldCastle.drawing();
-        
+
         int currentPolygonIndex = 0;
         List<CastleDocument.DrawingCommand> newDrawing = new ArrayList<>();
         for (CastleDocument.DrawingCommand command : oldDrawing) {
@@ -166,11 +166,36 @@ public class EditorPanel extends HGBasePanel {
                 newDrawing.add(command);
             }
         }
-        
+
         Castle updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
                 oldCastle.flag(), oldCastle.money(), oldCastle.powder(), oldCastle.balls(),
                 oldCastle.moneyRoom(), oldCastle.powderRoom(), oldCastle.ballRoom(), oldCastle.resources(),
                 oldCastle.reserved(), newDrawing);
+        List<Castle> castles = new ArrayList<>(document.castles());
+        castles.set(castleIndex, updatedCastle);
+        document = new CastleDocument(castles);
+        castleView.updateCastle(updatedCastle);
+        if (changeListener != null) {
+            changeListener.run();
+        }
+    }
+
+    public void updateCannonPosition(int cannonIndex, Point newPosition) {
+        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
+            return;
+        }
+        Castle oldCastle = document.castles().get(castleIndex);
+        if (cannonIndex < 0 || cannonIndex >= oldCastle.cannons().size()) {
+            return;
+        }
+
+        List<Point> newCannons = new ArrayList<>(oldCastle.cannons());
+        newCannons.set(cannonIndex, newPosition);
+
+        Castle updatedCastle = new Castle(oldCastle.width(), newCannons, oldCastle.throne(),
+                oldCastle.flag(), oldCastle.money(), oldCastle.powder(), oldCastle.balls(),
+                oldCastle.moneyRoom(), oldCastle.powderRoom(), oldCastle.ballRoom(), oldCastle.resources(),
+                oldCastle.reserved(), oldCastle.drawing());
         List<Castle> castles = new ArrayList<>(document.castles());
         castles.set(castleIndex, updatedCastle);
         document = new CastleDocument(castles);
@@ -288,6 +313,10 @@ public class EditorPanel extends HGBasePanel {
     }
 
     public void onPointSelectionChanged() {
+        notifySelectionChanged();
+    }
+
+    public void onCannonSelectionChanged() {
         notifySelectionChanged();
     }
 

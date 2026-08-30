@@ -22,6 +22,7 @@ final class CastleViewPanel extends HGBasePanel {
     private Castle castle;
     private Polygon selectedPolygon;
     private int selectedPointIndex = -1;
+    private int selectedCannonIndex = -1;
     private EditorPanel editorPanel;
     private double zoomFactor = 1.0;
     private Runnable zoomListener;
@@ -42,6 +43,7 @@ final class CastleViewPanel extends HGBasePanel {
     void setCastle(Castle castle) {
         this.castle = castle;
         selectedPolygon = null;
+        selectedCannonIndex = -1;
         zoomFactor = 1.0;
         notifyZoomChanged();
         repaint();
@@ -78,6 +80,17 @@ final class CastleViewPanel extends HGBasePanel {
     void setSelectedPointIndex(int index) {
         if (selectedPointIndex != index) {
             selectedPointIndex = index;
+            repaint();
+        }
+    }
+
+    int getSelectedCannonIndex() {
+        return selectedCannonIndex;
+    }
+
+    void setSelectedCannonIndex(int index) {
+        if (selectedCannonIndex != index) {
+            selectedCannonIndex = index;
             repaint();
         }
     }
@@ -182,8 +195,15 @@ final class CastleViewPanel extends HGBasePanel {
         drawArea(g, castle.powder(), castle.powderRoom(), left, bottom, scale);
         drawArea(g, castle.balls(), castle.ballRoom(), left, bottom, scale);
         drawSprite(g, Sprites.KING, castle.throne(), left, bottom, scale);
-        for (Point cannon : castle.cannons()) {
+        for (int i = 0; i < castle.cannons().size(); i++) {
+            Point cannon = castle.cannons().get(i);
             drawSprite(g, Sprites.CANNON, cannon, left, bottom, scale);
+            if (i == selectedCannonIndex) {
+                g.setColor(new Color(255, 255, 0));
+                g.setStroke(new BasicStroke(2.0f));
+                g.draw(calculateCannonRectangle(cannon, left, bottom, scale));
+                g.setStroke(new BasicStroke(1.0f));
+            }
         }
         drawResources(g, Sprites.MONEY, castle.money(), castle.moneyRoom(), 7, 10,
                 divideRoundedUp(castle.resources().money(), 150), left, bottom, scale);
@@ -237,5 +257,13 @@ final class CastleViewPanel extends HGBasePanel {
             return new Color(150, 150, 145);
         }
         return new Color(120, 130, 140);
+    }
+
+    static Rectangle2D.Double calculateCannonRectangle(Point cannon, double left, double bottom, double scale) {
+        double screenX = left + cannon.x() * scale;
+        double screenY = bottom - cannon.y() * scale;
+        double screenWidth = CastleFileFormat.CANNON_WIDTH * scale;
+        double screenHeight = 12 * scale;
+        return new Rectangle2D.Double(screenX, screenY - 11 * scale, screenWidth, screenHeight);
     }
 }

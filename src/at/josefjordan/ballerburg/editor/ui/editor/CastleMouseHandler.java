@@ -11,6 +11,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
 import java.awt.event.MouseMotionAdapter;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,6 +22,8 @@ final class CastleMouseHandler extends MouseAdapter {
     private int draggingPolygonIndex = -1;
     private int draggingPointIndex = -1;
     private boolean draggingEntirePolygon = false;
+    private int draggingCannonIndex = -1;
+    private Point2D cannonDragOffset;
     private double dragScale = 0;
     private double dragLeft = 0;
     private double dragBottom = 0;
@@ -54,7 +57,26 @@ final class CastleMouseHandler extends MouseAdapter {
         double bottom = (panel.getHeight() + maximumY * scale) / 2.0;
 
         Point2D clickPoint = e.getPoint();
-        
+
+        // First check if clicking on a cannon
+        int clickedCannonIndex = findClickedCannonIndex(castle, left, bottom, scale, clickPoint);
+        if (clickedCannonIndex >= 0) {
+            panel.setSelectedCannonIndex(clickedCannonIndex);
+            panel.setSelectedPolygon(null);
+            panel.setSelectedPointIndex(-1);
+            panel.getEditorPanel().onCannonSelectionChanged();
+            draggingCannonIndex = clickedCannonIndex;
+            dragScale = baseScale;
+            dragLeft = left;
+            dragBottom = bottom;
+            dragStartPoint = clickPoint;
+            Point cannon = castle.cannons().get(clickedCannonIndex);
+            double cannonScreenX = left + cannon.x() * scale;
+            double cannonScreenY = bottom - cannon.y() * scale;
+            cannonDragOffset = new Point2D.Double(clickPoint.getX() - cannonScreenX, clickPoint.getY() - cannonScreenY);
+            return;
+        }
+
         // First check if clicking on a point of the selected polygon
         Polygon selectedPolygon = panel.getSelectedPolygon();
         if (selectedPolygon != null) {
@@ -69,7 +91,9 @@ final class CastleMouseHandler extends MouseAdapter {
                     dragLeft = left;
                     dragBottom = bottom;
                     panel.setSelectedPointIndex(pointIndex);
+                    panel.setSelectedCannonIndex(-1);
                     panel.getEditorPanel().onPointSelectionChanged();
+                    panel.getEditorPanel().onCannonSelectionChanged();
                     return;
                 }
                 // Check if clicking inside the selected polygon (but not on a point)
@@ -84,7 +108,9 @@ final class CastleMouseHandler extends MouseAdapter {
                     dragStartPoint = clickPoint;
                     originalPoints = new ArrayList<>(selectedPolygon.points());
                     panel.setSelectedPointIndex(-1);
+                    panel.setSelectedCannonIndex(-1);
                     panel.getEditorPanel().onPointSelectionChanged();
+                    panel.getEditorPanel().onCannonSelectionChanged();
                     return;
                 }
             }
@@ -95,7 +121,9 @@ final class CastleMouseHandler extends MouseAdapter {
         if (clickedPolygon != null) {
             panel.setSelectedPolygon(clickedPolygon);
             panel.setSelectedPointIndex(-1);
+            panel.setSelectedCannonIndex(-1);
             panel.getEditorPanel().onPointSelectionChanged();
+            panel.getEditorPanel().onCannonSelectionChanged();
             int polygonIndex = findPolygonIndex(castle, clickedPolygon);
             if (polygonIndex >= 0) {
                 draggingPolygonIndex = polygonIndex;
@@ -110,7 +138,9 @@ final class CastleMouseHandler extends MouseAdapter {
         } else {
             panel.setSelectedPolygon(null);
             panel.setSelectedPointIndex(-1);
+            panel.setSelectedCannonIndex(-1);
             panel.getEditorPanel().onPointSelectionChanged();
+            panel.getEditorPanel().onCannonSelectionChanged();
         }
     }
 
@@ -119,21 +149,36 @@ final class CastleMouseHandler extends MouseAdapter {
         draggingPolygonIndex = -1;
         draggingPointIndex = -1;
         draggingEntirePolygon = false;
+        draggingCannonIndex = -1;
+        cannonDragOffset = null;
         dragStartPoint = null;
         originalPoints = null;
     }
 
     private void handleDrag(MouseEvent e) {
-        if (draggingPolygonIndex < 0) {
+        if (draggingPolygonIndex < 0 && draggingCannonIndex < 0) {
             return;
         }
-        
+
         Castle castle = panel.getCastle();
         if (castle == null) {
             return;
         }
 
         double currentScale = dragScale * panel.getZoomFactor();
+
+        if (draggingCannonIndex >= 0) {
+            // Drag a cannon
+            Point2D dragPoint = e.getPoint();
+            double currentLeft = (panel.getWidth() - castle.width() * currentScale) / 2.0;
+            double currentBottom = (panel.getHeight() + calculateMaximumY(castle) * currentScale) / 2.0;
+            int newX = (int) Math.round((dragPoint.getX() - cannonDragOffset.getX() - currentLeft) / currentScale);
+            int newY = (int) Math.round((currentBottom - (dragPoint.getY() - cannonDragOffset.getY())) / currentScale);
+
+            Point newPoint = new Point(newX, newY);
+            panel.getEditorPanel().updateCannonPosition(draggingCannonIndex, newPoint);
+            return;
+        }
 
         if (draggingEntirePolygon) {
             // Drag the entire polygon
@@ -263,6 +308,17 @@ final class CastleMouseHandler extends MouseAdapter {
             double screenY = bottom - point.y() * scale;
             double distance = clickPoint.distance(screenX, screenY);
             if (distance <= hitRadius) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private int findClickedCannonIndex(Castle castle, double left, double bottom, double scale, Point2D clickPoint) {
+        for (int i = 0; i < castle.cannons().size(); i++) {
+            Point cannon = castle.cannons().get(i);
+            Rectangle2D cannonRect = CastleViewPanel.calculateCannonRectangle(cannon, left, bottom, scale);
+            if (cannonRect.contains(clickPoint)) {
                 return i;
             }
         }

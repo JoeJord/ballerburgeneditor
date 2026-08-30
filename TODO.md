@@ -6,7 +6,6 @@
  - Show coordinates in status bar
  - Add polygon point
  - Add polygon
- - Drag cannon
  - Add/remove cannons
  - Set/drag/remove throne
  - Set/drag/remove powder
