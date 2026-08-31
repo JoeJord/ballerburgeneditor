@@ -25,6 +25,7 @@ final class CastleViewPanel extends HGBasePanel {
     private int selectedCannonIndex = -1;
     private boolean selectedThrone = false;
     private String selectedResourceArea = null; // "money", "powder", or "balls"
+    private int draggingResourceCorner = -1; // 0-3 for corners, -1 if not dragging
     private EditorPanel editorPanel;
     private double zoomFactor = 1.0;
     private Runnable zoomListener;
@@ -117,6 +118,14 @@ final class CastleViewPanel extends HGBasePanel {
     void setSelectedResourceArea(String resourceArea) {
         if (!java.util.Objects.equals(selectedResourceArea, resourceArea)) {
             selectedResourceArea = resourceArea;
+            draggingResourceCorner = -1;
+            repaint();
+        }
+    }
+
+    void setDraggingResourceCorner(int cornerIndex) {
+        if (draggingResourceCorner != cornerIndex) {
+            draggingResourceCorner = cornerIndex;
             repaint();
         }
     }
@@ -320,18 +329,41 @@ final class CastleViewPanel extends HGBasePanel {
         double y = bottom - (position.y() + size.height()) * scale;
         double width = size.width() * scale;
         double height = size.height() * scale;
-        
-        // Bottom-left corner
-        g.setColor(new Color(255, 100, 100));
-        g.fill(new Rectangle2D.Double(x - 3, (y + height) - 3, 6, 6));
-        
-        // Bottom-right corner
-        g.fill(new Rectangle2D.Double((x + width) - 3, (y + height) - 3, 6, 6));
-        
-        // Top-left corner
-        g.fill(new Rectangle2D.Double(x - 3, y - 3, 6, 6));
-        
-        // Top-right corner
-        g.fill(new Rectangle2D.Double((x + width) - 3, y - 3, 6, 6));
+
+        // Bottom-left corner (index 0)
+        if (draggingResourceCorner == 0) {
+            g.setColor(new Color(255, 255, 0));
+            g.fill(new Rectangle2D.Double(x - 4, (y + height) - 4, 8, 8));
+        } else {
+            g.setColor(new Color(255, 100, 100));
+            g.fill(new Rectangle2D.Double(x - 3, (y + height) - 3, 6, 6));
+        }
+
+        // Bottom-right corner (index 1)
+        if (draggingResourceCorner == 1) {
+            g.setColor(new Color(255, 255, 0));
+            g.fill(new Rectangle2D.Double((x + width) - 4, (y + height) - 4, 8, 8));
+        } else {
+            g.setColor(new Color(255, 100, 100));
+            g.fill(new Rectangle2D.Double((x + width) - 3, (y + height) - 3, 6, 6));
+        }
+
+        // Top-left corner (index 2)
+        if (draggingResourceCorner == 2) {
+            g.setColor(new Color(255, 255, 0));
+            g.fill(new Rectangle2D.Double(x - 4, y - 4, 8, 8));
+        } else {
+            g.setColor(new Color(255, 100, 100));
+            g.fill(new Rectangle2D.Double(x - 3, y - 3, 6, 6));
+        }
+
+        // Top-right corner (index 3)
+        if (draggingResourceCorner == 3) {
+            g.setColor(new Color(255, 255, 0));
+            g.fill(new Rectangle2D.Double((x + width) - 4, y - 4, 8, 8));
+        } else {
+            g.setColor(new Color(255, 100, 100));
+            g.fill(new Rectangle2D.Double((x + width) - 3, y - 3, 6, 6));
+        }
     }
 }

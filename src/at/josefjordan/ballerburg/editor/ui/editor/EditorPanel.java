@@ -224,6 +224,84 @@ public class EditorPanel extends HGBasePanel {
         }
     }
 
+    public void updateResourceAreaSize(String resourceArea, Point newPosition, Size newSize) {
+        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
+            return;
+        }
+        Castle oldCastle = document.castles().get(castleIndex);
+
+        Castle updatedCastle;
+        switch (resourceArea) {
+            case "money":
+                updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
+                        oldCastle.flag(), newPosition, oldCastle.powder(), oldCastle.balls(),
+                        newSize, oldCastle.powderRoom(), oldCastle.ballRoom(), oldCastle.resources(),
+                        oldCastle.reserved(), oldCastle.drawing());
+                break;
+            case "powder":
+                updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
+                        oldCastle.flag(), oldCastle.money(), newPosition, oldCastle.balls(),
+                        oldCastle.moneyRoom(), newSize, oldCastle.ballRoom(), oldCastle.resources(),
+                        oldCastle.reserved(), oldCastle.drawing());
+                break;
+            case "balls":
+                updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
+                        oldCastle.flag(), oldCastle.money(), oldCastle.powder(), newPosition,
+                        oldCastle.moneyRoom(), oldCastle.powderRoom(), newSize, oldCastle.resources(),
+                        oldCastle.reserved(), oldCastle.drawing());
+                break;
+            default:
+                return;
+        }
+
+        List<Castle> castles = new ArrayList<>(document.castles());
+        castles.set(castleIndex, updatedCastle);
+        document = new CastleDocument(castles);
+        castleView.updateCastle(updatedCastle);
+        if (changeListener != null) {
+            changeListener.run();
+        }
+    }
+
+    public void updateResourceAreaPosition(String resourceArea, Point newPosition) {
+        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
+            return;
+        }
+        Castle oldCastle = document.castles().get(castleIndex);
+
+        Castle updatedCastle;
+        switch (resourceArea) {
+            case "money":
+                updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
+                        oldCastle.flag(), newPosition, oldCastle.powder(), oldCastle.balls(),
+                        oldCastle.moneyRoom(), oldCastle.powderRoom(), oldCastle.ballRoom(), oldCastle.resources(),
+                        oldCastle.reserved(), oldCastle.drawing());
+                break;
+            case "powder":
+                updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
+                        oldCastle.flag(), oldCastle.money(), newPosition, oldCastle.balls(),
+                        oldCastle.moneyRoom(), oldCastle.powderRoom(), oldCastle.ballRoom(), oldCastle.resources(),
+                        oldCastle.reserved(), oldCastle.drawing());
+                break;
+            case "balls":
+                updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
+                        oldCastle.flag(), oldCastle.money(), oldCastle.powder(), newPosition,
+                        oldCastle.moneyRoom(), oldCastle.powderRoom(), oldCastle.ballRoom(), oldCastle.resources(),
+                        oldCastle.reserved(), oldCastle.drawing());
+                break;
+            default:
+                return;
+        }
+
+        List<Castle> castles = new ArrayList<>(document.castles());
+        castles.set(castleIndex, updatedCastle);
+        document = new CastleDocument(castles);
+        castleView.updateCastle(updatedCastle);
+        if (changeListener != null) {
+            changeListener.run();
+        }
+    }
+
     public boolean removePolygonPoint() {
         CastleDocument.Polygon selectedPolygon = castleView.getSelectedPolygon();
         if (selectedPolygon == null || selectedPolygon.points().size() <= 3) {
