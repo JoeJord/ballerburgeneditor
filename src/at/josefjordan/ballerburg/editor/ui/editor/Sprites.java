@@ -45,6 +45,10 @@ final class Sprites {
     }
 
     static void draw(Graphics2D graphics, int[] data, double x, double bottom, double scale) {
+        draw(graphics, data, x, bottom, scale, 1.0f);
+    }
+
+    static void draw(Graphics2D graphics, int[] data, double x, double bottom, double scale, float alpha) {
         BufferedImage image = RASTER_IMAGES.computeIfAbsent(data, Sprites::rasterize);
         int logicalWidth = data == BALL ? 5 : image.getWidth();
         int logicalHeight = data == BALL ? 5 : image.getHeight();
@@ -56,6 +60,9 @@ final class Sprites {
         Graphics2D spriteGraphics = (Graphics2D) graphics.create();
         spriteGraphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
                 RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+        if (alpha < 1.0f) {
+            spriteGraphics.setComposite(java.awt.AlphaComposite.getInstance(java.awt.AlphaComposite.SRC_OVER, alpha));
+        }
         spriteGraphics.drawImage(image, left, top, width, height, null);
         spriteGraphics.dispose();
     }

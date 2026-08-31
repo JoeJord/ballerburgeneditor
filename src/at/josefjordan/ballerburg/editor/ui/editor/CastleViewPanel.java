@@ -302,6 +302,17 @@ final class CastleViewPanel extends HGBasePanel {
                 remaining--;
             }
         }
+        // Draw semi-transparent placeholders for empty slots
+        int slotIndex = 0;
+        for (int y = 0; y < room.height(); y += stepY) {
+            for (int x = 0; x < room.width(); x += stepX) {
+                if (slotIndex >= count) {
+                    Sprites.draw(g, sprite, left + (position.x() + x) * scale,
+                            bottom - (position.y() + y) * scale, scale, 0.15f);
+                }
+                slotIndex++;
+            }
+        }
     }
 
     private int divideRoundedUp(int value, int divisor) {
