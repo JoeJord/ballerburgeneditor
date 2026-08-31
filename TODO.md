@@ -6,7 +6,6 @@
  - Show coordinates in status bar
  - Add polygon point
  - Add polygon
- - Add throne
  - Add powder
  - Add balls
  - Add money

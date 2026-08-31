@@ -131,6 +131,10 @@ public class MainFrame extends HGBaseFrame {
         editorPanel.addCannon();
     }
 
+    public void addThrone() {
+        editorPanel.addThrone();
+    }
+
     public void deleteCastle() {
         editorPanel.deleteCastle();
     }
@@ -173,6 +177,10 @@ public class MainFrame extends HGBaseFrame {
 
     public int getCannonCount() {
         return editorPanel != null ? editorPanel.getCannonCount() : 0;
+    }
+
+    public boolean hasThrone() {
+        return editorPanel != null && editorPanel.hasThrone();
     }
 
     public void removeCannon() {

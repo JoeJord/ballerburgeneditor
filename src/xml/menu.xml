@@ -14,6 +14,7 @@
     <menu id="edit">
         <item id="edit.delete_castle" type="action"/>
         <item id="edit.add_castle" type="action"/>
+        <item id="edit.add_throne" type="action"/>
         <item id="edit.add_cannon" type="action"/>
         <item id="edit.remove" type="action" shortcut="del"/>
     </menu>
@@ -38,6 +39,7 @@
         <item/>
         <item id="edit.delete_castle"/>
         <item id="edit.add_castle"/>
+        <item id="edit.add_throne"/>
         <item id="edit.add_cannon"/>
         <item id="edit.remove"/>
     </toolbar>
@@ -57,6 +59,7 @@
     <images path="/gfx/tools">
         <image id="edit.delete_castle" file="delete_castle.png"/>
         <image id="edit.add_castle" file="add_castle.png"/>
+        <image id="edit.add_throne" file="add_throne.png"/>
         <image id="edit.add_cannon" file="add_cannon.png"/>
         <image id="edit.remove" file="remove.png"/>
     </images>

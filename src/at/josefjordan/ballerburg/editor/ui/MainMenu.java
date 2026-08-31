@@ -3,6 +3,7 @@ package at.josefjordan.ballerburg.editor.ui;
 import at.josefjordan.ballerburg.editor.model.CastleFileFormat;
 import at.josefjordan.ballerburg.editor.ui.menu.AddCastleAction;
 import at.josefjordan.ballerburg.editor.ui.menu.AddCannonAction;
+import at.josefjordan.ballerburg.editor.ui.menu.AddThroneAction;
 import at.josefjordan.ballerburg.editor.ui.menu.DeleteCastleAction;
 import at.josefjordan.ballerburg.editor.ui.menu.RemoveAction;
 import hgb.gui.HGBaseGuiTools;
@@ -13,6 +14,7 @@ import java.io.File;
 public class MainMenu extends HGBaseMenu {
     private static final String ADD_CASTLE = "edit.add_castle";
     private static final String ADD_CANNON = "edit.add_cannon";
+    private static final String ADD_THRONE = "edit.add_throne";
     private static final String DELETE_CASTLE = "edit.delete_castle";
     private static final String REMOVE = "edit.remove";
 
@@ -20,6 +22,7 @@ public class MainMenu extends HGBaseMenu {
         super(frame);
         registerAction(ADD_CASTLE, new AddCastleAction(frame));
         registerAction(ADD_CANNON, new AddCannonAction(frame));
+        registerAction(ADD_THRONE, new AddThroneAction(frame));
         registerAction(DELETE_CASTLE, new DeleteCastleAction(frame));
         registerAction(REMOVE, new RemoveAction(frame));
         setFileMenuStates();
@@ -38,10 +41,13 @@ public class MainMenu extends HGBaseMenu {
         boolean hasSelectedResourceArea = hasCastle && frame.hasSelectedResourceArea();
         boolean canRemove = hasSelectedPolygonPoint || (hasSelectedPolygon && !frame.hasSelectedPoint()) || hasSelectedCannon || hasSelectedThrone || hasSelectedResourceArea;
         boolean canAddCannon = hasCastle && frame.getCannonCount() < CastleFileFormat.CANNON_POSITION_COUNT;
+        boolean canAddThrone = hasCastle && !frame.hasThrone();
         HGBaseGuiTools.setEnabledNullSafe(getMenuItem(ADD_CASTLE), hasOpenCastleFile);
         HGBaseGuiTools.setEnabledNullSafe(getToolbarItem(ADD_CASTLE), hasOpenCastleFile);
         HGBaseGuiTools.setEnabledNullSafe(getMenuItem(ADD_CANNON), canAddCannon);
         HGBaseGuiTools.setEnabledNullSafe(getToolbarItem(ADD_CANNON), canAddCannon);
+        HGBaseGuiTools.setEnabledNullSafe(getMenuItem(ADD_THRONE), canAddThrone);
+        HGBaseGuiTools.setEnabledNullSafe(getToolbarItem(ADD_THRONE), canAddThrone);
         HGBaseGuiTools.setEnabledNullSafe(getMenuItem(DELETE_CASTLE), hasCastle);
         HGBaseGuiTools.setEnabledNullSafe(getToolbarItem(DELETE_CASTLE), hasCastle);
         HGBaseGuiTools.setEnabledNullSafe(getMenuItem(REMOVE), canRemove);
