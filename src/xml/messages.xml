@@ -20,6 +20,7 @@
         <msg code="edit.add_throne">Thron hinzuf&#252;gen</msg>
         <msg code="edit.add_cannon">Kanone hinzuf&#252;gen</msg>
         <msg code="edit.add_money">Geldbereich hinzuf&#252;gen</msg>
+        <msg code="edit.add_powder">Pulverbereich hinzuf&#252;gen</msg>
         <msg code="edit.delete_castle">Burg entfernen</msg>
         <msg code="edit.remove">Entfernen</msg>
 
@@ -43,6 +44,7 @@
         <msg code="edit.add_throne">Add throne</msg>
         <msg code="edit.add_cannon">Add cannon</msg>
         <msg code="edit.add_money">Add money area</msg>
+        <msg code="edit.add_powder">Add powder area</msg>
         <msg code="edit.delete_castle">Delete castle</msg>
         <msg code="edit.remove">Remove</msg>
 
