@@ -44,18 +44,7 @@ public class MainFrame extends HGBaseFrame {
         mainFrame.setMenu(new MainMenu(mainFrame));
         mainFrame.setStatusBar(new StatusBar());
         mainFrame.initializeEditor();
-        if (args.length > 0) {
-            openArgumentFile(args, mainFrame);
-        }
-    }
-
-    private static void openArgumentFile(String[] args, MainFrame mainFrame) {
-        File file = new File(args[0]);
-        if (!file.exists()) {
-            HGBaseDialog.printError("arg_file_not_found", mainFrame);
-        } else {
-            mainFrame.onFileOpen(file);
-        }
+        mainFrame.testCommandLineForFile(args);
     }
 
     private void initializeEditor() {
