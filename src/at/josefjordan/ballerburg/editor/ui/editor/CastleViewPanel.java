@@ -19,6 +19,8 @@ import java.awt.geom.Rectangle2D;
 
 /** Draws one castle without owning or modifying editor state. */
 final class CastleViewPanel extends HGBasePanel {
+    public static final double MIN_ZOOM_FACTOR = 0.10; // corresponds 10 %
+    public static final double MAX_ZOOM_FACTOR = 10.0; // corresponds 1000 %
     private Castle castle;
     private Polygon selectedPolygon;
     private int selectedPointIndex = -1;
@@ -132,7 +134,7 @@ final class CastleViewPanel extends HGBasePanel {
 
     void adjustZoom(double multiplier) {
         zoomFactor *= multiplier;
-        zoomFactor = Math.max(0.1, Math.min(10.0, zoomFactor));
+        zoomFactor = Math.max(MIN_ZOOM_FACTOR, Math.min(MAX_ZOOM_FACTOR, zoomFactor));
         notifyZoomChanged();
         repaint();
     }
