@@ -8,7 +8,6 @@
  - Add polygon
  - Add powder
  - Add balls
- - Add money
  - Set/drag/remove wind vane
  - Undo/Redo
 
