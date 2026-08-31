@@ -143,6 +143,10 @@ public class MainFrame extends HGBaseFrame {
         editorPanel.addPowder();
     }
 
+    public void addCannonballs() {
+        editorPanel.addCannonballs();
+    }
+
     public void deleteCastle() {
         editorPanel.deleteCastle();
     }
@@ -197,6 +201,10 @@ public class MainFrame extends HGBaseFrame {
 
     public boolean hasPowder() {
         return editorPanel != null && editorPanel.hasPowder();
+    }
+
+    public boolean hasBalls() {
+        return editorPanel != null && editorPanel.hasBalls();
     }
 
     public void removeCannon() {

@@ -6,7 +6,6 @@
  - Show coordinates in status bar
  - Add polygon point
  - Add polygon
- - Add balls
  - Set/drag/remove wind vane
  - Undo/Redo
 

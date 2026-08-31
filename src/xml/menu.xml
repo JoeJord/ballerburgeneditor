@@ -17,6 +17,7 @@
         <item id="edit.add_throne" type="action"/>
         <item id="edit.add_money" type="action"/>
         <item id="edit.add_powder" type="action"/>
+        <item id="edit.add_cannonballs" type="action"/>
         <item id="edit.add_cannon" type="action"/>
         <item id="edit.remove" type="action" shortcut="del"/>
     </menu>
@@ -44,6 +45,7 @@
         <item id="edit.add_throne"/>
         <item id="edit.add_money"/>
         <item id="edit.add_powder"/>
+        <item id="edit.add_cannonballs"/>
         <item id="edit.add_cannon"/>
         <item id="edit.remove"/>
     </toolbar>
@@ -66,6 +68,7 @@
         <image id="edit.add_throne" file="add_throne.png"/>
         <image id="edit.add_money" file="add_money.png"/>
         <image id="edit.add_powder" file="add_powder.png"/>
+        <image id="edit.add_cannonballs" file="add_cannonballs.png"/>
         <image id="edit.add_cannon" file="add_cannon.png"/>
         <image id="edit.remove" file="remove.png"/>
     </images>
