@@ -5,6 +5,7 @@
 
     <language code="lan.de">
 
+        <msg code="arg_file_not_found">Die angegebene Datei wurde nicht gefunden!</msg>
         <msg code="filetype_description">Ballerburg-Burgdatei</msg>
         <msg code="castle.previous">Vorherige Burg</msg>
         <msg code="castle.next">N&#228;chste Burg</msg>
@@ -24,6 +25,7 @@
 
     <language code="lan.en">
 
+        <msg code="arg_file_not_found">The specified file was not found!</msg>
         <msg code="filetype_description">Ballerburg castle file</msg>
         <msg code="castle.previous">Previous castle</msg>
         <msg code="castle.next">Next castle</msg>
