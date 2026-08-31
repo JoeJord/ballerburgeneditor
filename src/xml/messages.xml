@@ -17,6 +17,7 @@
         <msg code="properties.balls">Kugeln</msg>
         <msg code="properties.people">Volk</msg>
         <msg code="edit.add_castle">Burg hinzuf&#252;gen</msg>
+        <msg code="edit.add_cannon">Kanone hinzuf&#252;gen</msg>
         <msg code="edit.delete_castle">Burg entfernen</msg>
         <msg code="edit.remove">Entfernen</msg>
 
@@ -37,6 +38,7 @@
         <msg code="properties.balls">Cannonballs</msg>
         <msg code="properties.people">People</msg>
         <msg code="edit.add_castle">Add castle</msg>
+        <msg code="edit.add_cannon">Add cannon</msg>
         <msg code="edit.delete_castle">Delete castle</msg>
         <msg code="edit.remove">Remove</msg>
 

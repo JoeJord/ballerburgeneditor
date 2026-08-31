@@ -5,6 +5,7 @@ import at.josefjordan.ballerburg.editor.model.CastleDocument.Castle;
 import at.josefjordan.ballerburg.editor.model.CastleDocument.Point;
 import at.josefjordan.ballerburg.editor.model.CastleDocument.Resources;
 import at.josefjordan.ballerburg.editor.model.CastleDocument.Size;
+import at.josefjordan.ballerburg.editor.model.CastleFileFormat;
 import hgb.gui.HGBasePanel;
 
 import javax.swing.JSplitPane;
@@ -60,6 +61,13 @@ public class EditorPanel extends HGBasePanel {
         return document == null ? 0 : document.castles().size();
     }
 
+    public int getCannonCount() {
+        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
+            return 0;
+        }
+        return document.castles().get(castleIndex).cannons().size();
+    }
+
     public boolean addCastle() {
         if (document == null) {
             return false;
@@ -80,6 +88,30 @@ public class EditorPanel extends HGBasePanel {
         castles.remove(castleIndex);
         document = new CastleDocument(castles);
         castleIndex = Math.min(castleIndex, castles.size() - 1);
+        documentChanged();
+        return true;
+    }
+
+    public boolean addCannon() {
+        if (document == null || castleIndex < 0 || castleIndex >= getCastleCount()) {
+            return false;
+        }
+        Castle oldCastle = document.castles().get(castleIndex);
+        if (oldCastle.cannons().size() >= CastleFileFormat.CANNON_POSITION_COUNT) {
+            return false;
+        }
+
+        List<Point> newCannons = new ArrayList<>(oldCastle.cannons());
+        newCannons.add(new Point(0, 0));
+
+        Castle updatedCastle = new Castle(oldCastle.width(), newCannons, oldCastle.throne(),
+                oldCastle.flag(), oldCastle.money(), oldCastle.powder(), oldCastle.balls(),
+                oldCastle.moneyRoom(), oldCastle.powderRoom(), oldCastle.ballRoom(), oldCastle.resources(),
+                oldCastle.reserved(), oldCastle.drawing());
+        List<Castle> castles = new ArrayList<>(document.castles());
+        castles.set(castleIndex, updatedCastle);
+        document = new CastleDocument(castles);
+        castleView.updateCastle(updatedCastle);
         documentChanged();
         return true;
     }

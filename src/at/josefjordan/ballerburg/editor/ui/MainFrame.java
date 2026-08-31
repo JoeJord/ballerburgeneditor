@@ -127,6 +127,10 @@ public class MainFrame extends HGBaseFrame {
         editorPanel.addCastle();
     }
 
+    public void addCannon() {
+        editorPanel.addCannon();
+    }
+
     public void deleteCastle() {
         editorPanel.deleteCastle();
     }
@@ -165,6 +169,10 @@ public class MainFrame extends HGBaseFrame {
 
     public boolean hasSelectedResourceArea() {
         return editorPanel != null && editorPanel.hasSelectedResourceArea();
+    }
+
+    public int getCannonCount() {
+        return editorPanel != null ? editorPanel.getCannonCount() : 0;
     }
 
     public void removeCannon() {
