@@ -86,6 +86,15 @@ public class EditorPanel extends HGBasePanel {
         return money.x() != Integer.MIN_VALUE && money.y() != Integer.MIN_VALUE;
     }
 
+    public boolean hasPowder() {
+        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
+            return false;
+        }
+        Castle castle = document.castles().get(castleIndex);
+        Point powder = castle.powder();
+        return powder.x() != Integer.MIN_VALUE && powder.y() != Integer.MIN_VALUE;
+    }
+
     public boolean addCastle() {
         if (document == null) {
             return false;
@@ -172,6 +181,30 @@ public class EditorPanel extends HGBasePanel {
         Castle updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
                 oldCastle.flag(), moneyPosition, oldCastle.powder(), oldCastle.balls(),
                 moneyRoomSize, oldCastle.powderRoom(), oldCastle.ballRoom(), oldCastle.resources(),
+                oldCastle.reserved(), oldCastle.drawing());
+        List<Castle> castles = new ArrayList<>(document.castles());
+        castles.set(castleIndex, updatedCastle);
+        document = new CastleDocument(castles);
+        castleView.updateCastle(updatedCastle);
+        documentChanged();
+        return true;
+    }
+
+    public boolean addPowder() {
+        if (document == null || castleIndex < 0 || castleIndex >= getCastleCount()) {
+            return false;
+        }
+        Castle oldCastle = document.castles().get(castleIndex);
+        if (hasPowder()) {
+            return false;
+        }
+
+        Point powderPosition = new Point(0, 0);
+        Size powderRoomSize = new Size(9, 9);
+
+        Castle updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
+                oldCastle.flag(), oldCastle.money(), powderPosition, oldCastle.balls(),
+                oldCastle.moneyRoom(), powderRoomSize, oldCastle.ballRoom(), oldCastle.resources(),
                 oldCastle.reserved(), oldCastle.drawing());
         List<Castle> castles = new ArrayList<>(document.castles());
         castles.set(castleIndex, updatedCastle);
