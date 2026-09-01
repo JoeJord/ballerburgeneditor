@@ -185,7 +185,7 @@ public class EditorPanel extends HGBasePanel {
         }
 
         Point moneyPosition = new Point(0, 0);
-        Size moneyRoomSize = new Size(7, 10);
+        Size moneyRoomSize = new Size(CastleFileFormat.MONEY_WIDTH, CastleFileFormat.MONEY_HEIGHT);
 
         Castle updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
                 oldCastle.flag(), moneyPosition, oldCastle.powder(), oldCastle.balls(),
@@ -209,7 +209,7 @@ public class EditorPanel extends HGBasePanel {
         }
 
         Point powderPosition = new Point(0, 0);
-        Size powderRoomSize = new Size(9, 9);
+        Size powderRoomSize = new Size(CastleFileFormat.POWDER_WIDTH, CastleFileFormat.POWDER_HEIGHT);
 
         Castle updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
                 oldCastle.flag(), oldCastle.money(), powderPosition, oldCastle.balls(),
@@ -233,7 +233,7 @@ public class EditorPanel extends HGBasePanel {
         }
 
         Point ballsPosition = new Point(0, 0);
-        Size ballRoomSize = new Size(6, 6);
+        Size ballRoomSize = new Size(CastleFileFormat.CANNONBALL_WIDTH, CastleFileFormat.CANNONBALL_HEIGHT);
 
         Castle updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
                 oldCastle.flag(), oldCastle.money(), oldCastle.powder(), ballsPosition,

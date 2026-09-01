@@ -98,7 +98,7 @@ public final class CastleReader {
     }
 
     private List<Point> readCannons(Cursor cursor) throws IOException {
-        Point unusedPosition = new Point(-1, -1);
+        Point unusedPosition = new Point(CastleFileFormat.UNUSED_CANNON_COORDINATE, CastleFileFormat.UNUSED_CANNON_COORDINATE);
         List<Point> cannons = readPoints(cursor, CastleFileFormat.CANNON_POSITION_COUNT);
         cannons.removeIf(unusedPosition::equals);
         return cannons;

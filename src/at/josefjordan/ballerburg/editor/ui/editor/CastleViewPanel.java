@@ -177,9 +177,7 @@ final class CastleViewPanel extends HGBasePanel {
             maximumY = Math.max(maximumY, areaTop(castle.throne(),
                     new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT)));
         }
-        for (Point cannon : castle.cannons()) {
-            maximumY = Math.max(maximumY, cannon.y() + 12);
-        }
+        maximumY = Math.max(maximumY, calculateMaximumCannonY(castle));
         maximumY = Math.max(maximumY, areaTop(castle.money(), castle.moneyRoom()));
         maximumY = Math.max(maximumY, areaTop(castle.powder(), castle.powderRoom()));
         maximumY = Math.max(maximumY, areaTop(castle.balls(), castle.ballRoom()));
@@ -264,11 +262,11 @@ final class CastleViewPanel extends HGBasePanel {
                 g.setStroke(new BasicStroke(1.0f));
             }
         }
-        drawResources(g, Sprites.MONEY, castle.money(), castle.moneyRoom(), 7, 10,
+        drawResources(g, Sprites.MONEY, castle.money(), castle.moneyRoom(), CastleFileFormat.MONEY_WIDTH, CastleFileFormat.MONEY_HEIGHT,
                 divideRoundedUp(castle.resources().money(), 150), left, bottom, scale);
-        drawResources(g, Sprites.POWDER, castle.powder(), castle.powderRoom(), 9, 9,
+        drawResources(g, Sprites.POWDER, castle.powder(), castle.powderRoom(), CastleFileFormat.POWDER_WIDTH, CastleFileFormat.POWDER_HEIGHT,
                 divideRoundedUp(castle.resources().powder(), 30), left, bottom, scale);
-        drawResources(g, Sprites.BALL, castle.balls(), castle.ballRoom(), 6, 6,
+        drawResources(g, Sprites.BALL, castle.balls(), castle.ballRoom(), CastleFileFormat.CANNONBALL_WIDTH, CastleFileFormat.CANNONBALL_HEIGHT,
                 castle.resources().balls(), left, bottom, scale);
     }
 
@@ -320,10 +318,10 @@ final class CastleViewPanel extends HGBasePanel {
     }
 
     private Color colorFor(FillStyle style) {
-        if (style.style() == 2 && style.index() == 11) {
+        if (style.style() == CastleFileFormat.FILL_STYLE_PATTERN && style.index() == CastleFileFormat.FILL_INDEX_ROOF) {
             return new Color(145, 65, 55);
         }
-        if (style.style() == 2 && style.index() == 9) {
+        if (style.style() == CastleFileFormat.FILL_STYLE_PATTERN && style.index() == CastleFileFormat.FILL_INDEX_MASONRY) {
             return new Color(150, 150, 145);
         }
         return new Color(120, 130, 140);
@@ -333,8 +331,16 @@ final class CastleViewPanel extends HGBasePanel {
         double screenX = left + cannon.x() * scale;
         double screenY = bottom - cannon.y() * scale;
         double screenWidth = CastleFileFormat.CANNON_WIDTH * scale;
-        double screenHeight = 12 * scale;
-        return new Rectangle2D.Double(screenX, screenY - 11 * scale, screenWidth, screenHeight);
+        double screenHeight = CastleFileFormat.CANNON_HEIGHT * scale;
+        return new Rectangle2D.Double(screenX, screenY - (CastleFileFormat.CANNON_HEIGHT - 1) * scale, screenWidth, screenHeight);
+    }
+
+    static int calculateMaximumCannonY(Castle castle) {
+        int maximumY = 1;
+        for (Point cannon : castle.cannons()) {
+            maximumY = Math.max(maximumY, cannon.y() + CastleFileFormat.CANNON_HEIGHT);
+        }
+        return maximumY;
     }
 
     private void drawCornerPoints(Graphics2D g, Point position, Size size, double left, double bottom, double scale) {

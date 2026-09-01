@@ -80,7 +80,7 @@ public final class CastleWriter {
     private List<Integer> cannonPoints(List<Point> cannons) {
         List<Point> positions = new ArrayList<>(cannons);
         while (positions.size() < CastleFileFormat.CANNON_POSITION_COUNT) {
-            positions.add(new Point(-1, -1));
+            positions.add(new Point(CastleFileFormat.UNUSED_CANNON_COORDINATE, CastleFileFormat.UNUSED_CANNON_COORDINATE));
         }
         return points(positions);
     }

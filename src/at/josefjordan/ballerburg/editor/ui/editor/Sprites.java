@@ -1,5 +1,7 @@
 package at.josefjordan.ballerburg.editor.ui.editor;
 
+import at.josefjordan.ballerburg.editor.model.CastleFileFormat;
+
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Paint;
@@ -84,7 +86,7 @@ final class Sprites {
         int style = 9;
         int index = 0;
         while (data[index] != -1) {
-            if (data[index] == -2) {
+            if (data[index] == CastleFileFormat.FILL_STYLE_COMMAND) {
                 interior = data[index + 1];
                 style = data[index + 2];
                 index += 3;
@@ -97,7 +99,7 @@ final class Sprites {
                 Path2D path = new Path2D.Double(Path2D.WIND_EVEN_ODD);
                 path.moveTo(data[index++], data[index++]);
                 int pointCount = 1;
-                while (data[index] != -9) {
+                while (data[index] != CastleFileFormat.POLYGON_TERMINATOR) {
                     path.lineTo(data[index++], data[index++]);
                     pointCount++;
                 }
@@ -143,12 +145,12 @@ final class Sprites {
         int maximumY = 0;
         int index = 0;
         while (data[index] != -1) {
-            if (data[index] == -2) {
+            if (data[index] == CastleFileFormat.FILL_STYLE_COMMAND) {
                 index += 3;
             } else if (data[index] == -4) {
                 index++;
             } else {
-                while (data[index] != -9) {
+                while (data[index] != CastleFileFormat.POLYGON_TERMINATOR) {
                     maximumX = Math.max(maximumX, data[index++]);
                     maximumY = Math.max(maximumY, data[index++]);
                 }

@@ -431,9 +431,7 @@ final class CastleMouseHandler extends MouseAdapter {
             maximumY = Math.max(maximumY, areaTop(castle.throne(),
                     new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT)));
         }
-        for (Point cannon : castle.cannons()) {
-            maximumY = Math.max(maximumY, cannon.y() + 12);
-        }
+        maximumY = Math.max(maximumY, CastleViewPanel.calculateMaximumCannonY(castle));
         maximumY = Math.max(maximumY, areaTop(castle.money(), castle.moneyRoom()));
         maximumY = Math.max(maximumY, areaTop(castle.powder(), castle.powderRoom()));
         maximumY = Math.max(maximumY, areaTop(castle.balls(), castle.ballRoom()));
@@ -612,18 +610,18 @@ final class CastleMouseHandler extends MouseAdapter {
 
     private int getResourceStepX(String resourceArea) {
         return switch (resourceArea) {
-            case "money" -> 7;
-            case "powder" -> 9;
-            case "balls" -> 6;
+            case "money" -> CastleFileFormat.MONEY_WIDTH;
+            case "powder" -> CastleFileFormat.POWDER_WIDTH;
+            case "balls" -> CastleFileFormat.CANNONBALL_WIDTH;
             default -> 1;
         };
     }
 
     private int getResourceStepY(String resourceArea) {
         return switch (resourceArea) {
-            case "money" -> 10;
-            case "powder" -> 9;
-            case "balls" -> 6;
+            case "money" -> CastleFileFormat.MONEY_HEIGHT;
+            case "powder" -> CastleFileFormat.POWDER_HEIGHT;
+            case "balls" -> CastleFileFormat.CANNONBALL_HEIGHT;
             default -> 1;
         };
     }

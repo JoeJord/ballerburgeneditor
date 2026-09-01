@@ -7,6 +7,12 @@ public final class CastleFileFormat {
     public static final int FILL_STYLE_COMMAND = -2;
     public static final int POLYGON_TERMINATOR = -9;
 
+    public static final int FILL_STYLE_PATTERN = 2;
+    public static final int FILL_INDEX_MASONRY = 9;
+    public static final int FILL_INDEX_ROOF = 11;
+
+    public static final int UNUSED_CANNON_COORDINATE = -1;
+
     public static final int CANNON_POSITION_COUNT = 10;
     public static final int CANNON_WIDTH = 20;
     public static final int CANNON_HEIGHT = 12;
@@ -14,6 +20,12 @@ public final class CastleFileFormat {
     public static final int COORDINATE_COMPONENT_COUNT = 2;
     public static final int THRONE_WIDTH = 30;
     public static final int THRONE_HEIGHT = 25;
+    public static final int CANNONBALL_WIDTH = 6;
+    public static final int CANNONBALL_HEIGHT = 6;
+    public static final int POWDER_WIDTH = 9;
+    public static final int POWDER_HEIGHT = 9;
+    public static final int MONEY_WIDTH = 7;
+    public static final int MONEY_HEIGHT = 10;
 
     private CastleFileFormat() {
     }
