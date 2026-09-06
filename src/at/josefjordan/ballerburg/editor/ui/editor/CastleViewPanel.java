@@ -181,6 +181,7 @@ final class CastleViewPanel extends HGBasePanel {
         maximumY = Math.max(maximumY, areaTop(castle.money(), castle.moneyRoom()));
         maximumY = Math.max(maximumY, areaTop(castle.powder(), castle.powderRoom()));
         maximumY = Math.max(maximumY, areaTop(castle.balls(), castle.ballRoom()));
+        maximumY = Math.max(maximumY, castle.flag().y() + CastleFileFormat.FLAG_HEIGHT);
 
         double margin = 24.0;
         double scale = Math.min((getWidth() - 2.0 * margin) / Math.max(1, castle.width()),
@@ -268,6 +269,7 @@ final class CastleViewPanel extends HGBasePanel {
                 divideRoundedUp(castle.resources().powder(), 30), left, bottom, scale);
         drawResources(g, Sprites.BALL, castle.balls(), castle.ballRoom(), CastleFileFormat.CANNONBALL_WIDTH, CastleFileFormat.CANNONBALL_HEIGHT,
                 castle.resources().balls(), left, bottom, scale);
+        drawSprite(g, Sprites.FLAG, castle.flag(), left, bottom, scale);
     }
 
     private int areaTop(Point position, Size size) {
