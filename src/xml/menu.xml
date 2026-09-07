@@ -19,6 +19,7 @@
         <item id="edit.add_powder" type="action"/>
         <item id="edit.add_cannonballs" type="action"/>
         <item id="edit.add_cannon" type="action"/>
+        <item id="edit.add_windvane" type="action"/>
         <item id="edit.remove" type="action" shortcut="del"/>
     </menu>
     <menu id="settings">
@@ -47,6 +48,7 @@
         <item id="edit.add_powder"/>
         <item id="edit.add_cannonballs"/>
         <item id="edit.add_cannon"/>
+        <item id="edit.add_windvane"/>
         <item id="edit.remove"/>
     </toolbar>
     <images path="/hgb/gui/gfx">
@@ -70,6 +72,7 @@
         <image id="edit.add_powder" file="add_powder.png"/>
         <image id="edit.add_cannonballs" file="add_cannonballs.png"/>
         <image id="edit.add_cannon" file="add_cannon.png"/>
+        <image id="edit.add_windvane" file="add_windvane.png"/>
         <image id="edit.remove" file="remove.png"/>
     </images>
 </menuconfig>

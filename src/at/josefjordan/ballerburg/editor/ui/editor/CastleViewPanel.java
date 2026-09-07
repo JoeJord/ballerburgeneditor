@@ -32,6 +32,7 @@ final class CastleViewPanel extends HGBasePanel {
     private int selectedPointIndex = -1;
     private int selectedCannonIndex = -1;
     private boolean selectedThrone = false;
+    private boolean selectedWindVane = false;
     private String selectedResourceArea = null; // "money", "powder", or "balls"
     private int draggingResourceCorner = -1; // 0-3 for corners, -1 if not dragging
     private EditorPanel editorPanel;
@@ -56,6 +57,7 @@ final class CastleViewPanel extends HGBasePanel {
         selectedPolygon = null;
         selectedCannonIndex = -1;
         selectedThrone = false;
+        selectedWindVane = false;
         selectedResourceArea = null;
         zoomFactor = 1.0;
         notifyZoomChanged();
@@ -115,6 +117,17 @@ final class CastleViewPanel extends HGBasePanel {
     void setSelectedThrone(boolean selected) {
         if (selectedThrone != selected) {
             selectedThrone = selected;
+            repaint();
+        }
+    }
+
+    boolean isSelectedWindVane() {
+        return selectedWindVane;
+    }
+
+    void setSelectedWindVane(boolean selected) {
+        if (selectedWindVane != selected) {
+            selectedWindVane = selected;
             repaint();
         }
     }
@@ -187,7 +200,7 @@ final class CastleViewPanel extends HGBasePanel {
         maximumY = Math.max(maximumY, areaTop(castle.money(), castle.moneyRoom()));
         maximumY = Math.max(maximumY, areaTop(castle.powder(), castle.powderRoom()));
         maximumY = Math.max(maximumY, areaTop(castle.balls(), castle.ballRoom()));
-        maximumY = Math.max(maximumY, castle.flag().y() + CastleFileFormat.FLAG_HEIGHT);
+        maximumY = Math.max(maximumY, castle.windVane().y() + CastleFileFormat.WIND_VANE_HEIGHT);
 
         double margin = 24.0;
         double scale = Math.min((getWidth() - 2.0 * margin) / Math.max(1, castle.width()),
@@ -275,7 +288,14 @@ final class CastleViewPanel extends HGBasePanel {
                 divideRoundedUp(castle.resources().powder(), CastleFileFormat.POWDER_PER_UNIT), left, bottom, scale);
         drawResources(g, Sprites.BALL, castle.balls(), castle.ballRoom(), CastleFileFormat.CANNONBALL_WIDTH, CastleFileFormat.CANNONBALL_HEIGHT,
                 castle.resources().balls(), left, bottom, scale);
-        drawSprite(g, Sprites.FLAG, castle.flag(), left, bottom, scale);
+        drawSprite(g, Sprites.WIND_VANE, castle.windVane(), left, bottom, scale);
+        if (selectedWindVane) {
+            Rectangle2D windVaneRect = calculateWindVaneRectangle(castle.windVane(), left, bottom, scale);
+            g.setColor(COLOR_SELECTED);
+            g.setStroke(new BasicStroke(2.0f));
+            g.draw(windVaneRect);
+            g.setStroke(new BasicStroke(1.0f));
+        }
     }
 
     private int areaTop(Point position, Size size) {
@@ -341,6 +361,14 @@ final class CastleViewPanel extends HGBasePanel {
         double screenWidth = CastleFileFormat.CANNON_WIDTH * scale;
         double screenHeight = CastleFileFormat.CANNON_HEIGHT * scale;
         return new Rectangle2D.Double(screenX, screenY - (CastleFileFormat.CANNON_HEIGHT - 1) * scale, screenWidth, screenHeight);
+    }
+
+    static Rectangle2D.Double calculateWindVaneRectangle(Point windVane, double left, double bottom, double scale) {
+        double screenX = left + windVane.x() * scale;
+        double screenY = bottom - windVane.y() * scale;
+        double screenWidth = CastleFileFormat.WIND_VANE_WIDTH * scale;
+        double screenHeight = (CastleFileFormat.WIND_VANE_HEIGHT + 1) * scale;
+        return new Rectangle2D.Double(screenX, screenY - (CastleFileFormat.WIND_VANE_HEIGHT + 1) * scale, screenWidth, screenHeight);
     }
 
     static int calculateMaximumCannonY(Castle castle) {

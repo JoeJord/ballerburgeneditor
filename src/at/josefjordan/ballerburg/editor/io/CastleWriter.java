@@ -41,7 +41,7 @@ public final class CastleWriter {
         writeLine(writer, List.of(castle.width()));
         writeLine(writer, cannonPoints(castle.cannons()));
         writeLine(writer, point(castle.throne()));
-        writeLine(writer, point(castle.flag()));
+        writeLine(writer, point(castle.windVane()));
         writeLine(writer, concat(point(castle.money()), point(castle.powder()), point(castle.balls())));
         writeLine(writer, List.of(castle.moneyRoom().width(), castle.moneyRoom().height(),
                 castle.powderRoom().width(), castle.powderRoom().height(),

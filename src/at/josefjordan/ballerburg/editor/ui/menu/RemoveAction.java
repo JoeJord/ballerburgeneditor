@@ -23,6 +23,8 @@ public class RemoveAction implements IMenuAction {
                 frame.removeCannon();
             } else if (frame.hasSelectedThrone()) {
                 frame.removeThrone();
+            } else if (frame.hasSelectedWindVane()) {
+                frame.removeWindVane();
             } else if (frame.hasSelectedResourceArea()) {
                 frame.removeResourceArea();
             }

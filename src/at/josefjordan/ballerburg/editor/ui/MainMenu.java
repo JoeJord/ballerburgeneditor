@@ -4,6 +4,7 @@ import at.josefjordan.ballerburg.editor.model.CastleFileFormat;
 import at.josefjordan.ballerburg.editor.ui.menu.AddCannonAction;
 import at.josefjordan.ballerburg.editor.ui.menu.AddCannonballsAction;
 import at.josefjordan.ballerburg.editor.ui.menu.AddCastleAction;
+import at.josefjordan.ballerburg.editor.ui.menu.AddWindVaneAction;
 import at.josefjordan.ballerburg.editor.ui.menu.AddMoneyAction;
 import at.josefjordan.ballerburg.editor.ui.menu.AddPowderAction;
 import at.josefjordan.ballerburg.editor.ui.menu.AddThroneAction;
@@ -18,6 +19,7 @@ public class MainMenu extends HGBaseMenu {
     private static final String ADD_CASTLE = "edit.add_castle";
     private static final String ADD_CANNON = "edit.add_cannon";
     private static final String ADD_THRONE = "edit.add_throne";
+    private static final String ADD_WIND_VANE = "edit.add_windvane";
     private static final String ADD_MONEY = "edit.add_money";
     private static final String ADD_POWDER = "edit.add_powder";
     private static final String ADD_CANNONBALLS = "edit.add_cannonballs";
@@ -29,6 +31,7 @@ public class MainMenu extends HGBaseMenu {
         registerAction(ADD_CASTLE, new AddCastleAction(frame));
         registerAction(ADD_CANNON, new AddCannonAction(frame));
         registerAction(ADD_THRONE, new AddThroneAction(frame));
+        registerAction(ADD_WIND_VANE, new AddWindVaneAction(frame));
         registerAction(ADD_MONEY, new AddMoneyAction(frame));
         registerAction(ADD_POWDER, new AddPowderAction(frame));
         registerAction(ADD_CANNONBALLS, new AddCannonballsAction(frame));
@@ -47,10 +50,12 @@ public class MainMenu extends HGBaseMenu {
         boolean hasSelectedPolygonPoint = hasCastle && frame.hasSelectedPolygonPoint();
         boolean hasSelectedCannon = hasCastle && frame.hasSelectedCannon();
         boolean hasSelectedThrone = hasCastle && frame.hasSelectedThrone();
+        boolean hasSelectedWindVane = hasCastle && frame.hasSelectedWindVane();
         boolean hasSelectedResourceArea = hasCastle && frame.hasSelectedResourceArea();
-        boolean canRemove = hasSelectedPolygonPoint || (hasSelectedPolygon && !frame.hasSelectedPoint()) || hasSelectedCannon || hasSelectedThrone || hasSelectedResourceArea;
+        boolean canRemove = hasSelectedPolygonPoint || (hasSelectedPolygon && !frame.hasSelectedPoint()) || hasSelectedCannon || hasSelectedThrone || hasSelectedWindVane || hasSelectedResourceArea;
         boolean canAddCannon = hasCastle && frame.getCannonCount() < CastleFileFormat.CANNON_POSITION_COUNT;
         boolean canAddThrone = hasCastle && !frame.hasThrone();
+        boolean canAddWindVane = hasCastle && !frame.hasWindVane();
         boolean canAddMoney = hasCastle && !frame.hasMoney();
         boolean canAddPowder = hasCastle && !frame.hasPowder();
         boolean canAddCannonballs = hasCastle && !frame.hasBalls();
@@ -60,6 +65,8 @@ public class MainMenu extends HGBaseMenu {
         HGBaseGuiTools.setEnabledNullSafe(getToolbarItem(ADD_CANNON), canAddCannon);
         HGBaseGuiTools.setEnabledNullSafe(getMenuItem(ADD_THRONE), canAddThrone);
         HGBaseGuiTools.setEnabledNullSafe(getToolbarItem(ADD_THRONE), canAddThrone);
+        HGBaseGuiTools.setEnabledNullSafe(getMenuItem(ADD_WIND_VANE), canAddWindVane);
+        HGBaseGuiTools.setEnabledNullSafe(getToolbarItem(ADD_WIND_VANE), canAddWindVane);
         HGBaseGuiTools.setEnabledNullSafe(getMenuItem(ADD_MONEY), canAddMoney);
         HGBaseGuiTools.setEnabledNullSafe(getToolbarItem(ADD_MONEY), canAddMoney);
         HGBaseGuiTools.setEnabledNullSafe(getMenuItem(ADD_POWDER), canAddPowder);

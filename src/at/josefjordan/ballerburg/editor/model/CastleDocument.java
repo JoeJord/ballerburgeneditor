@@ -17,7 +17,7 @@ public record CastleDocument(List<Castle> castles) {
     public record Resources(int money, int powder, int balls, int people) {
     }
 
-    public record Castle(int width, List<Point> cannons, Point throne, Point flag, Point money,
+    public record Castle(int width, List<Point> cannons, Point throne, Point windVane, Point money,
                          Point powder, Point balls, Size moneyRoom, Size powderRoom, Size ballRoom,
                          Resources resources, List<Integer> reserved, List<DrawingCommand> drawing) {
         public Castle {

@@ -124,6 +124,10 @@ public class MainFrame extends HGBaseFrame {
         editorPanel.addThrone();
     }
 
+    public void addWindVane() {
+        editorPanel.addWindVane();
+    }
+
     public void addMoney() {
         editorPanel.addMoney();
     }
@@ -172,6 +176,10 @@ public class MainFrame extends HGBaseFrame {
         return editorPanel != null && editorPanel.hasSelectedThrone();
     }
 
+    public boolean hasSelectedWindVane() {
+        return editorPanel != null && editorPanel.hasSelectedWindVane();
+    }
+
     public boolean hasSelectedResourceArea() {
         return editorPanel != null && editorPanel.hasSelectedResourceArea();
     }
@@ -182,6 +190,10 @@ public class MainFrame extends HGBaseFrame {
 
     public boolean hasThrone() {
         return editorPanel != null && editorPanel.hasThrone();
+    }
+
+    public boolean hasWindVane() {
+        return editorPanel != null && editorPanel.hasWindVane();
     }
 
     public boolean hasMoney() {
@@ -202,6 +214,10 @@ public class MainFrame extends HGBaseFrame {
 
     public void removeThrone() {
         editorPanel.removeThrone();
+    }
+
+    public void removeWindVane() {
+        editorPanel.removeWindVane();
     }
 
     public void removeResourceArea() {

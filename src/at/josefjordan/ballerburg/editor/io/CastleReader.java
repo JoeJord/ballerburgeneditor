@@ -44,7 +44,7 @@ public final class CastleReader {
     private Castle readCastle(Cursor cursor, int width) throws IOException {
         List<Point> cannons = readCannons(cursor);
         Point throne = readPoint(cursor);
-        Point flag = readPoint(cursor);
+        Point windVane = readPoint(cursor);
         Point money = readPoint(cursor);
         Point powder = readPoint(cursor);
         Point balls = readPoint(cursor);
@@ -55,7 +55,7 @@ public final class CastleReader {
                 cursor.next("start balls"), cursor.next("start people"));
         List<Integer> reserved = readValues(cursor, CastleFileFormat.RESERVED_VALUE_COUNT, "reserved value");
         List<DrawingCommand> drawing = readDrawing(cursor);
-        return new Castle(width, cannons, throne, flag, money, powder, balls, moneyRoom, powderRoom,
+        return new Castle(width, cannons, throne, windVane, money, powder, balls, moneyRoom, powderRoom,
                 ballRoom, resources, reserved, drawing);
     }
 

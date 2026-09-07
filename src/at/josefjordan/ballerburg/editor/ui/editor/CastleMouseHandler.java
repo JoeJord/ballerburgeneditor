@@ -26,6 +26,8 @@ final class CastleMouseHandler extends MouseAdapter {
     private Point2D cannonDragOffset;
     private boolean draggingThrone = false;
     private Point2D throneDragOffset;
+    private boolean draggingWindVane = false;
+    private Point2D windVaneDragOffset;
     private String draggingResourceArea = null;
     private int draggingCornerIndex = -1;
     private boolean draggingResourceAreaMove = false;
@@ -108,12 +110,34 @@ final class CastleMouseHandler extends MouseAdapter {
             return;
         }
 
+        // First check if clicking on the wind vane
+        if (isWindVaneClicked(castle, left, bottom, scale, clickPoint)) {
+            panel.setSelectedWindVane(true);
+            panel.setSelectedPolygon(null);
+            panel.setSelectedPointIndex(-1);
+            panel.setSelectedCannonIndex(-1);
+            panel.setSelectedThrone(false);
+            panel.setSelectedResourceArea(null);
+            panel.getEditorPanel().onPointSelectionChanged();
+            panel.getEditorPanel().onCannonSelectionChanged();
+            draggingWindVane = true;
+            dragScale = baseScale;
+            dragLeft = left;
+            dragBottom = bottom;
+            Point windVane = castle.windVane();
+            double windVaneScreenX = left + windVane.x() * scale;
+            double windVaneScreenY = bottom - windVane.y() * scale;
+            windVaneDragOffset = new Point2D.Double(clickPoint.getX() - windVaneScreenX, clickPoint.getY() - windVaneScreenY);
+            return;
+        }
+
         // First check if clicking on the throne
         if (isThroneClicked(castle, left, bottom, scale, clickPoint)) {
             panel.setSelectedThrone(true);
             panel.setSelectedPolygon(null);
             panel.setSelectedPointIndex(-1);
             panel.setSelectedCannonIndex(-1);
+            panel.setSelectedWindVane(false);
             panel.setSelectedResourceArea(null);
             panel.getEditorPanel().onPointSelectionChanged();
             panel.getEditorPanel().onCannonSelectionChanged();
@@ -135,6 +159,7 @@ final class CastleMouseHandler extends MouseAdapter {
             panel.setSelectedPolygon(null);
             panel.setSelectedPointIndex(-1);
             panel.setSelectedThrone(false);
+            panel.setSelectedWindVane(false);
             panel.setSelectedResourceArea(null);
             panel.getEditorPanel().onCannonSelectionChanged();
             draggingCannonIndex = clickedCannonIndex;
@@ -165,6 +190,7 @@ final class CastleMouseHandler extends MouseAdapter {
                     panel.setSelectedPointIndex(pointIndex);
                     panel.setSelectedCannonIndex(-1);
                     panel.setSelectedThrone(false);
+                    panel.setSelectedWindVane(false);
                     panel.setSelectedResourceArea(null);
                     panel.getEditorPanel().onPointSelectionChanged();
                     panel.getEditorPanel().onCannonSelectionChanged();
@@ -184,6 +210,7 @@ final class CastleMouseHandler extends MouseAdapter {
                     panel.setSelectedPointIndex(-1);
                     panel.setSelectedCannonIndex(-1);
                     panel.setSelectedThrone(false);
+                    panel.setSelectedWindVane(false);
                     panel.setSelectedResourceArea(null);
                     panel.getEditorPanel().onPointSelectionChanged();
                     panel.getEditorPanel().onCannonSelectionChanged();
@@ -199,6 +226,7 @@ final class CastleMouseHandler extends MouseAdapter {
             panel.setSelectedPointIndex(-1);
             panel.setSelectedCannonIndex(-1);
             panel.setSelectedThrone(false);
+            panel.setSelectedWindVane(false);
             panel.setSelectedResourceArea(null);
             panel.getEditorPanel().onPointSelectionChanged();
             panel.getEditorPanel().onCannonSelectionChanged();
@@ -218,6 +246,7 @@ final class CastleMouseHandler extends MouseAdapter {
             panel.setSelectedPointIndex(-1);
             panel.setSelectedCannonIndex(-1);
             panel.setSelectedThrone(false);
+            panel.setSelectedWindVane(false);
             panel.setSelectedResourceArea(null);
             panel.getEditorPanel().onPointSelectionChanged();
             panel.getEditorPanel().onCannonSelectionChanged();
@@ -233,6 +262,8 @@ final class CastleMouseHandler extends MouseAdapter {
         cannonDragOffset = null;
         draggingThrone = false;
         throneDragOffset = null;
+        draggingWindVane = false;
+        windVaneDragOffset = null;
         draggingResourceArea = null;
         draggingCornerIndex = -1;
         draggingResourceAreaMove = false;
@@ -245,7 +276,7 @@ final class CastleMouseHandler extends MouseAdapter {
     }
 
     private void handleDrag(MouseEvent e) {
-        if (draggingPolygonIndex < 0 && draggingCannonIndex < 0 && !draggingThrone && draggingResourceArea == null) {
+        if (draggingPolygonIndex < 0 && draggingCannonIndex < 0 && !draggingThrone && !draggingWindVane && draggingResourceArea == null) {
             return;
         }
 
@@ -352,6 +383,19 @@ final class CastleMouseHandler extends MouseAdapter {
             return;
         }
 
+        if (draggingWindVane) {
+            // Drag the wind vane
+            Point2D dragPoint = e.getPoint();
+            double currentLeft = (panel.getWidth() - castle.width() * currentScale) / 2.0;
+            double currentBottom = (panel.getHeight() + calculateMaximumY(castle) * currentScale) / 2.0;
+            int newX = (int) Math.round((dragPoint.getX() - windVaneDragOffset.getX() - currentLeft) / currentScale);
+            int newY = (int) Math.round((currentBottom - (dragPoint.getY() - windVaneDragOffset.getY())) / currentScale);
+
+            Point newPoint = new Point(newX, newY);
+            panel.getEditorPanel().updateWindVanePosition(newPoint);
+            return;
+        }
+
         if (draggingCannonIndex >= 0) {
             // Drag a cannon
             Point2D dragPoint = e.getPoint();
@@ -435,7 +479,7 @@ final class CastleMouseHandler extends MouseAdapter {
         maximumY = Math.max(maximumY, areaTop(castle.money(), castle.moneyRoom()));
         maximumY = Math.max(maximumY, areaTop(castle.powder(), castle.powderRoom()));
         maximumY = Math.max(maximumY, areaTop(castle.balls(), castle.ballRoom()));
-        maximumY = Math.max(maximumY, castle.flag().y() + CastleFileFormat.FLAG_HEIGHT);
+        maximumY = Math.max(maximumY, castle.windVane().y() + CastleFileFormat.WIND_VANE_HEIGHT);
         return maximumY;
     }
 
@@ -509,6 +553,15 @@ final class CastleMouseHandler extends MouseAdapter {
             }
         }
         return -1;
+    }
+
+    private boolean isWindVaneClicked(Castle castle, double left, double bottom, double scale, Point2D clickPoint) {
+        Point windVane = castle.windVane();
+        if (windVane.x() == Integer.MIN_VALUE || windVane.y() == Integer.MIN_VALUE) {
+            return false;
+        }
+        Rectangle2D windVaneRect = CastleViewPanel.calculateWindVaneRectangle(windVane, left, bottom, scale);
+        return windVaneRect.contains(clickPoint);
     }
 
     private boolean isThroneClicked(Castle castle, double left, double bottom, double scale, Point2D clickPoint) {

@@ -29,9 +29,8 @@ public final class CastleFileFormat {
     public static final int POWDER_HEIGHT = 9;
     public static final int MONEY_WIDTH = 7;
     public static final int MONEY_HEIGHT = 10;
-    public static final int FLAG_WIDTH = 30;
-    public static final int FLAG_HEIGHT = 15;
-    public static final int FLAG_POLE_LENGTH = 13;
+    public static final int WIND_VANE_WIDTH = 11;
+    public static final int WIND_VANE_HEIGHT = 13;
 
     private CastleFileFormat() {
     }

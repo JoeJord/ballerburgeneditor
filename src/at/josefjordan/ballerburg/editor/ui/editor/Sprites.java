@@ -42,10 +42,10 @@ final class Sprites {
     static final int[] BALL = {
             -2, 1, 1, 1, 0, 0, 1, 0, 3, 1, 4, 3, 4, 4, 3, 4, 1, 3, 0, -9, -1
     };
-    static final int[] FLAG = {
-            0, 0, 0, CastleFileFormat.FLAG_POLE_LENGTH, -9,
-            0, CastleFileFormat.FLAG_POLE_LENGTH, 0, CastleFileFormat.FLAG_POLE_LENGTH,
-            10, CastleFileFormat.FLAG_POLE_LENGTH - 3, 0, CastleFileFormat.FLAG_POLE_LENGTH - 6, -9, -1
+    static final int[] WIND_VANE = {
+            0, 0, 0, CastleFileFormat.WIND_VANE_HEIGHT, -9,
+            0, CastleFileFormat.WIND_VANE_HEIGHT, 0, CastleFileFormat.WIND_VANE_HEIGHT,
+            10, CastleFileFormat.WIND_VANE_HEIGHT - 3, 0, CastleFileFormat.WIND_VANE_HEIGHT - 6, -9, -1
     };
 
     private Sprites() {
