@@ -13,6 +13,9 @@ public final class CastleFileFormat {
 
     public static final int UNUSED_CANNON_COORDINATE = -1;
 
+    public static final int MONEY_PER_UNIT = 150;
+    public static final int POWDER_PER_UNIT = 30;
+
     public static final int CANNON_POSITION_COUNT = 10;
     public static final int CANNON_WIDTH = 20;
     public static final int CANNON_HEIGHT = 12;

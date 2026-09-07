@@ -628,8 +628,8 @@ final class CastleMouseHandler extends MouseAdapter {
 
     private int getResourceCount(Castle castle, String resourceArea) {
         return switch (resourceArea) {
-            case "money" -> divideRoundedUp(castle.resources().money(), 150);
-            case "powder" -> divideRoundedUp(castle.resources().powder(), 30);
+            case "money" -> divideRoundedUp(castle.resources().money(), CastleFileFormat.MONEY_PER_UNIT);
+            case "powder" -> divideRoundedUp(castle.resources().powder(), CastleFileFormat.POWDER_PER_UNIT);
             case "balls" -> castle.resources().balls();
             default -> 0;
         };

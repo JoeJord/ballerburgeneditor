@@ -16,6 +16,9 @@ import java.util.List;
 
 /** Editor containing the castle view and the property palette. */
 public class EditorPanel extends HGBasePanel {
+    private static final int PROPERTY_PALETTE_MIN_WIDTH = 200;
+    private static final int PROPERTY_PALETTE_PREFERRED_WIDTH = 230;
+
     private final CastleViewPanel castleView = new CastleViewPanel();
     private final PropertyPalettePanel propertyPalette = new PropertyPalettePanel();
     private CastleDocument document;
@@ -35,8 +38,8 @@ public class EditorPanel extends HGBasePanel {
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, castleView, propertyPalette);
         splitPane.setContinuousLayout(true);
         splitPane.setResizeWeight(1.0);
-        propertyPalette.setMinimumSize(new Dimension(200, 0));
-        propertyPalette.setPreferredSize(new Dimension(230, 0));
+        propertyPalette.setMinimumSize(new Dimension(PROPERTY_PALETTE_MIN_WIDTH, 0));
+        propertyPalette.setPreferredSize(new Dimension(PROPERTY_PALETTE_PREFERRED_WIDTH, 0));
         add(splitPane, BorderLayout.CENTER);
         propertyPalette.setResourcesListener(this::updateResources);
         updateSelectedCastle();

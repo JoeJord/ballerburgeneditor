@@ -21,6 +21,12 @@ import java.awt.geom.Rectangle2D;
 final class CastleViewPanel extends HGBasePanel {
     public static final double MIN_ZOOM_FACTOR = 0.10; // corresponds 10 %
     public static final double MAX_ZOOM_FACTOR = 10.0; // corresponds 1000 %
+    private static final Color COLOR_SELECTED = new Color(255, 255, 0);
+    private static final Color COLOR_HIGHLIGHTED = new Color(255, 100, 100);
+    private static final Color COLOR_OUTLINE = new Color(45, 45, 45);
+    private static final Color COLOR_FILL_DEFAULT = new Color(120, 130, 140);
+    private static final Color COLOR_FILL_ROOF = new Color(145, 65, 55);
+    private static final Color COLOR_FILL_MASONRY = new Color(150, 150, 145);
     private Castle castle;
     private Polygon selectedPolygon;
     private int selectedPointIndex = -1;
@@ -207,7 +213,7 @@ final class CastleViewPanel extends HGBasePanel {
                 path.closePath();
                 g.setColor(fill);
                 g.fill(path);
-                g.setColor(new Color(45, 45, 45));
+                g.setColor(COLOR_OUTLINE);
                 g.draw(path);
                 if (polygon == selectedPolygon) {
                     for (int i = 0; i < polygon.points().size(); i++) {
@@ -215,10 +221,10 @@ final class CastleViewPanel extends HGBasePanel {
                         double screenX = left + point.x() * scale;
                         double screenY = bottom - point.y() * scale;
                         if (i == selectedPointIndex) {
-                            g.setColor(new Color(255, 255, 0));
+                            g.setColor(COLOR_SELECTED);
                             g.fill(new Rectangle2D.Double(screenX - 4, screenY - 4, 8, 8));
                         } else {
-                            g.setColor(new Color(255, 100, 100));
+                            g.setColor(COLOR_HIGHLIGHTED);
                             g.fill(new Rectangle2D.Double(screenX - 3, screenY - 3, 6, 6));
                         }
                     }
@@ -233,7 +239,7 @@ final class CastleViewPanel extends HGBasePanel {
                 Rectangle2D throneRect = new Rectangle2D.Double(left + castle.throne().x() * scale,
                         bottom - (castle.throne().y() + CastleFileFormat.THRONE_HEIGHT) * scale,
                         CastleFileFormat.THRONE_WIDTH * scale, CastleFileFormat.THRONE_HEIGHT * scale);
-                g.setColor(new Color(255, 255, 0));
+                g.setColor(COLOR_SELECTED);
                 g.setStroke(new BasicStroke(2.0f));
                 g.draw(throneRect);
                 g.setStroke(new BasicStroke(1.0f));
@@ -256,16 +262,16 @@ final class CastleViewPanel extends HGBasePanel {
             Point cannon = castle.cannons().get(i);
             drawSprite(g, Sprites.CANNON, cannon, left, bottom, scale);
             if (i == selectedCannonIndex) {
-                g.setColor(new Color(255, 255, 0));
+                g.setColor(COLOR_SELECTED);
                 g.setStroke(new BasicStroke(2.0f));
                 g.draw(calculateCannonRectangle(cannon, left, bottom, scale));
                 g.setStroke(new BasicStroke(1.0f));
             }
         }
         drawResources(g, Sprites.MONEY, castle.money(), castle.moneyRoom(), CastleFileFormat.MONEY_WIDTH, CastleFileFormat.MONEY_HEIGHT,
-                divideRoundedUp(castle.resources().money(), 150), left, bottom, scale);
+                divideRoundedUp(castle.resources().money(), CastleFileFormat.MONEY_PER_UNIT), left, bottom, scale);
         drawResources(g, Sprites.POWDER, castle.powder(), castle.powderRoom(), CastleFileFormat.POWDER_WIDTH, CastleFileFormat.POWDER_HEIGHT,
-                divideRoundedUp(castle.resources().powder(), 30), left, bottom, scale);
+                divideRoundedUp(castle.resources().powder(), CastleFileFormat.POWDER_PER_UNIT), left, bottom, scale);
         drawResources(g, Sprites.BALL, castle.balls(), castle.ballRoom(), CastleFileFormat.CANNONBALL_WIDTH, CastleFileFormat.CANNONBALL_HEIGHT,
                 castle.resources().balls(), left, bottom, scale);
     }
@@ -319,12 +325,12 @@ final class CastleViewPanel extends HGBasePanel {
 
     private Color colorFor(FillStyle style) {
         if (style.style() == CastleFileFormat.FILL_STYLE_PATTERN && style.index() == CastleFileFormat.FILL_INDEX_ROOF) {
-            return new Color(145, 65, 55);
+            return COLOR_FILL_ROOF;
         }
         if (style.style() == CastleFileFormat.FILL_STYLE_PATTERN && style.index() == CastleFileFormat.FILL_INDEX_MASONRY) {
-            return new Color(150, 150, 145);
+            return COLOR_FILL_MASONRY;
         }
-        return new Color(120, 130, 140);
+        return COLOR_FILL_DEFAULT;
     }
 
     static Rectangle2D.Double calculateCannonRectangle(Point cannon, double left, double bottom, double scale) {
@@ -351,37 +357,37 @@ final class CastleViewPanel extends HGBasePanel {
 
         // Bottom-left corner (index 0)
         if (draggingResourceCorner == 0) {
-            g.setColor(new Color(255, 255, 0));
+            g.setColor(COLOR_SELECTED);
             g.fill(new Rectangle2D.Double(x - 4, (y + height) - 4, 8, 8));
         } else {
-            g.setColor(new Color(255, 100, 100));
+            g.setColor(COLOR_HIGHLIGHTED);
             g.fill(new Rectangle2D.Double(x - 3, (y + height) - 3, 6, 6));
         }
 
         // Bottom-right corner (index 1)
         if (draggingResourceCorner == 1) {
-            g.setColor(new Color(255, 255, 0));
+            g.setColor(COLOR_SELECTED);
             g.fill(new Rectangle2D.Double((x + width) - 4, (y + height) - 4, 8, 8));
         } else {
-            g.setColor(new Color(255, 100, 100));
+            g.setColor(COLOR_HIGHLIGHTED);
             g.fill(new Rectangle2D.Double((x + width) - 3, (y + height) - 3, 6, 6));
         }
 
         // Top-left corner (index 2)
         if (draggingResourceCorner == 2) {
-            g.setColor(new Color(255, 255, 0));
+            g.setColor(COLOR_SELECTED);
             g.fill(new Rectangle2D.Double(x - 4, y - 4, 8, 8));
         } else {
-            g.setColor(new Color(255, 100, 100));
+            g.setColor(COLOR_HIGHLIGHTED);
             g.fill(new Rectangle2D.Double(x - 3, y - 3, 6, 6));
         }
 
         // Top-right corner (index 3)
         if (draggingResourceCorner == 3) {
-            g.setColor(new Color(255, 255, 0));
+            g.setColor(COLOR_SELECTED);
             g.fill(new Rectangle2D.Double((x + width) - 4, y - 4, 8, 8));
         } else {
-            g.setColor(new Color(255, 100, 100));
+            g.setColor(COLOR_HIGHLIGHTED);
             g.fill(new Rectangle2D.Double((x + width) - 3, y - 3, 6, 6));
         }
     }
