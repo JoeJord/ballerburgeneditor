@@ -435,6 +435,7 @@ final class CastleMouseHandler extends MouseAdapter {
         maximumY = Math.max(maximumY, areaTop(castle.money(), castle.moneyRoom()));
         maximumY = Math.max(maximumY, areaTop(castle.powder(), castle.powderRoom()));
         maximumY = Math.max(maximumY, areaTop(castle.balls(), castle.ballRoom()));
+        maximumY = Math.max(maximumY, castle.flag().y() + CastleFileFormat.FLAG_HEIGHT);
         return maximumY;
     }
 
