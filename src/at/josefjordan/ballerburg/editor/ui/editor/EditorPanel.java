@@ -7,6 +7,7 @@ import at.josefjordan.ballerburg.editor.model.CastleDocument.Resources;
 import at.josefjordan.ballerburg.editor.model.CastleDocument.Size;
 import at.josefjordan.ballerburg.editor.model.CastleFileFormat;
 import hgb.gui.HGBasePanel;
+import hgb.lib.HGBaseText;
 
 import javax.swing.JSplitPane;
 import java.awt.BorderLayout;
@@ -26,6 +27,7 @@ public class EditorPanel extends HGBasePanel {
     private Runnable selectionListener;
     private Runnable changeListener;
     private Runnable zoomListener;
+    private java.util.function.Consumer<String> statusBarListener;
 
     public EditorPanel() {
         super(new BorderLayout());
@@ -114,6 +116,27 @@ public class EditorPanel extends HGBasePanel {
         Castle castle = document.castles().get(castleIndex);
         Point balls = castle.balls();
         return balls.x() != Integer.MIN_VALUE && balls.y() != Integer.MIN_VALUE;
+    }
+
+    public boolean hasWall() {
+        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
+            return false;
+        }
+        Castle castle = document.castles().get(castleIndex);
+        // Start fill style is 2,9 (masonry) according to BALLER.DAT
+        int fillStyle = CastleFileFormat.FILL_STYLE_PATTERN;
+        int fillIndex = CastleFileFormat.FILL_INDEX_MASONRY;
+        for (CastleDocument.DrawingCommand command : castle.drawing()) {
+            if (command instanceof CastleDocument.FillStyle(int style, int index)) {
+                fillStyle = style;
+                fillIndex = index;
+            } else if (command instanceof CastleDocument.Polygon) {
+                if (fillStyle == CastleFileFormat.FILL_STYLE_PATTERN && fillIndex == CastleFileFormat.FILL_INDEX_MASONRY) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public boolean addCastle() {
@@ -282,6 +305,78 @@ public class EditorPanel extends HGBasePanel {
         return true;
     }
 
+    public void addWall() {
+        if (document == null || castleIndex < 0 || castleIndex >= getCastleCount()) {
+            return;
+        }
+        if (hasWall()) {
+            return;
+        }
+        castleView.startPolygonCreation("wall");
+        setPolygonCreationHint();
+    }
+
+    public void addRoof() {
+        if (document == null || castleIndex < 0 || castleIndex >= getCastleCount()) {
+            return;
+        }
+        castleView.startPolygonCreation("roof");
+        setPolygonCreationHint();
+    }
+
+    public void finishPolygonCreation(List<Point> points) {
+        if (document == null || castleIndex < 0 || castleIndex >= getCastleCount()) {
+            castleView.finishPolygonCreation();
+            clearPolygonCreationHint();
+            return;
+        }
+        if (points.size() < 3) {
+            castleView.finishPolygonCreation();
+            clearPolygonCreationHint();
+            return;
+        }
+
+        Castle oldCastle = document.castles().get(castleIndex);
+        List<CastleDocument.DrawingCommand> newDrawing = new ArrayList<>(oldCastle.drawing());
+
+        String polygonType = castleView.getPolygonType();
+        int fillIndex = "wall".equals(polygonType) ? CastleFileFormat.FILL_INDEX_MASONRY : CastleFileFormat.FILL_INDEX_ROOF;
+
+        // Add FillStyle command before the polygon
+        newDrawing.add(new CastleDocument.FillStyle(CastleFileFormat.FILL_STYLE_PATTERN, fillIndex));
+        newDrawing.add(new CastleDocument.Polygon(points));
+
+        Castle updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
+                oldCastle.windVane(), oldCastle.money(), oldCastle.powder(), oldCastle.balls(),
+                oldCastle.moneyRoom(), oldCastle.powderRoom(), oldCastle.ballRoom(), oldCastle.resources(),
+                oldCastle.reserved(), newDrawing);
+        List<Castle> castles = new ArrayList<>(document.castles());
+        castles.set(castleIndex, updatedCastle);
+        document = new CastleDocument(castles);
+        castleView.updateCastle(updatedCastle);
+        castleView.finishPolygonCreation();
+        clearPolygonCreationHint();
+        documentChanged();
+        notifySelectionChanged();
+    }
+
+    public void cancelPolygonCreation() {
+        castleView.cancelPolygonCreation();
+        clearPolygonCreationHint();
+    }
+
+    private void setPolygonCreationHint() {
+        if (statusBarListener != null) {
+            statusBarListener.accept(HGBaseText.getText("polygon.hint"));
+        }
+    }
+
+    private void clearPolygonCreationHint() {
+        if (statusBarListener != null) {
+            statusBarListener.accept("");
+        }
+    }
+
     public void showPreviousCastle() {
         setCastleIndex(castleIndex - 1);
     }
@@ -300,6 +395,10 @@ public class EditorPanel extends HGBasePanel {
 
     public void setZoomListener(Runnable zoomListener) {
         this.zoomListener = zoomListener;
+    }
+
+    public void setStatusBarListener(java.util.function.Consumer<String> statusBarListener) {
+        this.statusBarListener = statusBarListener;
     }
 
     public double getZoomFactor() {

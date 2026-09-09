@@ -52,6 +52,11 @@ public class MainFrame extends HGBaseFrame {
         editorPanel.setSelectionListener(this::updateCastleNavigation);
         editorPanel.setChangeListener(() -> setChanged(true));
         editorPanel.setZoomListener(this::updateZoomDisplay);
+        editorPanel.setStatusBarListener(hint -> {
+            if (getStatusBar() instanceof StatusBar statusBar) {
+                statusBar.setHint(hint);
+            }
+        });
         addCastleNavigationToToolbar();
         setPanel(editorPanel);
         updateCastleNavigation();
@@ -140,6 +145,14 @@ public class MainFrame extends HGBaseFrame {
         editorPanel.addCannonballs();
     }
 
+    public void addWall() {
+        editorPanel.addWall();
+    }
+
+    public void addRoof() {
+        editorPanel.addRoof();
+    }
+
     public void deleteCastle() {
         editorPanel.deleteCastle();
     }
@@ -206,6 +219,10 @@ public class MainFrame extends HGBaseFrame {
 
     public boolean hasBalls() {
         return editorPanel != null && editorPanel.hasBalls();
+    }
+
+    public boolean hasWall(){
+        return editorPanel != null && editorPanel.hasWall();
     }
 
     public void removeCannon() {

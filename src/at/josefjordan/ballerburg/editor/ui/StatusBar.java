@@ -16,4 +16,8 @@ public class StatusBar extends HGBaseStatusBar {
     void setZoomLevel(String zoomLevel) {
         setText(ZOOM_PANEL_INDEX, zoomLevel);
     }
+
+    void setHint(String hint) {
+        setText(0, hint);
+    }
 }

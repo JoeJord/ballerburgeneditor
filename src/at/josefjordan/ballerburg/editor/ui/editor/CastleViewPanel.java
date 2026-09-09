@@ -14,8 +14,12 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.awt.geom.Line2D;
 import java.awt.geom.Path2D;
+import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
+import java.util.ArrayList;
+import java.util.List;
 
 /** Draws one castle without owning or modifying editor state. */
 final class CastleViewPanel extends HGBasePanel {
@@ -38,6 +42,12 @@ final class CastleViewPanel extends HGBasePanel {
     private EditorPanel editorPanel;
     private double zoomFactor = 1.0;
     private Runnable zoomListener;
+    
+    // Polygon creation mode
+    private boolean polygonCreationMode = false;
+    private String polygonType = null; // "wall" or "roof"
+    private List<Point> creationPoints = new ArrayList<>();
+    private Point2D mousePosition = null;
 
     CastleViewPanel() {
         addMouseListener(new CastleMouseHandler(this));
@@ -59,6 +69,9 @@ final class CastleViewPanel extends HGBasePanel {
         selectedThrone = false;
         selectedWindVane = false;
         selectedResourceArea = null;
+        polygonCreationMode = false;
+        polygonType = null;
+        creationPoints.clear();
         zoomFactor = 1.0;
         notifyZoomChanged();
         repaint();
@@ -171,13 +184,18 @@ final class CastleViewPanel extends HGBasePanel {
     @Override
     protected void paintComponent(Graphics graphics) {
         super.paintComponent(graphics);
-        if (castle == null) {
+        if (castle == null && !polygonCreationMode) {
             return;
         }
         Graphics2D g = (Graphics2D) graphics.create();
         try {
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            drawCastle(g);
+            if (castle != null) {
+                drawCastle(g);
+            }
+            if (polygonCreationMode) {
+                drawPolygonCreation(g);
+            }
         } finally {
             g.dispose();
         }
@@ -211,7 +229,8 @@ final class CastleViewPanel extends HGBasePanel {
         double left = (getWidth() - castle.width() * scale) / 2.0;
         double bottom = (getHeight() + maximumY * scale) / 2.0;
 
-        Color fill = new Color(150, 150, 145);
+        // Start fill style is 2,9 (masonry) according to BALLER.DAT
+        Color fill = colorFor(new FillStyle(CastleFileFormat.FILL_STYLE_PATTERN, CastleFileFormat.FILL_INDEX_MASONRY));
         g.setStroke(new BasicStroke(1.0f));
         for (DrawingCommand command : castle.drawing()) {
             if (command instanceof FillStyle style) {
@@ -420,5 +439,142 @@ final class CastleViewPanel extends HGBasePanel {
             g.setColor(COLOR_HIGHLIGHTED);
             g.fill(new Rectangle2D.Double((x + width) - 3, y - 3, 6, 6));
         }
+    }
+
+    void startPolygonCreation(String type) {
+        polygonCreationMode = true;
+        polygonType = type;
+        creationPoints.clear();
+        mousePosition = null;
+        selectedPolygon = null;
+        selectedCannonIndex = -1;
+        selectedThrone = false;
+        selectedWindVane = false;
+        selectedResourceArea = null;
+        repaint();
+    }
+
+    void cancelPolygonCreation() {
+        polygonCreationMode = false;
+        polygonType = null;
+        creationPoints.clear();
+        repaint();
+    }
+
+    boolean isInPolygonCreationMode() {
+        return polygonCreationMode;
+    }
+
+    String getPolygonType() {
+        return polygonType;
+    }
+
+    List<Point> getCreationPoints() {
+        return new ArrayList<>(creationPoints);
+    }
+
+    void addCreationPoint(Point point) {
+        creationPoints.add(point);
+        repaint();
+    }
+
+    private void drawPolygonCreation(Graphics2D g) {
+        if (creationPoints.isEmpty() && mousePosition == null) {
+            return;
+        }
+
+        // Calculate scale and position
+        int maximumY = 1;
+        if (castle != null) {
+            for (DrawingCommand command : castle.drawing()) {
+                if (command instanceof Polygon polygon) {
+                    for (Point point : polygon.points()) {
+                        maximumY = Math.max(maximumY, point.y());
+                    }
+                }
+            }
+            if (castle.throne().x() != Integer.MIN_VALUE && castle.throne().y() != Integer.MIN_VALUE) {
+                maximumY = Math.max(maximumY, areaTop(castle.throne(),
+                        new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT)));
+            }
+            maximumY = Math.max(maximumY, calculateMaximumCannonY(castle));
+            maximumY = Math.max(maximumY, areaTop(castle.money(), castle.moneyRoom()));
+            maximumY = Math.max(maximumY, areaTop(castle.powder(), castle.powderRoom()));
+            maximumY = Math.max(maximumY, areaTop(castle.balls(), castle.ballRoom()));
+            maximumY = Math.max(maximumY, castle.windVane().y() + CastleFileFormat.WIND_VANE_HEIGHT);
+        }
+
+        double margin = 24.0;
+        int castleWidth = castle != null ? castle.width() : 100;
+        double scale = Math.min((getWidth() - 2.0 * margin) / Math.max(1, castleWidth),
+                (getHeight() - 2.0 * margin) / maximumY) * zoomFactor;
+        if (scale <= 0) {
+            return;
+        }
+        double left = (getWidth() - castleWidth * scale) / 2.0;
+        double bottom = (getHeight() + maximumY * scale) / 2.0;
+
+        // Set color based on polygon type
+        Color fillColor = "wall".equals(polygonType) ? COLOR_FILL_MASONRY : COLOR_FILL_ROOF;
+        
+        // Draw polygon preview with mouse position as last point
+        if (creationPoints.size() >= 2 && mousePosition != null) {
+            Path2D path = new Path2D.Double();
+            Point first = creationPoints.get(0);
+            path.moveTo(left + first.x() * scale, bottom - first.y() * scale);
+            for (int i = 1; i < creationPoints.size(); i++) {
+                Point point = creationPoints.get(i);
+                path.lineTo(left + point.x() * scale, bottom - point.y() * scale);
+            }
+            // Add line to mouse position
+            path.lineTo(mousePosition.getX(), mousePosition.getY());
+            // Close the polygon
+            path.closePath();
+            
+            g.setColor(fillColor);
+            g.fill(path);
+            g.setColor(COLOR_OUTLINE);
+            g.setStroke(new BasicStroke(1.0f));
+            g.draw(path);
+        } else if (creationPoints.size() >= 2) {
+            // Draw lines between points without mouse position
+            Path2D path = new Path2D.Double();
+            Point first = creationPoints.get(0);
+            path.moveTo(left + first.x() * scale, bottom - first.y() * scale);
+            for (int i = 1; i < creationPoints.size(); i++) {
+                Point point = creationPoints.get(i);
+                path.lineTo(left + point.x() * scale, bottom - point.y() * scale);
+            }
+            g.setColor(fillColor);
+            g.setStroke(new BasicStroke(1.0f));
+            g.draw(path);
+        }
+
+        // Draw points
+        for (Point point : creationPoints) {
+            double screenX = left + point.x() * scale;
+            double screenY = bottom - point.y() * scale;
+            g.setColor(COLOR_SELECTED);
+            g.fill(new Rectangle2D.Double(screenX - 4, screenY - 4, 8, 8));
+        }
+
+        // Draw yellow square at mouse position
+        if (mousePosition != null) {
+            g.setColor(Color.YELLOW);
+            g.fill(new Rectangle2D.Double(mousePosition.getX() - 4, mousePosition.getY() - 4, 8, 8));
+        }
+    }
+
+    void finishPolygonCreation() {
+        polygonCreationMode = false;
+        polygonType = null;
+        creationPoints.clear();
+        mousePosition = null;
+        repaint();
+    }
+
+    void setMousePosition(Point2D position) {
+        mousePosition = position;
+        repaint();
     }
 }

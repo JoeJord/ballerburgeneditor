@@ -23,8 +23,11 @@
         <msg code="edit.add_powder">Pulverbereich hinzuf&#252;gen</msg>
         <msg code="edit.add_cannonballs">Kugelbereich hinzuf&#252;gen</msg>
         <msg code="edit.add_windvane">Windfahne hinzuf&#252;gen</msg>
+        <msg code="edit.add_wall">Wand hinzuf&#252;gen</msg>
+        <msg code="edit.add_roof">Dach hinzuf&#252;gen</msg>
         <msg code="edit.delete_castle">Burg entfernen</msg>
         <msg code="edit.remove">Entfernen</msg>
+        <msg code="polygon.hint">Klicken Sie, um Punkte hinzuzuf&#252;gen. Rechtsklick oder Enter zum Abschlie&#223;en. Esc zum Abbrechen.</msg>
 
     </language>
 
@@ -49,8 +52,11 @@
         <msg code="edit.add_powder">Add powder area</msg>
         <msg code="edit.add_cannonballs">Add cannonballs area</msg>
         <msg code="edit.add_windvane">Add wind vane</msg>
+        <msg code="edit.add_wall">Add wall</msg>
+        <msg code="edit.add_roof">Add roof</msg>
         <msg code="edit.delete_castle">Delete castle</msg>
         <msg code="edit.remove">Remove</msg>
+        <msg code="polygon.hint">Click to add points. Right-click or Enter to finish. Esc to cancel.</msg>
 
     </language>
 

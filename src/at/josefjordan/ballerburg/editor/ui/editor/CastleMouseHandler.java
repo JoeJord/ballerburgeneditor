@@ -9,6 +9,8 @@ import at.josefjordan.ballerburg.editor.model.CastleFileFormat;
 
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
@@ -47,11 +49,83 @@ final class CastleMouseHandler extends MouseAdapter {
             public void mouseDragged(MouseEvent e) {
                 handleDrag(e);
             }
+
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                if (panel.isInPolygonCreationMode()) {
+                    panel.setMousePosition(e.getPoint());
+                } else {
+                    panel.setMousePosition(null);
+                }
+            }
         });
+        panel.addKeyListener(new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+                // Not used
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (panel.isInPolygonCreationMode()) {
+                    if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                        panel.getEditorPanel().cancelPolygonCreation();
+                    } else if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                        List<Point> points = panel.getCreationPoints();
+                        if (points.size() >= 3) {
+                            panel.getEditorPanel().finishPolygonCreation(points);
+                        } else {
+                            panel.getEditorPanel().cancelPolygonCreation();
+                        }
+                    }
+                }
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+                // Not used
+            }
+        });
+        panel.setFocusable(true);
+        panel.requestFocusInWindow();
     }
 
     @Override
     public void mousePressed(MouseEvent e) {
+        // Handle polygon creation mode
+        if (panel.isInPolygonCreationMode()) {
+            if (e.getButton() == MouseEvent.BUTTON1) {
+                // Left click adds a point
+                Castle castle = panel.getCastle();
+                if (castle == null) {
+                    return;
+                }
+                int maximumY = calculateMaximumY(castle);
+                double baseScale = calculateScale(castle, maximumY);
+                double scale = baseScale * panel.getZoomFactor();
+                if (scale <= 0) {
+                    return;
+                }
+                double left = (panel.getWidth() - castle.width() * scale) / 2.0;
+                double bottom = (panel.getHeight() + maximumY * scale) / 2.0;
+                
+                Point2D clickPoint = e.getPoint();
+                int newX = (int) Math.round((clickPoint.getX() - left) / scale);
+                int newY = (int) Math.round((bottom - clickPoint.getY()) / scale);
+                
+                panel.addCreationPoint(new Point(newX, newY));
+            } else if (e.getButton() == MouseEvent.BUTTON3) {
+                // Right click finishes the polygon
+                List<Point> points = panel.getCreationPoints();
+                if (points.size() >= 3) {
+                    panel.getEditorPanel().finishPolygonCreation(points);
+                } else {
+                    panel.getEditorPanel().cancelPolygonCreation();
+                }
+            }
+            return;
+        }
+
         Castle castle = panel.getCastle();
         if (castle == null) {
             return;

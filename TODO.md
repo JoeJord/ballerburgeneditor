@@ -5,7 +5,6 @@
  - Zoom in status bar adjustable
  - Show coordinates in status bar
  - Add polygon point
- - Add polygon
  - Undo/Redo
 
 ## File Handling
