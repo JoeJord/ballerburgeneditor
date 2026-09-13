@@ -4,7 +4,6 @@
  - Scrolling
  - Zoom in status bar adjustable
  - Show coordinates in status bar
- - Add polygon point
  - Undo/Redo
 
 ## File Handling

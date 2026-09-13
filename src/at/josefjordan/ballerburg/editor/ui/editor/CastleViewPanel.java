@@ -48,6 +48,10 @@ final class CastleViewPanel extends HGBasePanel {
     private String polygonType = null; // "wall" or "roof"
     private List<Point> creationPoints = new ArrayList<>();
     private Point2D mousePosition = null;
+    
+    // Edge hover for selected polygon
+    private Point2D edgeHoverPosition = null;
+    private Runnable polygonSelectionListener;
 
     CastleViewPanel() {
         addMouseListener(new CastleMouseHandler(this));
@@ -62,6 +66,10 @@ final class CastleViewPanel extends HGBasePanel {
         this.zoomListener = zoomListener;
     }
 
+    void setPolygonSelectionListener(Runnable listener) {
+        this.polygonSelectionListener = listener;
+    }
+
     void setCastle(Castle castle) {
         this.castle = castle;
         selectedPolygon = null;
@@ -72,6 +80,7 @@ final class CastleViewPanel extends HGBasePanel {
         polygonCreationMode = false;
         polygonType = null;
         creationPoints.clear();
+        edgeHoverPosition = null;
         zoomFactor = 1.0;
         notifyZoomChanged();
         repaint();
@@ -93,7 +102,11 @@ final class CastleViewPanel extends HGBasePanel {
     void setSelectedPolygon(Polygon polygon) {
         if (polygon != selectedPolygon) {
             selectedPolygon = polygon;
+            edgeHoverPosition = null;
             repaint();
+            if (polygonSelectionListener != null) {
+                polygonSelectionListener.run();
+            }
         }
     }
 
@@ -314,6 +327,15 @@ final class CastleViewPanel extends HGBasePanel {
             g.setStroke(new BasicStroke(2.0f));
             g.draw(windVaneRect);
             g.setStroke(new BasicStroke(1.0f));
+        }
+        
+        // Draw edge hover indicator for selected polygon
+        if (selectedPolygon != null && edgeHoverPosition != null) {
+            Point2D hoverPoint = findClosestPointOnEdge(selectedPolygon, edgeHoverPosition, left, bottom, scale);
+            if (hoverPoint != null) {
+                g.setColor(COLOR_SELECTED);
+                g.fill(new Rectangle2D.Double(hoverPoint.getX() - 4, hoverPoint.getY() - 4, 8, 8));
+            }
         }
     }
 
@@ -576,5 +598,110 @@ final class CastleViewPanel extends HGBasePanel {
     void setMousePosition(Point2D position) {
         mousePosition = position;
         repaint();
+    }
+    
+    void setEdgeHoverPosition(Point2D position) {
+        edgeHoverPosition = position;
+        repaint();
+    }
+    
+    int findEdgeIndexForHoverPosition(double left, double bottom, double scale) {
+        if (selectedPolygon == null || edgeHoverPosition == null) {
+            return -1;
+        }
+        Point2D closestPoint = findClosestPointOnEdge(selectedPolygon, edgeHoverPosition, left, bottom, scale);
+        if (closestPoint == null) {
+            return -1;
+        }
+        
+        List<Point> points = selectedPolygon.points();
+        final double edgeThreshold = 8.0;
+        final double pointThreshold = 10.0;
+        
+        for (int i = 0; i < points.size(); i++) {
+            Point p1 = points.get(i);
+            Point p2 = points.get((i + 1) % points.size());
+            
+            double screenX1 = left + p1.x() * scale;
+            double screenY1 = bottom - p1.y() * scale;
+            double screenX2 = left + p2.x() * scale;
+            double screenY2 = bottom - p2.y() * scale;
+            
+            double distToP1 = edgeHoverPosition.distance(screenX1, screenY1);
+            double distToP2 = edgeHoverPosition.distance(screenX2, screenY2);
+            
+            if (distToP1 < pointThreshold || distToP2 < pointThreshold) {
+                continue;
+            }
+            
+            Point2D closestOnSegment = closestPointOnSegment(
+                edgeHoverPosition, screenX1, screenY1, screenX2, screenY2);
+            
+            double distance = edgeHoverPosition.distance(closestOnSegment);
+            
+            if (distance < edgeThreshold) {
+                return i; // Return the edge index (point index where the edge starts)
+            }
+        }
+        
+        return -1;
+    }
+    
+    private Point2D findClosestPointOnEdge(Polygon polygon, Point2D mousePoint, 
+                                            double left, double bottom, double scale) {
+        final double edgeThreshold = 8.0; // Maximum distance to consider as "near edge"
+        final double pointThreshold = 10.0; // Distance to avoid showing near existing points
+        
+        List<Point> points = polygon.points();
+        Point2D closestPoint = null;
+        double minDistance = Double.MAX_VALUE;
+        
+        for (int i = 0; i < points.size(); i++) {
+            Point p1 = points.get(i);
+            Point p2 = points.get((i + 1) % points.size());
+            
+            double screenX1 = left + p1.x() * scale;
+            double screenY1 = bottom - p1.y() * scale;
+            double screenX2 = left + p2.x() * scale;
+            double screenY2 = bottom - p2.y() * scale;
+            
+            // Check if mouse is too close to either endpoint
+            double distToP1 = mousePoint.distance(screenX1, screenY1);
+            double distToP2 = mousePoint.distance(screenX2, screenY2);
+            
+            if (distToP1 < pointThreshold || distToP2 < pointThreshold) {
+                continue; // Skip this edge, too close to an existing point
+            }
+            
+            // Find closest point on this line segment
+            Point2D closestOnSegment = closestPointOnSegment(
+                mousePoint, screenX1, screenY1, screenX2, screenY2);
+            
+            double distance = mousePoint.distance(closestOnSegment);
+            
+            if (distance < edgeThreshold && distance < minDistance) {
+                minDistance = distance;
+                closestPoint = closestOnSegment;
+            }
+        }
+        
+        return closestPoint;
+    }
+    
+    private Point2D closestPointOnSegment(Point2D point, double x1, double y1, 
+                                           double x2, double y2) {
+        double dx = x2 - x1;
+        double dy = y2 - y1;
+        
+        if (dx == 0 && dy == 0) {
+            return new Point2D.Double(x1, y1);
+        }
+        
+        double t = ((point.getX() - x1) * dx + (point.getY() - y1) * dy) / (dx * dx + dy * dy);
+        
+        // Clamp t to [0, 1] to stay on the segment
+        t = Math.max(0, Math.min(1, t));
+        
+        return new Point2D.Double(x1 + t * dx, y1 + t * dy);
     }
 }

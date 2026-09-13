@@ -37,6 +37,7 @@ public class EditorPanel extends HGBasePanel {
                 zoomListener.run();
             }
         });
+        castleView.setPolygonSelectionListener(this::onPolygonSelectionChanged);
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, castleView, propertyPalette);
         splitPane.setContinuousLayout(true);
         splitPane.setResizeWeight(1.0);
@@ -618,6 +619,41 @@ public class EditorPanel extends HGBasePanel {
         }
     }
 
+    public boolean addPolygonPoint(int edgeIndex, Point newPoint) {
+        CastleDocument.Polygon selectedPolygon = castleView.getSelectedPolygon();
+        if (selectedPolygon == null) {
+            return false;
+        }
+        
+        int polygonIndex = findPolygonIndex(selectedPolygon);
+        if (polygonIndex < 0) {
+            return false;
+        }
+        
+        List<Point> newPoints = new ArrayList<>(selectedPolygon.points());
+        // Insert the new point after the edge index (edgeIndex is the index of the point where the edge starts)
+        newPoints.add(edgeIndex + 1, newPoint);
+        updatePolygonPoints(polygonIndex, newPoints);
+        
+        // Update the selected polygon reference to the new polygon
+        Castle updatedCastle = document.castles().get(castleIndex);
+        int currentPolygonIndex = 0;
+        for (CastleDocument.DrawingCommand command : updatedCastle.drawing()) {
+            if (command instanceof CastleDocument.Polygon polygon) {
+                if (currentPolygonIndex == polygonIndex) {
+                    castleView.setSelectedPolygon(polygon);
+                    break;
+                }
+                currentPolygonIndex++;
+            }
+        }
+        
+        // Select the newly added point
+        castleView.setSelectedPointIndex(edgeIndex + 1);
+        onPointSelectionChanged();
+        return true;
+    }
+
     public boolean removePolygonPoint() {
         CastleDocument.Polygon selectedPolygon = castleView.getSelectedPolygon();
         if (selectedPolygon == null || selectedPolygon.points().size() <= 3) {
@@ -887,11 +923,36 @@ public class EditorPanel extends HGBasePanel {
     }
 
     public void onPointSelectionChanged() {
+        if (castleView.getSelectedPolygon() != null) {
+            setPolygonSelectedHint();
+        } else {
+            clearPolygonSelectedHint();
+        }
         notifySelectionChanged();
+    }
+    
+    private void setPolygonSelectedHint() {
+        if (statusBarListener != null) {
+            statusBarListener.accept(HGBaseText.getText("polygon.selected_hint"));
+        }
+    }
+    
+    private void clearPolygonSelectedHint() {
+        if (statusBarListener != null && !castleView.isInPolygonCreationMode()) {
+            statusBarListener.accept("");
+        }
     }
 
     public void onCannonSelectionChanged() {
         notifySelectionChanged();
+    }
+    
+    private void onPolygonSelectionChanged() {
+        if (castleView.getSelectedPolygon() != null) {
+            setPolygonSelectedHint();
+        } else {
+            clearPolygonSelectedHint();
+        }
     }
 
     private void setCastleIndex(int index) {

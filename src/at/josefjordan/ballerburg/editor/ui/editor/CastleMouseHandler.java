@@ -56,6 +56,8 @@ final class CastleMouseHandler extends MouseAdapter {
                     panel.setMousePosition(e.getPoint());
                 } else {
                     panel.setMousePosition(null);
+                    // Update edge hover for selected polygon
+                    panel.setEdgeHoverPosition(e.getPoint());
                 }
             }
         });
@@ -139,6 +141,19 @@ final class CastleMouseHandler extends MouseAdapter {
         }
         double left = (panel.getWidth() - castle.width() * scale) / 2.0;
         double bottom = (panel.getHeight() + maximumY * scale) / 2.0;
+
+        // Handle edge hover for adding points to selected polygon
+        if (e.getButton() == MouseEvent.BUTTON1 && panel.getSelectedPolygon() != null) {
+            int edgeIndex = panel.findEdgeIndexForHoverPosition(left, bottom, scale);
+            if (edgeIndex >= 0) {
+                Point2D clickPoint = e.getPoint();
+                int newX = (int) Math.round((clickPoint.getX() - left) / scale);
+                int newY = (int) Math.round((bottom - clickPoint.getY()) / scale);
+                panel.getEditorPanel().addPolygonPoint(edgeIndex, new Point(newX, newY));
+                panel.setEdgeHoverPosition(null);
+                return;
+            }
+        }
 
         Point2D clickPoint = e.getPoint();
 
