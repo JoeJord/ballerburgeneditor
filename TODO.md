@@ -1,7 +1,6 @@
 # TODO
 
 ## Editor
- - Scrolling
  - Zoom in status bar adjustable
  - Show coordinates in status bar
  - Undo/Redo

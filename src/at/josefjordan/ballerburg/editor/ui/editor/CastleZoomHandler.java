@@ -14,7 +14,7 @@ final class CastleZoomHandler implements MouseWheelListener {
     @Override
     public void mouseWheelMoved(MouseWheelEvent e) {
         if (e.isControlDown()) {
-            panel.adjustZoom(calculateZoomMultiplier(e));
+            panel.adjustZoom(calculateZoomMultiplier(e), e.getPoint());
             e.consume();
         }
     }

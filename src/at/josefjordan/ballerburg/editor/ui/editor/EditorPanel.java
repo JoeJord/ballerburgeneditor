@@ -10,6 +10,7 @@ import hgb.gui.HGBasePanel;
 import hgb.lib.HGBaseText;
 
 import javax.swing.JSplitPane;
+import javax.swing.JScrollPane;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.util.ArrayList;
@@ -38,7 +39,10 @@ public class EditorPanel extends HGBasePanel {
             }
         });
         castleView.setPolygonSelectionListener(this::onPolygonSelectionChanged);
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, castleView, propertyPalette);
+        JScrollPane scrollPane = new JScrollPane(castleView);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, scrollPane, propertyPalette);
         splitPane.setContinuousLayout(true);
         splitPane.setResizeWeight(1.0);
         propertyPalette.setMinimumSize(new Dimension(PROPERTY_PALETTE_MIN_WIDTH, 0));

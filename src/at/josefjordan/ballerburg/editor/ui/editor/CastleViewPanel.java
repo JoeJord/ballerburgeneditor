@@ -25,6 +25,8 @@ import java.util.List;
 final class CastleViewPanel extends HGBasePanel {
     public static final double MIN_ZOOM_FACTOR = 0.10; // corresponds 10 %
     public static final double MAX_ZOOM_FACTOR = 10.0; // corresponds 1000 %
+    private static final double BASE_SCALE = 4.0; // Base scale multiplier for 100% zoom
+    private static final double MARGIN = 24.0;
     private static final Color COLOR_SELECTED = new Color(255, 255, 0);
     private static final Color COLOR_HIGHLIGHTED = new Color(255, 100, 100);
     private static final Color COLOR_OUTLINE = new Color(45, 45, 45);
@@ -83,11 +85,14 @@ final class CastleViewPanel extends HGBasePanel {
         edgeHoverPosition = null;
         zoomFactor = 1.0;
         notifyZoomChanged();
+        updatePreferredSize();
+        centerCastle();
         repaint();
     }
 
     void updateCastle(Castle castle) {
         this.castle = castle;
+        updatePreferredSize();
         repaint();
     }
 
@@ -178,8 +183,54 @@ final class CastleViewPanel extends HGBasePanel {
     }
 
     void adjustZoom(double multiplier) {
+        adjustZoom(multiplier, null);
+    }
+
+    void adjustZoom(double multiplier, java.awt.Point mousePoint) {
+        double oldZoomFactor = zoomFactor;
         zoomFactor *= multiplier;
         zoomFactor = Math.max(MIN_ZOOM_FACTOR, Math.min(MAX_ZOOM_FACTOR, zoomFactor));
+
+        if (mousePoint != null && getParent() instanceof javax.swing.JScrollPane scrollPane) {
+            // Calculate world coordinates under mouse before zoom
+            double oldScale = BASE_SCALE * oldZoomFactor;
+            double newScale = BASE_SCALE * zoomFactor;
+
+            int[] oldBounds = calculateBounds();
+            int oldMinimumX = oldBounds[0];
+            int oldBaseMaximumY = calculateMaximumY();
+            double oldLeft = MARGIN - oldMinimumX * oldScale;
+            double oldBottom = MARGIN + oldBaseMaximumY * oldScale;
+
+            // Convert mouse screen coordinates to world coordinates
+            double worldX = (mousePoint.x - oldLeft) / oldScale;
+            double worldY = (oldBottom - mousePoint.y) / oldScale;
+
+            // Update preferred size with new zoom
+            updatePreferredSize();
+
+            // Calculate new screen position for the same world coordinates
+            int[] newBounds = calculateBounds();
+            int newMinimumX = newBounds[0];
+            int newBaseMaximumY = calculateMaximumY();
+            double newLeft = MARGIN - newMinimumX * newScale;
+            double newBottom = MARGIN + newBaseMaximumY * newScale;
+            double newScreenX = newLeft + worldX * newScale;
+            double newScreenY = newBottom - worldY * newScale;
+
+            // Adjust scroll position to keep the same point under mouse
+            java.awt.Point oldViewPos = scrollPane.getViewport().getViewPosition();
+            int deltaX = (int) Math.round(newScreenX - mousePoint.x);
+            int deltaY = (int) Math.round(newScreenY - mousePoint.y);
+
+            int newX = Math.max(0, oldViewPos.x + deltaX);
+            int newY = Math.max(0, oldViewPos.y + deltaY);
+
+            scrollPane.getViewport().setViewPosition(new java.awt.Point(newX, newY));
+        } else {
+            updatePreferredSize();
+        }
+
         notifyZoomChanged();
         repaint();
     }
@@ -192,6 +243,195 @@ final class CastleViewPanel extends HGBasePanel {
         if (zoomListener != null) {
             zoomListener.run();
         }
+    }
+
+    private void updatePreferredSize() {
+        int minimumX = 0;
+        int minimumY = 0;
+        int maximumY = 1;
+        int maximumX = 100;
+
+        if (castle != null) {
+            maximumX = castle.width();
+            for (DrawingCommand command : castle.drawing()) {
+                if (command instanceof Polygon polygon) {
+                    for (Point point : polygon.points()) {
+                        minimumY = Math.min(minimumY, point.y());
+                        minimumX = Math.min(minimumX, point.x());
+                        maximumY = Math.max(maximumY, point.y());
+                        maximumX = Math.max(maximumX, point.x());
+                    }
+                }
+            }
+            if (castle.throne().x() != Integer.MIN_VALUE && castle.throne().y() != Integer.MIN_VALUE) {
+                minimumY = Math.min(minimumY, castle.throne().y());
+                minimumX = Math.min(minimumX, castle.throne().x());
+                maximumY = Math.max(maximumY, areaTop(castle.throne(),
+                        new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT)));
+                maximumX = Math.max(maximumX, castle.throne().x() + CastleFileFormat.THRONE_WIDTH);
+            }
+            for (Point cannon : castle.cannons()) {
+                minimumY = Math.min(minimumY, cannon.y());
+                minimumX = Math.min(minimumX, cannon.x());
+                maximumY = Math.max(maximumY, cannon.y() + CastleFileFormat.CANNON_HEIGHT);
+                maximumX = Math.max(maximumX, cannon.x() + CastleFileFormat.CANNON_WIDTH);
+            }
+            if (castle.money().x() != Integer.MIN_VALUE && castle.money().y() != Integer.MIN_VALUE) {
+                minimumY = Math.min(minimumY, castle.money().y());
+                minimumX = Math.min(minimumX, castle.money().x());
+                maximumY = Math.max(maximumY, areaTop(castle.money(), castle.moneyRoom()));
+                maximumX = Math.max(maximumX, castle.money().x() + castle.moneyRoom().width());
+            }
+            if (castle.powder().x() != Integer.MIN_VALUE && castle.powder().y() != Integer.MIN_VALUE) {
+                minimumY = Math.min(minimumY, castle.powder().y());
+                minimumX = Math.min(minimumX, castle.powder().x());
+                maximumY = Math.max(maximumY, areaTop(castle.powder(), castle.powderRoom()));
+                maximumX = Math.max(maximumX, castle.powder().x() + castle.powderRoom().width());
+            }
+            if (castle.balls().x() != Integer.MIN_VALUE && castle.balls().y() != Integer.MIN_VALUE) {
+                minimumY = Math.min(minimumY, castle.balls().y());
+                minimumX = Math.min(minimumX, castle.balls().x());
+                maximumY = Math.max(maximumY, areaTop(castle.balls(), castle.ballRoom()));
+                maximumX = Math.max(maximumX, castle.balls().x() + castle.ballRoom().width());
+            }
+            if (castle.windVane().x() != Integer.MIN_VALUE && castle.windVane().y() != Integer.MIN_VALUE) {
+                minimumY = Math.min(minimumY, castle.windVane().y());
+                minimumX = Math.min(minimumX, castle.windVane().x());
+                maximumY = Math.max(maximumY, castle.windVane().y() + CastleFileFormat.WIND_VANE_HEIGHT);
+                maximumX = Math.max(maximumX, castle.windVane().x() + CastleFileFormat.WIND_VANE_WIDTH);
+            }
+        }
+
+        double scale = BASE_SCALE * zoomFactor;
+        // Calculate preferred size based on full span to handle movement in any direction
+        // Use castle.width() as minimum baseline for width
+        int baseWidth = castle != null ? castle.width() : 100;
+        int contentWidth = Math.max(baseWidth, maximumX - minimumX);
+        int contentHeight = maximumY - minimumY;
+        int preferredWidth = (int) Math.ceil(2 * MARGIN + contentWidth * scale);
+        int preferredHeight = (int) Math.ceil(2 * MARGIN + contentHeight * scale);
+        setPreferredSize(new java.awt.Dimension(preferredWidth, preferredHeight));
+        revalidate();
+
+        // Also revalidate the scroll pane viewport to update scrollbars
+        if (getParent() instanceof javax.swing.JViewport viewport) {
+            viewport.revalidate();
+        }
+    }
+
+    private static int calculateMaximumCannonX(Castle castle) {
+        int maximumX = 1;
+        for (Point cannon : castle.cannons()) {
+            maximumX = Math.max(maximumX, cannon.x() + CastleFileFormat.CANNON_WIDTH);
+        }
+        return maximumX;
+    }
+
+    private int calculateMaximumY() {
+        int maximumY = 1;
+        if (castle != null) {
+            for (DrawingCommand command : castle.drawing()) {
+                if (command instanceof Polygon polygon) {
+                    for (Point point : polygon.points()) {
+                        maximumY = Math.max(maximumY, point.y());
+                    }
+                }
+            }
+            if (castle.throne().x() != Integer.MIN_VALUE && castle.throne().y() != Integer.MIN_VALUE) {
+                maximumY = Math.max(maximumY, areaTop(castle.throne(),
+                        new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT)));
+            }
+            maximumY = Math.max(maximumY, calculateMaximumCannonY(castle));
+            maximumY = Math.max(maximumY, areaTop(castle.money(), castle.moneyRoom()));
+            maximumY = Math.max(maximumY, areaTop(castle.powder(), castle.powderRoom()));
+            maximumY = Math.max(maximumY, areaTop(castle.balls(), castle.ballRoom()));
+            maximumY = Math.max(maximumY, castle.windVane().y() + CastleFileFormat.WIND_VANE_HEIGHT);
+        }
+        return maximumY;
+    }
+
+    private void centerCastle() {
+        if (getParent() instanceof javax.swing.JScrollPane scrollPane) {
+            java.awt.Dimension panelSize = getPreferredSize();
+            java.awt.Dimension viewportSize = scrollPane.getViewport().getSize();
+            
+            int scrollX = Math.max(0, (panelSize.width - viewportSize.width) / 2);
+            int scrollY = Math.max(0, (panelSize.height - viewportSize.height) / 2);
+            
+            scrollPane.getViewport().setViewPosition(new java.awt.Point(scrollX, scrollY));
+        }
+    }
+
+    // Returns rendering parameters for mouse interaction
+    double[] getRenderingParameters() {
+        int[] bounds = calculateBounds();
+        int minimumX = bounds[0];
+        int baseMaximumY = calculateMaximumY();
+        double scale = BASE_SCALE * zoomFactor;
+        // Use fixed origin based on maximumY to keep castle visually fixed
+        // This prevents the castle from moving when elements are repositioned
+        double left = MARGIN - minimumX * scale;
+        double bottom = MARGIN + baseMaximumY * scale;
+        return new double[] { left, bottom, scale };
+    }
+
+    private int[] calculateBounds() {
+        int minimumX = 0;
+        int minimumY = 0;
+        int maximumY = 1;
+        int maximumX = 100;
+
+        if (castle != null) {
+            maximumX = castle.width();
+            for (DrawingCommand command : castle.drawing()) {
+                if (command instanceof Polygon polygon) {
+                    for (Point point : polygon.points()) {
+                        minimumY = Math.min(minimumY, point.y());
+                        minimumX = Math.min(minimumX, point.x());
+                        maximumY = Math.max(maximumY, point.y());
+                        maximumX = Math.max(maximumX, point.x());
+                    }
+                }
+            }
+            if (castle.throne().x() != Integer.MIN_VALUE && castle.throne().y() != Integer.MIN_VALUE) {
+                minimumY = Math.min(minimumY, castle.throne().y());
+                minimumX = Math.min(minimumX, castle.throne().x());
+                maximumY = Math.max(maximumY, areaTop(castle.throne(),
+                        new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT)));
+                maximumX = Math.max(maximumX, castle.throne().x() + CastleFileFormat.THRONE_WIDTH);
+            }
+            for (Point cannon : castle.cannons()) {
+                minimumY = Math.min(minimumY, cannon.y());
+                minimumX = Math.min(minimumX, cannon.x());
+                maximumY = Math.max(maximumY, cannon.y() + CastleFileFormat.CANNON_HEIGHT);
+                maximumX = Math.max(maximumX, cannon.x() + CastleFileFormat.CANNON_WIDTH);
+            }
+            if (castle.money().x() != Integer.MIN_VALUE && castle.money().y() != Integer.MIN_VALUE) {
+                minimumY = Math.min(minimumY, castle.money().y());
+                minimumX = Math.min(minimumX, castle.money().x());
+                maximumY = Math.max(maximumY, areaTop(castle.money(), castle.moneyRoom()));
+                maximumX = Math.max(maximumX, castle.money().x() + castle.moneyRoom().width());
+            }
+            if (castle.powder().x() != Integer.MIN_VALUE && castle.powder().y() != Integer.MIN_VALUE) {
+                minimumY = Math.min(minimumY, castle.powder().y());
+                minimumX = Math.min(minimumX, castle.powder().x());
+                maximumY = Math.max(maximumY, areaTop(castle.powder(), castle.powderRoom()));
+                maximumX = Math.max(maximumX, castle.powder().x() + castle.powderRoom().width());
+            }
+            if (castle.balls().x() != Integer.MIN_VALUE && castle.balls().y() != Integer.MIN_VALUE) {
+                minimumY = Math.min(minimumY, castle.balls().y());
+                minimumX = Math.min(minimumX, castle.balls().x());
+                maximumY = Math.max(maximumY, areaTop(castle.balls(), castle.ballRoom()));
+                maximumX = Math.max(maximumX, castle.balls().x() + castle.ballRoom().width());
+            }
+            if (castle.windVane().x() != Integer.MIN_VALUE && castle.windVane().y() != Integer.MIN_VALUE) {
+                minimumY = Math.min(minimumY, castle.windVane().y());
+                minimumX = Math.min(minimumX, castle.windVane().x());
+                maximumY = Math.max(maximumY, castle.windVane().y() + CastleFileFormat.WIND_VANE_HEIGHT);
+                maximumX = Math.max(maximumX, castle.windVane().x() + CastleFileFormat.WIND_VANE_WIDTH);
+            }
+        }
+        return new int[] { minimumX, minimumY, maximumX, maximumY };
     }
 
     @Override
@@ -215,32 +455,16 @@ final class CastleViewPanel extends HGBasePanel {
     }
 
     private void drawCastle(Graphics2D g) {
-        int maximumY = 1;
-        for (DrawingCommand command : castle.drawing()) {
-            if (command instanceof Polygon polygon) {
-                for (Point point : polygon.points()) {
-                    maximumY = Math.max(maximumY, point.y());
-                }
-            }
-        }
-        if (castle.throne().x() != Integer.MIN_VALUE && castle.throne().y() != Integer.MIN_VALUE) {
-            maximumY = Math.max(maximumY, areaTop(castle.throne(),
-                    new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT)));
-        }
-        maximumY = Math.max(maximumY, calculateMaximumCannonY(castle));
-        maximumY = Math.max(maximumY, areaTop(castle.money(), castle.moneyRoom()));
-        maximumY = Math.max(maximumY, areaTop(castle.powder(), castle.powderRoom()));
-        maximumY = Math.max(maximumY, areaTop(castle.balls(), castle.ballRoom()));
-        maximumY = Math.max(maximumY, castle.windVane().y() + CastleFileFormat.WIND_VANE_HEIGHT);
+        int[] bounds = calculateBounds();
+        int minimumX = bounds[0];
+        int baseMaximumY = calculateMaximumY();
 
-        double margin = 24.0;
-        double scale = Math.min((getWidth() - 2.0 * margin) / Math.max(1, castle.width()),
-                (getHeight() - 2.0 * margin) / maximumY) * zoomFactor;
+        double scale = BASE_SCALE * zoomFactor;
         if (scale <= 0) {
             return;
         }
-        double left = (getWidth() - castle.width() * scale) / 2.0;
-        double bottom = (getHeight() + maximumY * scale) / 2.0;
+        double left = MARGIN - minimumX * scale;
+        double bottom = MARGIN + baseMaximumY * scale;
 
         // Start fill style is 2,9 (masonry) according to BALLER.DAT
         Color fill = colorFor(new FillStyle(CastleFileFormat.FILL_STYLE_PATTERN, CastleFileFormat.FILL_INDEX_MASONRY));
@@ -473,6 +697,7 @@ final class CastleViewPanel extends HGBasePanel {
         selectedThrone = false;
         selectedWindVane = false;
         selectedResourceArea = null;
+        updatePreferredSize();
         repaint();
     }
 
@@ -480,6 +705,7 @@ final class CastleViewPanel extends HGBasePanel {
         polygonCreationMode = false;
         polygonType = null;
         creationPoints.clear();
+        updatePreferredSize();
         repaint();
     }
 
@@ -506,35 +732,16 @@ final class CastleViewPanel extends HGBasePanel {
         }
 
         // Calculate scale and position
-        int maximumY = 1;
-        if (castle != null) {
-            for (DrawingCommand command : castle.drawing()) {
-                if (command instanceof Polygon polygon) {
-                    for (Point point : polygon.points()) {
-                        maximumY = Math.max(maximumY, point.y());
-                    }
-                }
-            }
-            if (castle.throne().x() != Integer.MIN_VALUE && castle.throne().y() != Integer.MIN_VALUE) {
-                maximumY = Math.max(maximumY, areaTop(castle.throne(),
-                        new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT)));
-            }
-            maximumY = Math.max(maximumY, calculateMaximumCannonY(castle));
-            maximumY = Math.max(maximumY, areaTop(castle.money(), castle.moneyRoom()));
-            maximumY = Math.max(maximumY, areaTop(castle.powder(), castle.powderRoom()));
-            maximumY = Math.max(maximumY, areaTop(castle.balls(), castle.ballRoom()));
-            maximumY = Math.max(maximumY, castle.windVane().y() + CastleFileFormat.WIND_VANE_HEIGHT);
-        }
+        int[] bounds = calculateBounds();
+        int minimumX = bounds[0];
+        int baseMaximumY = calculateMaximumY();
 
-        double margin = 24.0;
-        int castleWidth = castle != null ? castle.width() : 100;
-        double scale = Math.min((getWidth() - 2.0 * margin) / Math.max(1, castleWidth),
-                (getHeight() - 2.0 * margin) / maximumY) * zoomFactor;
+        double scale = BASE_SCALE * zoomFactor;
         if (scale <= 0) {
             return;
         }
-        double left = (getWidth() - castleWidth * scale) / 2.0;
-        double bottom = (getHeight() + maximumY * scale) / 2.0;
+        double left = MARGIN - minimumX * scale;
+        double bottom = MARGIN + baseMaximumY * scale;
 
         // Set color based on polygon type
         Color fillColor = "wall".equals(polygonType) ? COLOR_FILL_MASONRY : COLOR_FILL_ROOF;
