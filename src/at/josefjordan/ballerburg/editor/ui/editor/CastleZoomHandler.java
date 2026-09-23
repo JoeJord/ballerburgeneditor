@@ -5,6 +5,7 @@ import java.awt.event.MouseWheelListener;
 
 /** Handles mouse wheel zoom for the castle view. */
 final class CastleZoomHandler implements MouseWheelListener {
+    private static final double ZOOM_STEP = 0.1;
     private final CastleViewPanel panel;
 
     CastleZoomHandler(CastleViewPanel panel) {
@@ -20,6 +21,7 @@ final class CastleZoomHandler implements MouseWheelListener {
     }
 
     private double calculateZoomMultiplier(MouseWheelEvent e) {
-        return e.getWheelRotation() < 0 ? 1.1 : 0.9;
+        double zoomMultiplier = 1.0 + ZOOM_STEP;
+        return e.getWheelRotation() < 0 ? zoomMultiplier : 1.0 / zoomMultiplier;
     }
 }
