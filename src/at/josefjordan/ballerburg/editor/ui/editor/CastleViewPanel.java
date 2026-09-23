@@ -21,12 +21,18 @@ import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.swing.JScrollPane;
+import javax.swing.SwingUtilities;
+import javax.swing.JViewport;
+
 /** Draws one castle without owning or modifying editor state. */
 final class CastleViewPanel extends HGBasePanel {
     public static final double MIN_ZOOM_FACTOR = 0.10; // corresponds 10 %
     public static final double MAX_ZOOM_FACTOR = 10.0; // corresponds 1000 %
+    private static final boolean ZOOM_DEBUG_LOGGING = true;
     private static final double BASE_SCALE = 4.0; // Base scale multiplier for 100% zoom
     private static final double MARGIN = 24.0;
+    private static final int SCROLLBAR_ACTIVATION_BUFFER = 32;
     private static final Color COLOR_SELECTED = new Color(255, 255, 0);
     private static final Color COLOR_HIGHLIGHTED = new Color(255, 100, 100);
     private static final Color COLOR_OUTLINE = new Color(45, 45, 45);
@@ -43,6 +49,8 @@ final class CastleViewPanel extends HGBasePanel {
     private int draggingResourceCorner = -1; // 0-3 for corners, -1 if not dragging
     private EditorPanel editorPanel;
     private double zoomFactor = 1.0;
+    private double renderingOffsetX;
+    private double renderingOffsetY;
     private Runnable zoomListener;
     
     // Polygon creation mode
@@ -84,9 +92,12 @@ final class CastleViewPanel extends HGBasePanel {
         creationPoints.clear();
         edgeHoverPosition = null;
         zoomFactor = 1.0;
+        renderingOffsetX = 0;
+        renderingOffsetY = 0;
         notifyZoomChanged();
         updatePreferredSize();
         centerCastle();
+        SwingUtilities.invokeLater(this::centerCastle);
         repaint();
     }
 
@@ -187,52 +198,105 @@ final class CastleViewPanel extends HGBasePanel {
     }
 
     void adjustZoom(double multiplier, java.awt.Point mousePoint) {
+        JViewport viewport = getViewport();
+        java.awt.Point oldViewPosition = viewport == null ? null : viewport.getViewPosition();
+        double[] oldRenderingParameters = mousePoint == null ? null : getRenderingParameters();
+        java.awt.Point mouseViewportPoint = viewport == null || mousePoint == null ? null : new java.awt.Point(
+                mousePoint.x - oldViewPosition.x,
+                mousePoint.y - oldViewPosition.y);
+
+        double worldX = mousePoint == null ? 0 : (mousePoint.x - oldRenderingParameters[0]) / oldRenderingParameters[2];
+        double worldY = mousePoint == null ? 0 : (oldRenderingParameters[1] - mousePoint.y) / oldRenderingParameters[2];
         double oldZoomFactor = zoomFactor;
         zoomFactor *= multiplier;
         zoomFactor = Math.max(MIN_ZOOM_FACTOR, Math.min(MAX_ZOOM_FACTOR, zoomFactor));
 
-        if (mousePoint != null && getParent() instanceof javax.swing.JScrollPane scrollPane) {
-            // Calculate world coordinates under mouse before zoom
-            double oldScale = BASE_SCALE * oldZoomFactor;
-            double newScale = BASE_SCALE * zoomFactor;
+        // Calculate the new transform without the old cursor correction first.
+        renderingOffsetX = 0;
+        renderingOffsetY = 0;
+        updatePreferredSize();
+        setSize(getPreferredSize());
 
-            int[] oldBounds = calculateBounds();
-            int oldMinimumX = oldBounds[0];
-            int oldBaseMaximumY = calculateMaximumY();
-            double oldLeft = MARGIN - oldMinimumX * oldScale;
-            double oldBottom = MARGIN + oldBaseMaximumY * oldScale;
+        if (mousePoint != null && viewport != null && oldViewPosition != null) {
+            double[] newRenderingParameters = calculateRenderingParameters(false);
+            double newPanelX = newRenderingParameters[0] + worldX * newRenderingParameters[2];
+            double newPanelY = newRenderingParameters[1] - worldY * newRenderingParameters[2];
 
-            // Convert mouse screen coordinates to world coordinates
-            double worldX = (mousePoint.x - oldLeft) / oldScale;
-            double worldY = (oldBottom - mousePoint.y) / oldScale;
+            java.awt.Point newViewPosition = new java.awt.Point(
+                    (int) Math.round(newPanelX - mouseViewportPoint.x),
+                    (int) Math.round(newPanelY - mouseViewportPoint.y));
+            if (viewport.getParent() instanceof JScrollPane scrollPane) {
+                scrollPane.validate();
+            }
+            java.awt.Dimension extent = viewport.getExtentSize();
+            java.awt.Dimension viewSize = getPreferredSize();
+            int maxScrollX = Math.max(0, viewSize.width - extent.width);
+            int maxScrollY = Math.max(0, viewSize.height - extent.height);
+            int scrollX = Math.max(0, Math.min(maxScrollX, newViewPosition.x));
+            int scrollY = Math.max(0, Math.min(maxScrollY, newViewPosition.y));
+            viewport.setViewPosition(new java.awt.Point(scrollX, scrollY));
 
-            // Update preferred size with new zoom
+            // If the view cannot scroll far enough, preserve the cursor point
+            // by translating the content inside the viewport instead.
+            renderingOffsetX = mouseViewportPoint.x + scrollX - newPanelX;
+            renderingOffsetY = mouseViewportPoint.y + scrollY - newPanelY;
             updatePreferredSize();
-
-            // Calculate new screen position for the same world coordinates
-            int[] newBounds = calculateBounds();
-            int newMinimumX = newBounds[0];
-            int newBaseMaximumY = calculateMaximumY();
-            double newLeft = MARGIN - newMinimumX * newScale;
-            double newBottom = MARGIN + newBaseMaximumY * newScale;
-            double newScreenX = newLeft + worldX * newScale;
-            double newScreenY = newBottom - worldY * newScale;
-
-            // Adjust scroll position to keep the same point under mouse
-            java.awt.Point oldViewPos = scrollPane.getViewport().getViewPosition();
-            int deltaX = (int) Math.round(newScreenX - mousePoint.x);
-            int deltaY = (int) Math.round(newScreenY - mousePoint.y);
-
-            int newX = Math.max(0, oldViewPos.x + deltaX);
-            int newY = Math.max(0, oldViewPos.y + deltaY);
-
-            scrollPane.getViewport().setViewPosition(new java.awt.Point(newX, newY));
-        } else {
-            updatePreferredSize();
+            setSize(getPreferredSize());
+            viewport.revalidate();
+            if (viewport.getParent() != null) {
+                viewport.getParent().revalidate();
+            }
+            logZoomState("immediate", oldZoomFactor, multiplier, oldViewPosition, mousePoint,
+                    mouseViewportPoint, oldRenderingParameters, newRenderingParameters,
+                    worldX, worldY, newViewPosition, viewport, newPanelX, newPanelY);
+            SwingUtilities.invokeLater(() -> logZoomState("after-layout", oldZoomFactor, multiplier,
+                    oldViewPosition, mousePoint, mouseViewportPoint, oldRenderingParameters,
+                    getRenderingParameters(), worldX, worldY, newViewPosition, viewport,
+                    getRenderingParameters()[0] + worldX * getRenderingParameters()[2],
+                    getRenderingParameters()[1] - worldY * getRenderingParameters()[2]));
         }
 
         notifyZoomChanged();
         repaint();
+    }
+
+    private void logZoomState(String phase, double oldZoomFactor, double multiplier,
+                              java.awt.Point oldViewPosition, java.awt.Point mousePoint,
+                              java.awt.Point mouseViewportPoint, double[] oldParameters,
+                              double[] newParameters, double worldX, double worldY,
+                              java.awt.Point requestedViewPosition, JViewport viewport,
+                              double newPanelX, double newPanelY) {
+        if (!ZOOM_DEBUG_LOGGING) {
+            return;
+        }
+        java.awt.Point actualViewPosition = viewport.getViewPosition();
+        java.awt.Dimension extent = viewport.getExtentSize();
+        java.awt.Dimension panelSize = getSize();
+        java.awt.Dimension preferredSize = getPreferredSize();
+        double actualViewportX = newPanelX - actualViewPosition.x;
+        double actualViewportY = newPanelY - actualViewPosition.y;
+        System.out.printf(
+                "[CastleZoom %s] zoom %.4f -> %.4f, multiplier %.4f%n"
+                        + "  mousePanel=%s, mouseViewport=%s, oldView=%s, requestedView=%s, actualView=%s%n"
+                        + "  oldParams=(left=%.2f,bottom=%.2f,scale=%.4f), "
+                        + "newParams=(left=%.2f,bottom=%.2f,scale=%.4f)%n"
+                        + "  world=(x=%.2f,y=%.2f), panelPoint=(x=%.2f,y=%.2f), "
+                        + "actualViewportPoint=(x=%.2f,y=%.2f)%n"
+                        + "  panelSize=%s, preferredSize=%s, extent=%s, "
+                        + "maxScroll=(x=%d,y=%d), offset=(x=%.2f,y=%.2f)%n",
+                phase, oldZoomFactor, zoomFactor, multiplier,
+                mousePoint, mouseViewportPoint, oldViewPosition, requestedViewPosition, actualViewPosition,
+                oldParameters[0], oldParameters[1], oldParameters[2],
+                newParameters[0], newParameters[1], newParameters[2],
+                worldX, worldY, newPanelX, newPanelY, actualViewportX, actualViewportY,
+                panelSize, preferredSize, extent,
+                Math.max(0, panelSize.width - extent.width),
+                Math.max(0, panelSize.height - extent.height),
+                renderingOffsetX, renderingOffsetY);
+    }
+
+    private JViewport getViewport() {
+        return getParent() instanceof JViewport viewport ? viewport : null;
     }
 
     double getZoomFactor() {
@@ -310,12 +374,25 @@ final class CastleViewPanel extends HGBasePanel {
         int contentHeight = maximumY - minimumY;
         int preferredWidth = (int) Math.ceil(2 * MARGIN + contentWidth * scale);
         int preferredHeight = (int) Math.ceil(2 * MARGIN + contentHeight * scale);
+        JViewport viewport = getViewport();
+        if (viewport != null) {
+            if (preferredWidth > viewport.getWidth() - SCROLLBAR_ACTIVATION_BUFFER) {
+                preferredWidth = Math.max(preferredWidth, viewport.getWidth() + 1);
+            }
+            if (preferredHeight > viewport.getHeight() - SCROLLBAR_ACTIVATION_BUFFER) {
+                preferredHeight = Math.max(preferredHeight, viewport.getHeight() + 1);
+            }
+            preferredWidth = Math.max(preferredWidth, viewport.getWidth());
+            preferredHeight = Math.max(preferredHeight, viewport.getHeight());
+        }
+        preferredWidth += (int) Math.ceil(Math.abs(renderingOffsetX));
+        preferredHeight += (int) Math.ceil(Math.max(0, renderingOffsetY));
         setPreferredSize(new java.awt.Dimension(preferredWidth, preferredHeight));
         revalidate();
 
         // Also revalidate the scroll pane viewport to update scrollbars
-        if (getParent() instanceof javax.swing.JViewport viewport) {
-            viewport.revalidate();
+        if (getParent() instanceof javax.swing.JViewport parentViewport) {
+            parentViewport.revalidate();
         }
     }
 
@@ -351,28 +428,52 @@ final class CastleViewPanel extends HGBasePanel {
     }
 
     private void centerCastle() {
-        if (getParent() instanceof javax.swing.JScrollPane scrollPane) {
+        JViewport viewport = getViewport();
+        if (viewport != null && viewport.getParent() instanceof JScrollPane) {
+            viewport.revalidate();
+            viewport.getParent().validate();
             java.awt.Dimension panelSize = getPreferredSize();
-            java.awt.Dimension viewportSize = scrollPane.getViewport().getSize();
+            java.awt.Dimension viewportSize = viewport.getSize();
             
             int scrollX = Math.max(0, (panelSize.width - viewportSize.width) / 2);
             int scrollY = Math.max(0, (panelSize.height - viewportSize.height) / 2);
             
-            scrollPane.getViewport().setViewPosition(new java.awt.Point(scrollX, scrollY));
+            viewport.setViewPosition(new java.awt.Point(scrollX, scrollY));
         }
     }
 
     // Returns rendering parameters for mouse interaction
     double[] getRenderingParameters() {
+        return calculateRenderingParameters(renderingOffsetX == 0 && renderingOffsetY == 0);
+    }
+
+    private double[] calculateRenderingParameters(boolean center) {
         int[] bounds = calculateBounds();
         int minimumX = bounds[0];
         int baseMaximumY = calculateMaximumY();
         double scale = BASE_SCALE * zoomFactor;
-        // Use fixed origin based on maximumY to keep castle visually fixed
-        // This prevents the castle from moving when elements are repositioned
-        double left = MARGIN - minimumX * scale;
-        double bottom = MARGIN + baseMaximumY * scale;
+        double[] origin = calculateRenderingOrigin(minimumX, baseMaximumY, scale, center);
+        double left = origin[0];
+        double bottom = origin[1];
         return new double[] { left, bottom, scale };
+    }
+
+    private double[] calculateRenderingOrigin(int minimumX, int maximumY, double scale, boolean center) {
+        int[] bounds = calculateBounds();
+        int minimumY = bounds[1];
+        int contentWidthInUnits = Math.max(castle != null ? castle.width() : 100, bounds[2] - minimumX);
+        double contentWidth = 2 * MARGIN + contentWidthInUnits * scale;
+        double contentHeight = 2 * MARGIN + (maximumY - minimumY) * scale;
+        double horizontalOffset = center
+                ? Math.max(0, (getWidth() - contentWidth) / 2.0)
+                : 0;
+        double verticalOffset = center
+                ? Math.max(0, (getHeight() - contentHeight) / 2.0)
+                : 0;
+        return new double[] {
+                MARGIN - minimumX * scale + horizontalOffset + renderingOffsetX,
+                MARGIN + maximumY * scale + verticalOffset + renderingOffsetY,
+        };
     }
 
     private int[] calculateBounds() {
@@ -463,8 +564,10 @@ final class CastleViewPanel extends HGBasePanel {
         if (scale <= 0) {
             return;
         }
-        double left = MARGIN - minimumX * scale;
-        double bottom = MARGIN + baseMaximumY * scale;
+        double[] origin = calculateRenderingOrigin(minimumX, baseMaximumY, scale,
+                renderingOffsetX == 0 && renderingOffsetY == 0);
+        double left = origin[0];
+        double bottom = origin[1];
 
         // Start fill style is 2,9 (masonry) according to BALLER.DAT
         Color fill = colorFor(new FillStyle(CastleFileFormat.FILL_STYLE_PATTERN, CastleFileFormat.FILL_INDEX_MASONRY));
@@ -740,8 +843,10 @@ final class CastleViewPanel extends HGBasePanel {
         if (scale <= 0) {
             return;
         }
-        double left = MARGIN - minimumX * scale;
-        double bottom = MARGIN + baseMaximumY * scale;
+        double[] origin = calculateRenderingOrigin(minimumX, baseMaximumY, scale,
+                renderingOffsetX == 0 && renderingOffsetY == 0);
+        double left = origin[0];
+        double bottom = origin[1];
 
         // Set color based on polygon type
         Color fillColor = "wall".equals(polygonType) ? COLOR_FILL_MASONRY : COLOR_FILL_ROOF;
