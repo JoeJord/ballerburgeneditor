@@ -302,6 +302,14 @@ final class CastleViewPanel extends HGBasePanel {
         return zoomFactor;
     }
 
+    void setZoomFactor(double zoomFactor) {
+        double boundedZoomFactor = Math.max(MIN_ZOOM_FACTOR, Math.min(MAX_ZOOM_FACTOR, zoomFactor));
+        if (this.zoomFactor == boundedZoomFactor) {
+            return;
+        }
+        adjustZoom(boundedZoomFactor / this.zoomFactor);
+    }
+
     private void notifyZoomChanged() {
         if (zoomListener != null) {
             zoomListener.run();

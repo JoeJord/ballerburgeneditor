@@ -52,6 +52,9 @@ public class MainFrame extends HGBaseFrame {
         editorPanel.setSelectionListener(this::updateCastleNavigation);
         editorPanel.setChangeListener(() -> setChanged(true));
         editorPanel.setZoomListener(this::updateZoomDisplay);
+        if (getStatusBar() instanceof StatusBar statusBar) {
+            statusBar.setZoomListener(zoomPercent -> editorPanel.setZoomPercent(zoomPercent));
+        }
         editorPanel.setStatusBarListener(hint -> {
             if (getStatusBar() instanceof StatusBar statusBar) {
                 statusBar.setHint(hint);
@@ -113,7 +116,7 @@ public class MainFrame extends HGBaseFrame {
         if (getStatusBar() != null) {
             double zoomFactor = editorPanel.getZoomFactor();
             int zoomPercent = (int) Math.round(zoomFactor * 100);
-            ((StatusBar) getStatusBar()).setZoomLevel(zoomPercent + "%");
+            ((StatusBar) getStatusBar()).setZoomLevel(zoomPercent);
         }
     }
 

@@ -410,6 +410,10 @@ public class EditorPanel extends HGBasePanel {
         return castleView.getZoomFactor();
     }
 
+    public void setZoomPercent(int zoomPercent) {
+        castleView.setZoomFactor(zoomPercent / 100.0);
+    }
+
     public void updatePolygonPoint(int polygonIndex, int pointIndex, Point newPoint) {
         if (castleIndex < 0 || castleIndex >= getCastleCount()) {
             return;
