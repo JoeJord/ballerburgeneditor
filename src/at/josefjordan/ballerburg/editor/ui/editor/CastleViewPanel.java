@@ -32,7 +32,6 @@ final class CastleViewPanel extends HGBasePanel {
     private static final boolean ZOOM_DEBUG_LOGGING = true;
     private static final double BASE_SCALE = 4.0; // Base scale multiplier for 100% zoom
     private static final double MARGIN = 24.0;
-    private static final int SCROLLBAR_ACTIVATION_BUFFER = 32;
     private static final Color COLOR_SELECTED = new Color(255, 255, 0);
     private static final Color COLOR_HIGHLIGHTED = new Color(255, 100, 100);
     private static final Color COLOR_OUTLINE = new Color(45, 45, 45);
@@ -376,17 +375,21 @@ final class CastleViewPanel extends HGBasePanel {
         int preferredHeight = (int) Math.ceil(2 * MARGIN + contentHeight * scale);
         JViewport viewport = getViewport();
         if (viewport != null) {
-            if (preferredWidth > viewport.getWidth() - SCROLLBAR_ACTIVATION_BUFFER) {
-                preferredWidth = Math.max(preferredWidth, viewport.getWidth() + 1);
+            if (preferredWidth > viewport.getWidth()) {
+                preferredWidth += (int) Math.ceil(Math.abs(renderingOffsetX));
             }
-            if (preferredHeight > viewport.getHeight() - SCROLLBAR_ACTIVATION_BUFFER) {
-                preferredHeight = Math.max(preferredHeight, viewport.getHeight() + 1);
+            if (preferredHeight > viewport.getHeight()) {
+                preferredHeight += (int) Math.ceil(Math.abs(renderingOffsetY));
             }
             preferredWidth = Math.max(preferredWidth, viewport.getWidth());
             preferredHeight = Math.max(preferredHeight, viewport.getHeight());
         }
-        preferredWidth += (int) Math.ceil(Math.abs(renderingOffsetX));
-        preferredHeight += (int) Math.ceil(Math.max(0, renderingOffsetY));
+        double[] renderingOrigin = calculateRenderingOrigin(minimumX, maximumY, scale,
+                renderingOffsetX == 0 && renderingOffsetY == 0);
+        preferredWidth = Math.max(preferredWidth,
+                (int) Math.ceil(renderingOrigin[0] + maximumX * scale + MARGIN));
+        preferredHeight = Math.max(preferredHeight,
+                (int) Math.ceil(renderingOrigin[1] - minimumY * scale + MARGIN));
         setPreferredSize(new java.awt.Dimension(preferredWidth, preferredHeight));
         revalidate();
 
