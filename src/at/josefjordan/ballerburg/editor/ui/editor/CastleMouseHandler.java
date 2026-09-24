@@ -432,45 +432,34 @@ final class CastleMouseHandler extends MouseAdapter {
 
             // Round delta to step sizes
             int deltaXRounded = (int) Math.round(deltaX / stepX) * stepX;
-            int deltaXRoundedAbs = Math.abs(deltaXRounded);
             int deltaYRounded = (int) Math.round(deltaY / stepY) * stepY;
-            int deltaYRoundedAbs = Math.abs(deltaYRounded);
 
-            Point newPosition = originalResourcePosition;
             Size newSize = originalResourceSize;
 
             // Corner indices: 0 = bottom-left, 1 = bottom-right, 2 = top-left, 3 = top-right
             // Note: In castle coordinates, Y increases upward (opposite to Swing)
             switch (draggingCornerIndex) {
                 case 0: // bottom-left
-                    newPosition = new Point(originalResourcePosition.x() + deltaXRounded,
-                            originalResourcePosition.y() - deltaYRounded);
                     newSize = new Size(originalResourceSize.width() - deltaXRounded,
                             originalResourceSize.height() + deltaYRounded);
                     break;
                 case 1: // bottom-right
-                    newPosition = new Point(originalResourcePosition.x(),
-                            originalResourcePosition.y() - deltaYRounded);
                     newSize = new Size(originalResourceSize.width() + deltaXRounded,
                             originalResourceSize.height() + deltaYRounded);
                     break;
                 case 2: // top-left
-                    newPosition = new Point(originalResourcePosition.x() + deltaXRounded,
-                            originalResourcePosition.y());
                     newSize = new Size(originalResourceSize.width() - deltaXRounded,
                             originalResourceSize.height() - deltaYRounded);
                     break;
                 case 3: // top-right
-                    newPosition = new Point(originalResourcePosition.x(),
-                            originalResourcePosition.y());
                     newSize = new Size(originalResourceSize.width() + deltaXRounded,
                             originalResourceSize.height() - deltaYRounded);
                     break;
             }
 
             // Snap to multiples of step sizes
-            int newWidth = (newSize.width() / stepX) * stepX;
-            int newHeight = (newSize.height() / stepY) * stepY;
+            int newWidth = Math.max(minSize.width(), (newSize.width() / stepX) * stepX);
+            int newHeight = Math.max(minSize.height(), (newSize.height() / stepY) * stepY);
 
             // Ensure the size can fit the resources
             if (!canFitResources(resourceCount, newWidth, newHeight, stepX, stepY)) {
@@ -481,6 +470,15 @@ final class CastleMouseHandler extends MouseAdapter {
             }
 
             newSize = new Size(newWidth, newHeight);
+            Point newPosition = switch (draggingCornerIndex) {
+                case 0 -> new Point(originalResourcePosition.x() + originalResourceSize.width() - newWidth,
+                        originalResourcePosition.y() + originalResourceSize.height() - newHeight);
+                case 1 -> new Point(originalResourcePosition.x(),
+                        originalResourcePosition.y() + originalResourceSize.height() - newHeight);
+                case 2 -> new Point(originalResourcePosition.x() + originalResourceSize.width() - newWidth,
+                        originalResourcePosition.y());
+                default -> originalResourcePosition;
+            };
 
             panel.getEditorPanel().updateResourceAreaSize(draggingResourceArea, newPosition, newSize);
             autoScrollToKeepVisible(e.getPoint());
