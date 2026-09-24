@@ -3,9 +3,14 @@ package at.josefjordan.ballerburg.editor.ui;
 import hgb.gui.HGBaseStatusBar;
 
 import javax.swing.JLabel;
+import javax.swing.JPanel;
 import javax.swing.JSlider;
 import javax.swing.SwingConstants;
 import java.awt.BorderLayout;
+import java.awt.Cursor;
+import java.awt.FlowLayout;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.function.IntConsumer;
 
 public class StatusBar extends HGBaseStatusBar {
@@ -19,6 +24,7 @@ public class StatusBar extends HGBaseStatusBar {
     private final JSlider zoomSlider = new JSlider(SwingConstants.HORIZONTAL,
             MIN_ZOOM_PERCENT, MAX_ZOOM_PERCENT, 100);
     private final JLabel zoomLabel = new JLabel("100%");
+    private final JLabel zoomResetLabel = new JLabel("1:1");
     private IntConsumer zoomListener;
 
     StatusBar() {
@@ -34,9 +40,22 @@ public class StatusBar extends HGBaseStatusBar {
             }
         });
         zoomLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        zoomResetLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        zoomResetLabel.setToolTipText("Zoom auf 100% zurücksetzen");
+        zoomResetLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        zoomResetLabel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent event) {
+                zoomSlider.setValue(100);
+            }
+        });
+        JPanel zoomDisplayPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
+        zoomDisplayPanel.setOpaque(false);
+        zoomDisplayPanel.add(zoomLabel);
+        zoomDisplayPanel.add(zoomResetLabel);
         getPanel(ZOOM_PANEL_INDEX).setLayout(new BorderLayout(4, 0));
         getPanel(ZOOM_PANEL_INDEX).add(zoomSlider, BorderLayout.CENTER);
-        getPanel(ZOOM_PANEL_INDEX).add(zoomLabel, BorderLayout.EAST);
+        getPanel(ZOOM_PANEL_INDEX).add(zoomDisplayPanel, BorderLayout.EAST);
         setProgressPanel(PROGRESS_PANEL_INDEX);
     }
 
