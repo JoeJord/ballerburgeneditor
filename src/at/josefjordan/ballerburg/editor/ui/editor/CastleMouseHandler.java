@@ -148,6 +148,7 @@ final class CastleMouseHandler extends MouseAdapter {
         if (castle == null) {
             return;
         }
+        panel.getEditorPanel().beginHistoryGroup();
 
         double[] params = panel.getRenderingParameters();
         double left = params[0];
@@ -357,6 +358,7 @@ final class CastleMouseHandler extends MouseAdapter {
 
     @Override
     public void mouseReleased(MouseEvent e) {
+        panel.getEditorPanel().endHistoryGroup();
         draggingPolygonIndex = -1;
         draggingPointIndex = -1;
         draggingEntirePolygon = false;

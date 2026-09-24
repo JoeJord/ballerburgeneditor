@@ -19,6 +19,8 @@ public class MainMenu extends HGBaseMenu {
     private static final String ADD_ROOF = "edit.add_roof";
     private static final String DELETE_CASTLE = "edit.delete_castle";
     private static final String REMOVE = "edit.remove";
+    private static final String UNDO = "edit.undo";
+    private static final String REDO = "edit.redo";
 
     public MainMenu(MainFrame frame) {
         super(frame);
@@ -33,6 +35,8 @@ public class MainMenu extends HGBaseMenu {
         registerAction(ADD_ROOF, new AddRoofAction(frame));
         registerAction(DELETE_CASTLE, new DeleteCastleAction(frame));
         registerAction(REMOVE, new RemoveAction(frame));
+        registerAction(UNDO, new UndoAction(frame));
+        registerAction(REDO, new RedoAction(frame));
         setFileMenuStates();
     }
 
@@ -41,6 +45,8 @@ public class MainMenu extends HGBaseMenu {
         super.setFileMenuStates();
         MainFrame frame = (MainFrame) getMainFrame();
         boolean hasOpenCastleFile = frame != null && frame.getFile() != null;
+        boolean canUndo = frame.canUndo();
+        boolean canRedo = frame.canRedo();
         boolean hasCastle = hasOpenCastleFile && frame.hasCastle();
         boolean hasSelectedPolygon = hasCastle && frame.hasSelectedPolygon();
         boolean hasSelectedPolygonPoint = hasCastle && frame.hasSelectedPolygonPoint();
@@ -57,6 +63,10 @@ public class MainMenu extends HGBaseMenu {
         boolean canAddCannonballs = hasCastle && !frame.hasBalls();
         boolean canAddWall = hasCastle && !frame.hasWall();
         boolean canAddRoof = hasCastle;
+        HGBaseGuiTools.setEnabledNullSafe(getMenuItem(UNDO), canUndo);
+        HGBaseGuiTools.setEnabledNullSafe(getToolbarItem(UNDO), canUndo);
+        HGBaseGuiTools.setEnabledNullSafe(getMenuItem(REDO), canRedo);
+        HGBaseGuiTools.setEnabledNullSafe(getToolbarItem(REDO), canRedo);
         HGBaseGuiTools.setEnabledNullSafe(getMenuItem(ADD_CASTLE), hasOpenCastleFile);
         HGBaseGuiTools.setEnabledNullSafe(getToolbarItem(ADD_CASTLE), hasOpenCastleFile);
         HGBaseGuiTools.setEnabledNullSafe(getMenuItem(ADD_CANNON), canAddCannon);

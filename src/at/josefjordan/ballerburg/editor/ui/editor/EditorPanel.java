@@ -27,6 +27,8 @@ public class EditorPanel extends HGBasePanel {
     private int castleIndex = -1;
     private Runnable selectionListener;
     private Runnable changeListener;
+    private Runnable beginHistoryGroupListener;
+    private Runnable endHistoryGroupListener;
     private Runnable zoomListener;
     private java.util.function.Consumer<String> statusBarListener;
 
@@ -396,6 +398,23 @@ public class EditorPanel extends HGBasePanel {
 
     public void setChangeListener(Runnable changeListener) {
         this.changeListener = changeListener;
+    }
+
+    public void setHistoryGroupListeners(Runnable beginListener, Runnable endListener) {
+        beginHistoryGroupListener = beginListener;
+        endHistoryGroupListener = endListener;
+    }
+
+    public void beginHistoryGroup() {
+        if (beginHistoryGroupListener != null) {
+            beginHistoryGroupListener.run();
+        }
+    }
+
+    public void endHistoryGroup() {
+        if (endHistoryGroupListener != null) {
+            endHistoryGroupListener.run();
+        }
     }
 
     public void setZoomListener(Runnable zoomListener) {

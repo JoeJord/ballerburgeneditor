@@ -17,6 +17,9 @@ import javax.swing.SwingConstants;
 import java.awt.Dimension;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Objects;
 
 /// The main frame for the editor.
 public class MainFrame extends HGBaseFrame {
@@ -24,6 +27,12 @@ public class MainFrame extends HGBaseFrame {
     private JButton previousCastleButton;
     private JButton nextCastleButton;
     private JLabel castlePositionLabel;
+    private final Deque<CastleDocument> undoHistory = new ArrayDeque<>();
+    private final Deque<CastleDocument> redoHistory = new ArrayDeque<>();
+    private CastleDocument historyDocument;
+    private boolean restoringHistory;
+    private boolean historyGroupActive;
+    private boolean historyGroupChanged;
 
     /**
      * Constructs a new instance.
@@ -50,7 +59,8 @@ public class MainFrame extends HGBaseFrame {
     private void initializeEditor() {
         editorPanel = new EditorPanel();
         editorPanel.setSelectionListener(this::updateCastleNavigation);
-        editorPanel.setChangeListener(() -> setChanged(true));
+        editorPanel.setChangeListener(this::recordDocumentChange);
+        editorPanel.setHistoryGroupListeners(this::beginHistoryGroup, this::endHistoryGroup);
         editorPanel.setZoomListener(this::updateZoomDisplay);
         if (getStatusBar() instanceof StatusBar statusBar) {
             statusBar.setZoomListener(zoomPercent -> editorPanel.setZoomPercent(zoomPercent));
@@ -244,6 +254,40 @@ public class MainFrame extends HGBaseFrame {
         editorPanel.removeResourceArea();
     }
 
+    public boolean canUndo() {
+        return !undoHistory.isEmpty();
+    }
+
+    public boolean canRedo() {
+        return !redoHistory.isEmpty();
+    }
+
+    public void undo() {
+        if (!canUndo()) {
+            return;
+        }
+        redoHistory.push(historyDocument);
+        restoreHistoryState(undoHistory.pop());
+    }
+
+    public void redo() {
+        if (!canRedo()) {
+            return;
+        }
+        undoHistory.push(historyDocument);
+        restoreHistoryState(redoHistory.pop());
+    }
+
+    public void beginHistoryGroup() {
+        historyGroupActive = true;
+        historyGroupChanged = false;
+    }
+
+    public void endHistoryGroup() {
+        historyGroupActive = false;
+        historyGroupChanged = false;
+    }
+
     @Override
     public void actualizeText() {
         super.actualizeText();
@@ -255,6 +299,7 @@ public class MainFrame extends HGBaseFrame {
         try {
             CastleDocument document = new CastleReader().read(file.toPath());
             editorPanel.setDocument(document);
+            resetHistory(document);
             return 0;
         } catch (IOException | IllegalArgumentException exception) {
             HGBaseDialog.printError(exception, this);
@@ -280,6 +325,44 @@ public class MainFrame extends HGBaseFrame {
     @Override
     public int onFileClose() {
         editorPanel.setDocument(null);
+        resetHistory(null);
         return super.onFileClose();
+    }
+
+    private void recordDocumentChange() {
+        CastleDocument currentDocument = editorPanel.getDocument();
+        if (!restoringHistory && !Objects.equals(currentDocument, historyDocument)) {
+            if (historyDocument != null && (!historyGroupActive || !historyGroupChanged)) {
+                undoHistory.push(historyDocument);
+            }
+            if (!historyGroupActive || !historyGroupChanged) {
+                redoHistory.clear();
+            }
+            historyDocument = currentDocument;
+            historyGroupChanged = true;
+        }
+        setChanged(true);
+    }
+
+    private void restoreHistoryState(CastleDocument document) {
+        restoringHistory = true;
+        try {
+            editorPanel.setDocument(document);
+            historyDocument = document;
+            setChanged(true);
+        } finally {
+            restoringHistory = false;
+        }
+        if (getMenu() != null) {
+            getMenu().setFileMenuStates();
+        }
+    }
+
+    private void resetHistory(CastleDocument document) {
+        undoHistory.clear();
+        redoHistory.clear();
+        historyDocument = document;
+        historyGroupActive = false;
+        historyGroupChanged = false;
     }
 }

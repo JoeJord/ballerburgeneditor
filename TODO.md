@@ -2,7 +2,6 @@
 
 ## Editor
  - Show coordinates in status bar
- - Undo/Redo
 
 ## File Handling
  - Coordinates lower 0 are not allowed ⇒ rebase before saving

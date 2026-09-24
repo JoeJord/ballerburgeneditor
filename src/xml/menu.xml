@@ -12,6 +12,9 @@
         <item id="file.exit" type="action"/>
     </menu>
     <menu id="edit">
+        <item id="edit.undo" type="action" shortcut="Ctrl+Z"/>
+        <item id="edit.redo" type="action" shortcut="Ctrl+Y"/>
+        <item/>
         <item id="edit.delete_castle" type="action"/>
         <item id="edit.add_castle" type="action"/>
         <item id="edit.add_throne" type="action"/>
@@ -43,6 +46,9 @@
         <item id="file.new"/>
         <item id="file.save"/>
         <item/>
+        <item id="edit.undo"/>
+        <item id="edit.redo"/>
+        <item/>
         <item id="edit.delete_castle"/>
         <item id="edit.add_castle"/>
         <item id="edit.add_throne"/>
@@ -69,6 +75,8 @@
         <image id="updating" file="updating.gif"/>
     </images>
     <images path="/gfx/tools">
+        <image id="edit.undo" file="undo.png"/>
+        <image id="edit.redo" file="redo.png"/>
         <image id="edit.delete_castle" file="delete_castle.png"/>
         <image id="edit.add_castle" file="add_castle.png"/>
         <image id="edit.add_throne" file="add_throne.png"/>
