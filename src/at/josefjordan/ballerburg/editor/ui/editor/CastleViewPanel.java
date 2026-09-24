@@ -391,7 +391,9 @@ final class CastleViewPanel extends HGBasePanel {
             if (castle.windVane().x() != Integer.MIN_VALUE && castle.windVane().y() != Integer.MIN_VALUE) {
                 minimumY = Math.min(minimumY, castle.windVane().y());
                 minimumX = Math.min(minimumX, castle.windVane().x());
-                maximumY = Math.max(maximumY, castle.windVane().y() + CastleFileFormat.WIND_VANE_HEIGHT);
+                if (castle.windVane().x() != Integer.MIN_VALUE && castle.windVane().y() != Integer.MIN_VALUE) {
+                    maximumY = Math.max(maximumY, castle.windVane().y() + CastleFileFormat.WIND_VANE_HEIGHT);
+                }
                 maximumX = Math.max(maximumX, castle.windVane().x() + CastleFileFormat.WIND_VANE_WIDTH);
             }
         }
@@ -681,13 +683,15 @@ final class CastleViewPanel extends HGBasePanel {
                 divideRoundedUp(castle.resources().powder(), CastleFileFormat.POWDER_PER_UNIT), left, bottom, scale);
         drawResources(g, Sprites.BALL, castle.balls(), castle.ballRoom(), CastleFileFormat.CANNONBALL_WIDTH, CastleFileFormat.CANNONBALL_HEIGHT,
                 castle.resources().balls(), left, bottom, scale);
-        drawSprite(g, Sprites.WIND_VANE, castle.windVane(), left, bottom, scale);
-        if (selectedWindVane) {
-            Rectangle2D windVaneRect = calculateWindVaneRectangle(castle.windVane(), left, bottom, scale);
-            g.setColor(COLOR_SELECTED);
-            g.setStroke(new BasicStroke(2.0f));
-            g.draw(windVaneRect);
-            g.setStroke(new BasicStroke(1.0f));
+        if (castle.windVane().x() != Integer.MIN_VALUE && castle.windVane().y() != Integer.MIN_VALUE) {
+            drawSprite(g, Sprites.WIND_VANE, castle.windVane(), left, bottom, scale);
+            if (selectedWindVane) {
+                Rectangle2D windVaneRect = calculateWindVaneRectangle(castle.windVane(), left, bottom, scale);
+                g.setColor(COLOR_SELECTED);
+                g.setStroke(new BasicStroke(2.0f));
+                g.draw(windVaneRect);
+                g.setStroke(new BasicStroke(1.0f));
+            }
         }
         
         // Draw edge hover indicator for selected polygon
