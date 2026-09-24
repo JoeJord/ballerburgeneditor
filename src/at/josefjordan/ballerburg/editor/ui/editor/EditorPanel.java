@@ -602,6 +602,7 @@ public class EditorPanel extends HGBasePanel {
         castles.set(castleIndex, updatedCastle);
         document = new CastleDocument(castles);
         castleView.updateCastle(updatedCastle);
+        propertyPalette.setCastle(updatedCastle);
         if (changeListener != null) {
             changeListener.run();
         }
