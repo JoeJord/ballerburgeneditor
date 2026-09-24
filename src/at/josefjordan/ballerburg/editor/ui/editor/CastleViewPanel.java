@@ -14,6 +14,7 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.awt.event.MouseWheelEvent;
 import java.awt.geom.Line2D;
 import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
@@ -21,6 +22,7 @@ import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.SwingUtilities;
 import javax.swing.JViewport;
@@ -29,6 +31,7 @@ import javax.swing.JViewport;
 final class CastleViewPanel extends HGBasePanel {
     public static final double MIN_ZOOM_FACTOR = 0.10; // corresponds 10 %
     public static final double MAX_ZOOM_FACTOR = 10.0; // corresponds 1000 %
+    private static final int WHEEL_SCROLL_MULTIPLIER = 4;
     private static final boolean ZOOM_DEBUG_LOGGING = true;
     private static final double BASE_SCALE = 4.0; // Base scale multiplier for 100% zoom
     private static final double MARGIN = 24.0;
@@ -296,6 +299,26 @@ final class CastleViewPanel extends HGBasePanel {
 
     private JViewport getViewport() {
         return getParent() instanceof JViewport viewport ? viewport : null;
+    }
+
+    void scrollByWheel(MouseWheelEvent event, boolean horizontal) {
+        JViewport viewport = getViewport();
+        if (viewport == null || !(viewport.getParent() instanceof JScrollPane scrollPane)) {
+            return;
+        }
+
+        JScrollBar scrollBar = horizontal
+                ? scrollPane.getHorizontalScrollBar()
+                : scrollPane.getVerticalScrollBar();
+        int units = event.getUnitsToScroll();
+        if (units == 0) {
+            units = event.getWheelRotation();
+        }
+        int unitIncrement = scrollBar.getUnitIncrement(units);
+        if (unitIncrement <= 0) {
+            unitIncrement = Math.max(1, event.getScrollAmount());
+        }
+        scrollBar.setValue(scrollBar.getValue() + units * unitIncrement * WHEEL_SCROLL_MULTIPLIER);
     }
 
     double getZoomFactor() {
