@@ -13,16 +13,21 @@ import javax.swing.JSplitPane;
 import javax.swing.JScrollPane;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.awt.geom.Path2D;
+import java.awt.geom.Rectangle2D;
+import java.awt.geom.Area;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Editor containing the castle view and the property palette. */
+/** Editor containing the castle view, property palette, and problems panel. */
 public class EditorPanel extends HGBasePanel {
     private static final int PROPERTY_PALETTE_MIN_WIDTH = 200;
     private static final int PROPERTY_PALETTE_PREFERRED_WIDTH = 230;
+    private static final int PROBLEMS_PANEL_PREFERRED_HEIGHT = 120;
 
     private final CastleViewPanel castleView = new CastleViewPanel();
     private final PropertyPalettePanel propertyPalette = new PropertyPalettePanel();
+    private final ProblemsPanel problemsPanel = new ProblemsPanel();
     private CastleDocument document;
     private int castleIndex = -1;
     private Runnable selectionListener;
@@ -49,6 +54,11 @@ public class EditorPanel extends HGBasePanel {
         splitPane.setResizeWeight(1.0);
         propertyPalette.setMinimumSize(new Dimension(PROPERTY_PALETTE_MIN_WIDTH, 0));
         propertyPalette.setPreferredSize(new Dimension(PROPERTY_PALETTE_PREFERRED_WIDTH, 0));
+        JSplitPane propertySplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, propertyPalette, problemsPanel);
+        propertySplitPane.setContinuousLayout(true);
+        propertySplitPane.setResizeWeight(0.7);
+        problemsPanel.setPreferredSize(new Dimension(0, PROBLEMS_PANEL_PREFERRED_HEIGHT));
+        splitPane.setRightComponent(propertySplitPane);
         add(splitPane, BorderLayout.CENTER);
         propertyPalette.setResourcesListener(this::updateResources);
         updateSelectedCastle();
@@ -71,6 +81,11 @@ public class EditorPanel extends HGBasePanel {
 
     public int getCastleCount() {
         return document == null ? 0 : document.castles().size();
+    }
+
+    public boolean hasProblems() {
+        return document != null && document.castles().stream()
+                .anyMatch(castle -> !createProblems(castle).isEmpty());
     }
 
     public int getCannonCount() {
@@ -129,7 +144,10 @@ public class EditorPanel extends HGBasePanel {
         if (castleIndex < 0 || castleIndex >= getCastleCount()) {
             return false;
         }
-        Castle castle = document.castles().get(castleIndex);
+        return hasWall(document.castles().get(castleIndex));
+    }
+
+    private boolean hasWall(Castle castle) {
         // Start fill style is 2,9 (masonry) according to BALLER.DAT
         int fillStyle = CastleFileFormat.FILL_STYLE_PATTERN;
         int fillIndex = CastleFileFormat.FILL_INDEX_MASONRY;
@@ -465,6 +483,7 @@ public class EditorPanel extends HGBasePanel {
         castles.set(castleIndex, updatedCastle);
         document = new CastleDocument(castles);
         castleView.updateCastle(updatedCastle);
+        updateProblems(updatedCastle);
         if (changeListener != null) {
             changeListener.run();
         }
@@ -500,6 +519,7 @@ public class EditorPanel extends HGBasePanel {
         castles.set(castleIndex, updatedCastle);
         document = new CastleDocument(castles);
         castleView.updateCastle(updatedCastle);
+        updateProblems(updatedCastle);
         if (changeListener != null) {
             changeListener.run();
         }
@@ -525,6 +545,7 @@ public class EditorPanel extends HGBasePanel {
         castles.set(castleIndex, updatedCastle);
         document = new CastleDocument(castles);
         castleView.updateCastle(updatedCastle);
+        updateProblems(updatedCastle);
         if (changeListener != null) {
             changeListener.run();
         }
@@ -544,6 +565,7 @@ public class EditorPanel extends HGBasePanel {
         castles.set(castleIndex, updatedCastle);
         document = new CastleDocument(castles);
         castleView.updateCastle(updatedCastle);
+        updateProblems(updatedCastle);
         if (changeListener != null) {
             changeListener.run();
         }
@@ -563,6 +585,7 @@ public class EditorPanel extends HGBasePanel {
         castles.set(castleIndex, updatedCastle);
         document = new CastleDocument(castles);
         castleView.updateCastle(updatedCastle);
+        updateProblems(updatedCastle);
         if (changeListener != null) {
             changeListener.run();
         }
@@ -603,6 +626,7 @@ public class EditorPanel extends HGBasePanel {
         document = new CastleDocument(castles);
         castleView.updateCastle(updatedCastle);
         propertyPalette.setCastle(updatedCastle);
+        updateProblems(updatedCastle);
         if (changeListener != null) {
             changeListener.run();
         }
@@ -642,6 +666,7 @@ public class EditorPanel extends HGBasePanel {
         castles.set(castleIndex, updatedCastle);
         document = new CastleDocument(castles);
         castleView.updateCastle(updatedCastle);
+        updateProblems(updatedCastle);
         if (changeListener != null) {
             changeListener.run();
         }
@@ -778,6 +803,7 @@ public class EditorPanel extends HGBasePanel {
         document = new CastleDocument(castles);
         castleView.updateCastle(updatedCastle);
         castleView.setSelectedPolygon(null);
+        updateProblems(updatedCastle);
         if (changeListener != null) {
             changeListener.run();
         }
@@ -836,6 +862,7 @@ public class EditorPanel extends HGBasePanel {
         document = new CastleDocument(castles);
         castleView.updateCastle(updatedCastle);
         castleView.setSelectedCannonIndex(-1);
+        updateProblems(updatedCastle);
         if (changeListener != null) {
             changeListener.run();
         }
@@ -864,6 +891,7 @@ public class EditorPanel extends HGBasePanel {
         document = new CastleDocument(castles);
         castleView.updateCastle(updatedCastle);
         castleView.setSelectedThrone(false);
+        updateProblems(updatedCastle);
         if (changeListener != null) {
             changeListener.run();
         }
@@ -892,6 +920,7 @@ public class EditorPanel extends HGBasePanel {
         document = new CastleDocument(castles);
         castleView.updateCastle(updatedCastle);
         castleView.setSelectedWindVane(false);
+        updateProblems(updatedCastle);
         if (changeListener != null) {
             changeListener.run();
         }
@@ -943,6 +972,7 @@ public class EditorPanel extends HGBasePanel {
         castleView.updateCastle(updatedCastle);
         propertyPalette.setCastle(updatedCastle);
         castleView.setSelectedResourceArea(null);
+        updateProblems(updatedCastle);
         if (changeListener != null) {
             changeListener.run();
         }
@@ -996,6 +1026,294 @@ public class EditorPanel extends HGBasePanel {
                 ? document.castles().get(castleIndex) : null;
         castleView.setCastle(castle);
         propertyPalette.setCastle(castle);
+        updateProblems(castle);
+    }
+
+    private void updateProblems(Castle castle) {
+        problemsPanel.setProblems(createProblems(castle));
+    }
+
+    private List<ProblemsPanel.Problem> createProblems(Castle castle) {
+        List<ProblemsPanel.Problem> problems = new ArrayList<>();
+        if (castle != null) {
+            boolean wallPresent = hasWall(castle);
+            addMissingProblem(problems, hasThrone(castle), "problems.missing_throne");
+            addMissingProblem(problems, hasMoney(castle), "problems.missing_money");
+            addMissingProblem(problems, hasBalls(castle), "problems.missing_balls");
+            addMissingProblem(problems, hasPowder(castle), "problems.missing_powder");
+            addMissingProblem(problems, hasWindVane(castle), "problems.missing_windvane");
+            addMissingProblem(problems, wallPresent, "problems.missing_wall");
+            if (wallPresent) {
+                addMissingProblem(problems, isInsideWall(castle, castle.throne(),
+                        new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT)),
+                        "problems.throne_outside_wall");
+                addMissingProblem(problems, isInsideWall(castle, castle.money(), castle.moneyRoom()),
+                        "problems.money_outside_wall");
+                addMissingProblem(problems, isInsideWall(castle, castle.balls(), castle.ballRoom()),
+                        "problems.balls_outside_wall");
+                addMissingProblem(problems, isInsideWall(castle, castle.powder(), castle.powderRoom()),
+                        "problems.powder_outside_wall");
+            }
+            addOverlapProblem(problems, castle.throne(),
+                    new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT),
+                    castle.money(), castle.moneyRoom(), "problems.overlap_throne_money");
+            addOverlapProblem(problems, castle.throne(),
+                    new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT),
+                    castle.balls(), castle.ballRoom(), "problems.overlap_throne_balls");
+            addOverlapProblem(problems, castle.throne(),
+                    new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT),
+                    castle.powder(), castle.powderRoom(), "problems.overlap_throne_powder");
+            addOverlapProblem(problems, castle.money(), castle.moneyRoom(),
+                    castle.balls(), castle.ballRoom(), "problems.overlap_money_balls");
+            addOverlapProblem(problems, castle.money(), castle.moneyRoom(),
+                    castle.powder(), castle.powderRoom(), "problems.overlap_money_powder");
+            addOverlapProblem(problems, castle.balls(), castle.ballRoom(),
+                    castle.powder(), castle.powderRoom(), "problems.overlap_balls_powder");
+            addCannonOverlapProblems(problems, castle);
+            addWindVaneOverlapProblems(problems, castle);
+            addPolygonOverlapProblems(problems, castle);
+            addZeroWarning(problems, hasMoney(castle), castle.resources().money(), "problems.zero_money");
+            addZeroWarning(problems, hasPowder(castle), castle.resources().powder(), "problems.zero_powder");
+            addZeroWarning(problems, hasBalls(castle), castle.resources().balls(), "problems.zero_balls");
+            addZeroWarning(problems, hasPeople(castle), castle.resources().people(), "problems.zero_people");
+            if (castle.cannons().isEmpty()) {
+                problems.add(new ProblemsPanel.Problem(ProblemsPanel.ProblemSeverity.WARNING,
+                        HGBaseText.getText("problems.no_cannons")));
+            }
+        }
+        return problems;
+    }
+
+    private void addMissingProblem(List<ProblemsPanel.Problem> problems, boolean present, String textKey) {
+        if (!present) {
+            problems.add(new ProblemsPanel.Problem(ProblemsPanel.ProblemSeverity.ERROR,
+                    HGBaseText.getText(textKey)));
+        }
+    }
+
+    private void addZeroWarning(List<ProblemsPanel.Problem> problems, boolean areaPresent, int value,
+                                String textKey) {
+        if (areaPresent && value == 0) {
+            problems.add(new ProblemsPanel.Problem(ProblemsPanel.ProblemSeverity.WARNING,
+                    HGBaseText.getText(textKey)));
+        }
+    }
+
+    private boolean hasThrone(Castle castle) {
+        return hasPoint(castle.throne());
+    }
+
+    private boolean hasWindVane(Castle castle) {
+        return hasPoint(castle.windVane());
+    }
+
+    private boolean hasMoney(Castle castle) {
+        return hasPoint(castle.money());
+    }
+
+    private boolean hasPowder(Castle castle) {
+        return hasPoint(castle.powder());
+    }
+
+    private boolean hasBalls(Castle castle) {
+        return hasPoint(castle.balls());
+    }
+
+    private boolean hasPeople(Castle castle) {
+        return castle.resources().people() >= 0;
+    }
+
+    private boolean hasPoint(Point point) {
+        return point.x() != Integer.MIN_VALUE && point.y() != Integer.MIN_VALUE;
+    }
+
+    private void addOverlapProblem(List<ProblemsPanel.Problem> problems, Point firstPosition, Size firstSize,
+                                   Point secondPosition, Size secondSize, String textKey) {
+        if (hasPoint(firstPosition) && hasPoint(secondPosition)
+                && rectanglesOverlap(firstPosition, firstSize, secondPosition, secondSize)) {
+            problems.add(new ProblemsPanel.Problem(ProblemsPanel.ProblemSeverity.ERROR,
+                    HGBaseText.getText(textKey)));
+        }
+    }
+
+    private void addCannonOverlapProblems(List<ProblemsPanel.Problem> problems, Castle castle) {
+        Size cannonSize = new Size(CastleFileFormat.CANNON_WIDTH, CastleFileFormat.CANNON_HEIGHT);
+        for (int index = 0; index < castle.cannons().size(); index++) {
+            Point cannon = castle.cannons().get(index);
+            addOverlapProblem(problems, cannon, cannonSize, castle.throne(),
+                    new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT),
+                    "problems.overlap_cannon_throne");
+            addOverlapProblem(problems, cannon, cannonSize, castle.money(), castle.moneyRoom(),
+                    "problems.overlap_cannon_money");
+            addOverlapProblem(problems, cannon, cannonSize, castle.balls(), castle.ballRoom(),
+                    "problems.overlap_cannon_balls");
+            addOverlapProblem(problems, cannon, cannonSize, castle.powder(), castle.powderRoom(),
+                    "problems.overlap_cannon_powder");
+            addPolygonOverlapProblems(problems, cannon, cannonSize, castle,
+                    "problems.overlap_cannon_wall", "problems.overlap_cannon_roof");
+            for (int otherIndex = index + 1; otherIndex < castle.cannons().size(); otherIndex++) {
+                addOverlapProblem(problems, cannon, cannonSize, castle.cannons().get(otherIndex), cannonSize,
+                        "problems.overlap_cannon_cannon");
+            }
+        }
+    }
+
+    private void addWindVaneOverlapProblems(List<ProblemsPanel.Problem> problems, Castle castle) {
+        Point windVane = castle.windVane();
+        Size windVaneSize = new Size(CastleFileFormat.WIND_VANE_WIDTH, CastleFileFormat.WIND_VANE_HEIGHT);
+        addOverlapProblem(problems, windVane, windVaneSize, castle.throne(),
+                new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT),
+                "problems.overlap_windvane_throne");
+        addOverlapProblem(problems, windVane, windVaneSize, castle.money(), castle.moneyRoom(),
+                "problems.overlap_windvane_money");
+        addOverlapProblem(problems, windVane, windVaneSize, castle.balls(), castle.ballRoom(),
+                "problems.overlap_windvane_balls");
+        addOverlapProblem(problems, windVane, windVaneSize, castle.powder(), castle.powderRoom(),
+                "problems.overlap_windvane_powder");
+        for (Point cannon : castle.cannons()) {
+            addOverlapProblem(problems, windVane, windVaneSize, cannon,
+                    new Size(CastleFileFormat.CANNON_WIDTH, CastleFileFormat.CANNON_HEIGHT),
+                    "problems.overlap_windvane_cannon");
+        }
+        addPolygonOverlapProblems(problems, windVane, windVaneSize, castle,
+                "problems.overlap_windvane_wall", "problems.overlap_windvane_roof");
+    }
+
+    private void addPolygonOverlapProblems(List<ProblemsPanel.Problem> problems, Castle castle) {
+        List<PolygonInfo> polygons = polygonInfos(castle);
+        for (int firstIndex = 0; firstIndex < polygons.size(); firstIndex++) {
+            for (int secondIndex = firstIndex + 1; secondIndex < polygons.size(); secondIndex++) {
+                if (polygonsOverlap(polygons.get(firstIndex), polygons.get(secondIndex))) {
+                    problems.add(new ProblemsPanel.Problem(ProblemsPanel.ProblemSeverity.ERROR,
+                            HGBaseText.getText(polygonOverlapTextKey(
+                                    polygons.get(firstIndex), polygons.get(secondIndex)))));
+                }
+            }
+        }
+    }
+
+    private List<PolygonInfo> polygonInfos(Castle castle) {
+        List<PolygonInfo> polygons = new ArrayList<>();
+        int fillStyle = CastleFileFormat.FILL_STYLE_PATTERN;
+        int fillIndex = CastleFileFormat.FILL_INDEX_MASONRY;
+        for (CastleDocument.DrawingCommand command : castle.drawing()) {
+            if (command instanceof CastleDocument.FillStyle(int style, int index)) {
+                fillStyle = style;
+                fillIndex = index;
+            } else if (command instanceof CastleDocument.Polygon polygon) {
+                boolean wall = fillStyle == CastleFileFormat.FILL_STYLE_PATTERN
+                        && fillIndex == CastleFileFormat.FILL_INDEX_MASONRY;
+                polygons.add(new PolygonInfo(polygon, wall));
+            }
+        }
+        return polygons;
+    }
+
+    private String polygonOverlapTextKey(PolygonInfo first, PolygonInfo second) {
+        if (first.wall() && second.wall()) {
+            return "problems.overlap_wall_wall";
+        }
+        if (!first.wall() && !second.wall()) {
+            return "problems.overlap_roof_roof";
+        }
+        return "problems.overlap_wall_roof";
+    }
+
+    private void addPolygonOverlapProblems(List<ProblemsPanel.Problem> problems, Point position, Size size,
+                                           Castle castle, String wallTextKey, String roofTextKey) {
+        if (!hasPoint(position)) {
+            return;
+        }
+        Rectangle2D rectangle = new Rectangle2D.Double(position.x(), position.y(), size.width(), size.height());
+        int fillStyle = CastleFileFormat.FILL_STYLE_PATTERN;
+        int fillIndex = CastleFileFormat.FILL_INDEX_MASONRY;
+        for (CastleDocument.DrawingCommand command : castle.drawing()) {
+            if (command instanceof CastleDocument.FillStyle(int style, int index)) {
+                fillStyle = style;
+                fillIndex = index;
+            } else if (command instanceof CastleDocument.Polygon polygon
+                    && polygonIntersects(polygon, rectangle)) {
+                String textKey = fillStyle == CastleFileFormat.FILL_STYLE_PATTERN
+                        && fillIndex == CastleFileFormat.FILL_INDEX_MASONRY
+                        ? wallTextKey : roofTextKey;
+                problems.add(new ProblemsPanel.Problem(ProblemsPanel.ProblemSeverity.ERROR,
+                        HGBaseText.getText(textKey)));
+            }
+        }
+    }
+
+    private boolean rectanglesOverlap(Point firstPosition, Size firstSize,
+                                      Point secondPosition, Size secondSize) {
+        return new Rectangle2D.Double(firstPosition.x(), firstPosition.y(),
+                firstSize.width(), firstSize.height()).intersects(
+                secondPosition.x(), secondPosition.y(), secondSize.width(), secondSize.height());
+    }
+
+    private boolean isInsideWall(Castle castle, Point position, Size size) {
+        if (!hasPoint(position)) {
+            return true;
+        }
+        Rectangle2D area = new Rectangle2D.Double(position.x(), position.y(), size.width(), size.height());
+        int fillStyle = CastleFileFormat.FILL_STYLE_PATTERN;
+        int fillIndex = CastleFileFormat.FILL_INDEX_MASONRY;
+        for (CastleDocument.DrawingCommand command : castle.drawing()) {
+            if (command instanceof CastleDocument.FillStyle(int style, int index)) {
+                fillStyle = style;
+                fillIndex = index;
+            } else if (command instanceof CastleDocument.Polygon polygon) {
+                if (fillStyle == CastleFileFormat.FILL_STYLE_PATTERN
+                        && fillIndex == CastleFileFormat.FILL_INDEX_MASONRY
+                        && polygonContains(polygon, area)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean polygonContains(CastleDocument.Polygon polygon, Rectangle2D area) {
+        Path2D path = new Path2D.Double();
+        Point first = polygon.points().get(0);
+        path.moveTo(first.x(), first.y());
+        for (int index = 1; index < polygon.points().size(); index++) {
+            Point point = polygon.points().get(index);
+            path.lineTo(point.x(), point.y());
+        }
+        path.closePath();
+        return path.contains(area);
+    }
+
+    private boolean polygonIntersects(CastleDocument.Polygon polygon, Rectangle2D rectangle) {
+        Path2D path = new Path2D.Double();
+        Point first = polygon.points().get(0);
+        path.moveTo(first.x(), first.y());
+        for (int index = 1; index < polygon.points().size(); index++) {
+            Point point = polygon.points().get(index);
+            path.lineTo(point.x(), point.y());
+        }
+        path.closePath();
+        return path.intersects(rectangle);
+    }
+
+    private boolean polygonsOverlap(PolygonInfo first, PolygonInfo second) {
+        Area intersection = polygonArea(first.polygon());
+        intersection.intersect(polygonArea(second.polygon()));
+        return !intersection.isEmpty();
+    }
+
+    private Area polygonArea(CastleDocument.Polygon polygon) {
+        Path2D path = new Path2D.Double();
+        Point first = polygon.points().get(0);
+        path.moveTo(first.x(), first.y());
+        for (int index = 1; index < polygon.points().size(); index++) {
+            Point point = polygon.points().get(index);
+            path.lineTo(point.x(), point.y());
+        }
+        path.closePath();
+        return new Area(path);
+    }
+
+    private record PolygonInfo(CastleDocument.Polygon polygon, boolean wall) {
     }
 
     private void updateResources(Resources resources) {
@@ -1014,6 +1332,7 @@ public class EditorPanel extends HGBasePanel {
         castles.set(castleIndex, updatedCastle);
         document = new CastleDocument(castles);
         castleView.updateCastle(updatedCastle);
+        updateProblems(updatedCastle);
         if (changeListener != null) {
             changeListener.run();
         }

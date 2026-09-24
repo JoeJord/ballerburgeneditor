@@ -11,6 +11,7 @@ import hgb.lib.HGBaseText;
 
 import javax.swing.JButton;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JSeparator;
 import javax.swing.JToolBar;
 import javax.swing.SwingConstants;
@@ -312,6 +313,16 @@ public class MainFrame extends HGBaseFrame {
         CastleDocument document = editorPanel.getDocument();
         if (document == null) {
             return HGBaseTools.INVALID;
+        }
+        if (editorPanel.hasProblems()) {
+            int result = JOptionPane.showConfirmDialog(this,
+                    HGBaseText.getText("problems.save_confirmation"),
+                    HGBaseText.getText("problems.title"),
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE);
+            if (result != JOptionPane.YES_OPTION) {
+                return HGBaseTools.INVALID;
+            }
         }
         try {
             new CastleWriter().write(file.toPath(), document);
