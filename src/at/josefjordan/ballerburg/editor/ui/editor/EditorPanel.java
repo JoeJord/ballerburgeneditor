@@ -21,6 +21,7 @@ import java.util.List;
 
 /** Editor containing the castle view, property palette, and problems panel. */
 public class EditorPanel extends HGBasePanel {
+    private static final int MAX_CASTLE_ELEMENT_WIDTH = 200;
     private static final int PROPERTY_PALETTE_MIN_WIDTH = 200;
     private static final int PROPERTY_PALETTE_PREFERRED_WIDTH = 230;
     private static final int PROBLEMS_PANEL_PREFERRED_HEIGHT = 120;
@@ -1043,6 +1044,7 @@ public class EditorPanel extends HGBasePanel {
             addMissingProblem(problems, hasPowder(castle), "problems.missing_powder");
             addMissingProblem(problems, hasWindVane(castle), "problems.missing_windvane");
             addMissingProblem(problems, wallPresent, "problems.missing_wall");
+            addMissingProblem(problems, hasElementWidth(castle), "problems.elements_too_wide");
             if (wallPresent) {
                 addMissingProblem(problems, isInsideWall(castle, castle.throne(),
                         new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT)),
@@ -1125,6 +1127,45 @@ public class EditorPanel extends HGBasePanel {
 
     private boolean hasPoint(Point point) {
         return point.x() != Integer.MIN_VALUE && point.y() != Integer.MIN_VALUE;
+    }
+
+    private boolean hasElementWidth(Castle castle) {
+        int minimumX = Integer.MAX_VALUE;
+        int maximumX = Integer.MIN_VALUE;
+        for (CastleDocument.DrawingCommand command : castle.drawing()) {
+            if (command instanceof CastleDocument.Polygon polygon) {
+                for (Point point : polygon.points()) {
+                    minimumX = Math.min(minimumX, point.x());
+                    maximumX = Math.max(maximumX, point.x());
+                }
+            }
+        }
+        if (hasPoint(castle.throne())) {
+            minimumX = Math.min(minimumX, castle.throne().x());
+            maximumX = Math.max(maximumX, castle.throne().x() + CastleFileFormat.THRONE_WIDTH);
+        }
+        if (hasPoint(castle.money())) {
+            minimumX = Math.min(minimumX, castle.money().x());
+            maximumX = Math.max(maximumX, castle.money().x() + castle.moneyRoom().width());
+        }
+        if (hasPoint(castle.powder())) {
+            minimumX = Math.min(minimumX, castle.powder().x());
+            maximumX = Math.max(maximumX, castle.powder().x() + castle.powderRoom().width());
+        }
+        if (hasPoint(castle.balls())) {
+            minimumX = Math.min(minimumX, castle.balls().x());
+            maximumX = Math.max(maximumX, castle.balls().x() + castle.ballRoom().width());
+        }
+        if (hasPoint(castle.windVane())) {
+            minimumX = Math.min(minimumX, castle.windVane().x());
+            maximumX = Math.max(maximumX, castle.windVane().x() + CastleFileFormat.WIND_VANE_WIDTH);
+        }
+        for (Point cannon : castle.cannons()) {
+            minimumX = Math.min(minimumX, cannon.x());
+            maximumX = Math.max(maximumX, cannon.x() + CastleFileFormat.CANNON_WIDTH);
+        }
+        return minimumX == Integer.MAX_VALUE
+                || maximumX - minimumX <= MAX_CASTLE_ELEMENT_WIDTH;
     }
 
     private void addOverlapProblem(List<ProblemsPanel.Problem> problems, Point firstPosition, Size firstSize,

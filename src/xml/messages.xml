@@ -28,6 +28,7 @@
         <msg code="problems.missing_powder">Kein Pulver-Bereich vorhanden</msg>
         <msg code="problems.missing_windvane">Keine Windfahne vorhanden</msg>
         <msg code="problems.missing_wall">Keine Burgmauer vorhanden</msg>
+        <msg code="problems.elements_too_wide">Die Burg ist zu breit.</msg>
         <msg code="problems.overlap_throne_money">Der Thron &#252;berschneidet sich mit dem Geld-Bereich</msg>
         <msg code="problems.overlap_throne_balls">Der Thron &#252;berschneidet sich mit dem Kugeln-Bereich</msg>
         <msg code="problems.overlap_throne_powder">Der Thron &#252;berschneidet sich mit dem Pulver-Bereich</msg>
@@ -104,6 +105,7 @@
         <msg code="problems.missing_powder">No powder area present</msg>
         <msg code="problems.missing_windvane">No wind vane present</msg>
         <msg code="problems.missing_wall">No castle wall present</msg>
+        <msg code="problems.elements_too_wide">The castle is too wide.</msg>
         <msg code="problems.overlap_throne_money">The throne overlaps the money area</msg>
         <msg code="problems.overlap_throne_balls">The throne overlaps the cannonball area</msg>
         <msg code="problems.overlap_throne_powder">The throne overlaps the powder area</msg>
