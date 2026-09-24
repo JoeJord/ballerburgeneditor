@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.List;
 import java.util.Objects;
 
 /// The main frame for the editor.
@@ -293,6 +294,15 @@ public class MainFrame extends HGBaseFrame {
     public void actualizeText() {
         super.actualizeText();
         actualizeCastleNavigationText();
+    }
+
+    @Override
+    public int onFileNew() {
+        CastleDocument document = new CastleDocument(List.of());
+        editorPanel.setDocument(document);
+        editorPanel.addCastle();
+        resetHistory(editorPanel.getDocument());
+        return 0;
     }
 
     @Override

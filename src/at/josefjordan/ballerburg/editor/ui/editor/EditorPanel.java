@@ -1354,8 +1354,9 @@ public class EditorPanel extends HGBasePanel {
 
     private Castle createEmptyCastle() {
         Point origin = new Point(0, 0);
+        Point absent = new Point(Integer.MIN_VALUE, Integer.MIN_VALUE);
         Size emptySize = new Size(0, 0);
-        return new Castle(0, List.of(), origin, origin, origin, origin, origin,
+        return new Castle(0, List.of(), absent, absent, absent, absent, absent,
                 emptySize, emptySize, emptySize, new Resources(0, 0, 0, 0),
                 List.of(0, 0, 0, 0), List.of());
     }
