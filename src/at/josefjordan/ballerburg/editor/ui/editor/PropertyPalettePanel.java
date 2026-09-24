@@ -2,6 +2,8 @@ package at.josefjordan.ballerburg.editor.ui.editor;
 
 import at.josefjordan.ballerburg.editor.model.CastleDocument.Castle;
 import at.josefjordan.ballerburg.editor.model.CastleDocument.Resources;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.Size;
+import at.josefjordan.ballerburg.editor.model.CastleFileFormat;
 import hgb.gui.HGBasePanel;
 import hgb.lib.HGBaseText;
 
@@ -65,6 +67,7 @@ final class PropertyPalettePanel extends HGBasePanel {
         updating = true;
         try {
             Resources resources = castle == null ? new Resources(0, 0, 0, 0) : castle.resources();
+            setResourceMaximums(castle);
             moneySpinner.setValue(resources.money());
             powderSpinner.setValue(resources.powder());
             ballsSpinner.setValue(resources.balls());
@@ -86,6 +89,26 @@ final class PropertyPalettePanel extends HGBasePanel {
 
     private static JSpinner createSpinner() {
         return new JSpinner(new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 1));
+    }
+
+    private void setResourceMaximums(Castle castle) {
+        Size moneyRoom = castle == null ? new Size(0, 0) : castle.moneyRoom();
+        Size powderRoom = castle == null ? new Size(0, 0) : castle.powderRoom();
+        Size ballRoom = castle == null ? new Size(0, 0) : castle.ballRoom();
+        ((SpinnerNumberModel) moneySpinner.getModel()).setMaximum(
+                resourceValueCapacity(moneyRoom, CastleFileFormat.MONEY_WIDTH, CastleFileFormat.MONEY_HEIGHT,
+                        CastleFileFormat.MONEY_PER_UNIT));
+        ((SpinnerNumberModel) powderSpinner.getModel()).setMaximum(
+                resourceValueCapacity(powderRoom, CastleFileFormat.POWDER_WIDTH, CastleFileFormat.POWDER_HEIGHT,
+                        CastleFileFormat.POWDER_PER_UNIT));
+        ((SpinnerNumberModel) ballsSpinner.getModel()).setMaximum(
+                resourceValueCapacity(ballRoom, CastleFileFormat.CANNONBALL_WIDTH, CastleFileFormat.CANNONBALL_HEIGHT,
+                        1));
+    }
+
+    private int resourceValueCapacity(Size room, int slotWidth, int slotHeight, int valuePerSlot) {
+        long slots = (long) (room.width() / slotWidth) * (room.height() / slotHeight);
+        return (int) Math.min(Integer.MAX_VALUE, slots * valuePerSlot);
     }
 
     private void addRow(JLabel label, JSpinner spinner, GridBagConstraints constraints) {
