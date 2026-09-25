@@ -43,11 +43,11 @@ public final class CastleReader {
 
     private Castle readCastle(Cursor cursor, int width) throws IOException {
         List<Point> cannons = readCannons(cursor);
-        Point throne = readPoint(cursor);
-        Point windVane = readPoint(cursor);
-        Point money = readPoint(cursor);
-        Point powder = readPoint(cursor);
-        Point balls = readPoint(cursor);
+        Point throne = readOptionalPoint(cursor);
+        Point windVane = readOptionalPoint(cursor);
+        Point money = readOptionalPoint(cursor);
+        Point powder = readOptionalPoint(cursor);
+        Point balls = readOptionalPoint(cursor);
         Size moneyRoom = readSize(cursor);
         Size powderRoom = readSize(cursor);
         Size ballRoom = readSize(cursor);
@@ -114,6 +114,15 @@ public final class CastleReader {
 
     private Point readPoint(Cursor cursor) throws IOException {
         return new Point(cursor.next("x coordinate"), cursor.next("y coordinate"));
+    }
+
+    private Point readOptionalPoint(Cursor cursor) throws IOException {
+        Point point = readPoint(cursor);
+        if (point.x() == CastleFileFormat.UNUSED_CANNON_COORDINATE
+                && point.y() == CastleFileFormat.UNUSED_CANNON_COORDINATE) {
+            return new Point(Integer.MIN_VALUE, Integer.MIN_VALUE);
+        }
+        return point;
     }
 
     private Size readSize(Cursor cursor) throws IOException {

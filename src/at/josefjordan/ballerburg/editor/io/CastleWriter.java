@@ -29,7 +29,7 @@ public final class CastleWriter {
             for (Castle castle : document.castles()) {
                 writer.write("* Castle " + number++ + " *");
                 writer.write(NEW_LINE);
-                writeCastle(writer, castle);
+                writeCastle(writer, normalize(castle));
                 writer.write(NEW_LINE);
             }
             writer.write(CastleFileFormat.FILE_TERMINATOR + " * end of castle data *");
@@ -38,7 +38,8 @@ public final class CastleWriter {
     }
 
     private void writeCastle(BufferedWriter writer, Castle castle) throws IOException {
-        writeLine(writer, List.of(castle.width()));
+        validateCoordinates(castle);
+        writeLine(writer, List.of(castleWidth(castle)));
         writeLine(writer, cannonPoints(castle.cannons()));
         writeLine(writer, point(castle.throne()));
         writeLine(writer, point(castle.windVane()));
@@ -64,8 +65,99 @@ public final class CastleWriter {
         writeLine(writer, drawing);
     }
 
+    private int castleWidth(Castle castle) {
+        int width = 0;
+        for (DrawingCommand command : castle.drawing()) {
+            if (command instanceof Polygon polygon) {
+                for (Point point : polygon.points()) {
+                    width = Math.max(width, point.x());
+                }
+            }
+        }
+        return width;
+    }
+
+    private Castle normalize(Castle castle) {
+        CoordinateOffset offset = coordinateOffset(castle);
+        if (offset.x() == 0 && offset.y() == 0) {
+            return castle;
+        }
+
+        List<Point> cannons = castle.cannons().stream()
+                .map(point -> translate(point, offset))
+                .toList();
+        return new Castle(castle.width(), cannons, translateIfSet(castle.throne(), offset),
+                translateIfSet(castle.windVane(), offset), translateIfSet(castle.money(), offset),
+                translateIfSet(castle.powder(), offset), translateIfSet(castle.balls(), offset),
+                castle.moneyRoom(), castle.powderRoom(), castle.ballRoom(), castle.resources(),
+                castle.reserved(), castle.drawing().stream().map(command -> {
+                    if (command instanceof FillStyle) {
+                        return command;
+                    }
+                    Polygon polygon = (Polygon) command;
+                    return new Polygon(polygon.points().stream()
+                            .map(point -> translate(point, offset))
+                            .toList());
+                }).toList());
+    }
+
+    private CoordinateOffset coordinateOffset(Castle castle) {
+        int minimumX = Integer.MAX_VALUE;
+        int minimumY = Integer.MAX_VALUE;
+        List<Point> points = new ArrayList<>();
+        points.addAll(castle.cannons());
+        points.addAll(castle.drawing().stream()
+                .filter(command -> command instanceof Polygon)
+                .map(command -> (Polygon) command)
+                .flatMap(polygon -> polygon.points().stream())
+                .toList());
+        points.add(castle.throne());
+        points.add(castle.windVane());
+        points.add(castle.money());
+        points.add(castle.powder());
+        points.add(castle.balls());
+        for (Point point : points) {
+            if (!isSet(point)) {
+                continue;
+            }
+            minimumX = Math.min(minimumX, point.x());
+            minimumY = Math.min(minimumY, point.y());
+        }
+        return minimumX == Integer.MAX_VALUE
+                ? new CoordinateOffset(0, 0)
+                : new CoordinateOffset(-minimumX, -minimumY);
+    }
+
+    private void validateCoordinates(Castle castle) throws IOException {
+        for (DrawingCommand command : castle.drawing()) {
+            if (command instanceof Polygon polygon) {
+                for (Point point : polygon.points()) {
+                    if (point.x() < 0 || point.y() < 0) {
+                        throw new IOException("Negative polygon coordinate after normalization: "
+                                + point.x() + "," + point.y());
+                    }
+                }
+            }
+        }
+    }
+
+    private boolean isSet(Point point) {
+        return point.x() != Integer.MIN_VALUE && point.y() != Integer.MIN_VALUE;
+    }
+
+    private Point translateIfSet(Point point, CoordinateOffset offset) {
+        return isSet(point) ? translate(point, offset) : point;
+    }
+
+    private Point translate(Point point, CoordinateOffset offset) {
+        return new Point(point.x() + offset.x(), point.y() + offset.y());
+    }
+
     private List<Integer> point(Point point) {
-        return List.of(point.x(), point.y());
+        return isSet(point)
+                ? List.of(point.x(), point.y())
+                : List.of(CastleFileFormat.UNUSED_CANNON_COORDINATE,
+                        CastleFileFormat.UNUSED_CANNON_COORDINATE);
     }
 
     private List<Integer> points(List<Point> points) {
@@ -102,5 +194,8 @@ public final class CastleWriter {
             writer.write(Integer.toString(values.get(i)));
         }
         writer.write(NEW_LINE);
+    }
+
+    private record CoordinateOffset(int x, int y) {
     }
 }

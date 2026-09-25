@@ -3,10 +3,6 @@
 ## Editor
  - Show coordinates in status bar
 
-## File Handling
- - Coordinates lower 0 are not allowed ⇒ rebase before saving
- - Calculate the width of the castle (is saved as a separate value)
-
 ## Refactoring
  - Replace magic numbers with constants:
    - UI margins: 24.0 (view margin)
