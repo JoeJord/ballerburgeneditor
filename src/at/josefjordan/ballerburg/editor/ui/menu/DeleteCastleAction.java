@@ -5,9 +5,20 @@ import hgb.gui.menu.IMenuAction;
 
 import java.awt.event.ActionEvent;
 
+/**
+ * Deletes the selected castle when a document is open.
+ */
 public class DeleteCastleAction implements IMenuAction {
+    /**
+     * The main application frame.
+     */
     private final MainFrame frame;
 
+    /**
+     * Creates an action that deletes the selected castle through the application frame.
+     *
+     * @param frame application frame whose document is edited
+     */
     public DeleteCastleAction(MainFrame frame) {
         this.frame = frame;
     }

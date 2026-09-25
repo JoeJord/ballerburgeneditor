@@ -13,8 +13,17 @@ import java.util.Map;
  * Vector sprites transcribed from the original {@code BALLER2.C} source.
  */
 final class Sprites {
+    /**
+     * Near-black color used to draw sprite outlines and filled pixels.
+     */
     private static final Color INK = new Color(35, 35, 35);
+    /**
+     * Lazily generated raster images, keyed by the identity of their encoded sprite arrays.
+     */
     private static final Map<int[], BufferedImage> RASTER_IMAGES = new IdentityHashMap<>();
+    /**
+     * Encoded vector data for the king sprite.
+     */
     static final int[] KING = {
             -2, 2, 2, 8, 3, 5, 12, 8, 12, 12, 16, 12, 17, 14, 15, 15, 15, 17, 17, 17,
             16, 21, 11, 24, 11, 21, 3, -9, -4, 3, 0, 5, 2, 24, 2, 26, 0, -9,
@@ -24,35 +33,72 @@ final class Sprites {
             12, 22, 12, 21, 15, 21, 14, 22, 17, 21, 17, 22, -9,
             6, 13, 6, 17, 5, 16, 5, 17, 7, 17, 7, 16, -9, -1
     };
+    /**
+     * Encoded vector data for the cannon sprite.
+     */
     static final int[] CANNON = {
             -2, 1, 1, 1, 0, 3, 3, 5, 0, 3, 3, 3, 11, 2, 11, 2, 9, 4, 9, 4,
             11, 3, 11, 3, 8, 0, 5, 3, 8, 6, 5, 3, 8, 3, 3, -9,
             11, 0, 13, 2, 15, 0, 16, 0, 17, 1, 17, 2, 15, 4, 19, 8, 16, 11, 8, 3, -9, -1
     };
+    /**
+     * Encoded vector data for the money sprite.
+     */
     static final int[] MONEY = {
             -4, 1, 1, 1, 4, 2, 5, 2, 0, 3, 0, 3, 8, 2, 8, 4, 8, 3, 8, 3,
             6, 4, 6, 4, 0, 5, 0, 5, 6, 6, 5, 6, 1, -9, -1
     };
+    /**
+     * Encoded vector data for the powder sprite.
+     */
     static final int[] POWDER = {
             -4, 2, 0, 6, 0, 8, 3, 8, 5, 6, 8, 2, 8, 0, 5, 0, 3, 2, 0, 3,
             0, 3, 3, 2, 4, 3, 5, 3, 8, 5, 8, 5, 5, 6, 4, 5, 3, 5, 1, -9, -1
     };
+    /**
+     * Encoded vector data for the cannonball sprite.
+     */
     static final int[] BALL = {
             -2, 1, 1, 1, 0, 0, 1, 0, 3, 1, 4, 3, 4, 4, 3, 4, 1, 3, 0, -9, -1
     };
+    /**
+     * Encoded vector data for the wind-vane sprite.
+     */
     static final int[] WIND_VANE = {
             0, 0, 0, CastleFileFormat.WIND_VANE_HEIGHT, -9,
             0, CastleFileFormat.WIND_VANE_HEIGHT, 0, CastleFileFormat.WIND_VANE_HEIGHT,
             10, CastleFileFormat.WIND_VANE_HEIGHT - 3, 0, CastleFileFormat.WIND_VANE_HEIGHT - 6, -9, -1
     };
 
+    /**
+     * Prevents instantiation of this sprite utility class.
+     */
     private Sprites() {
     }
 
+    /**
+     * Draws a sprite at the supplied position and scale.
+     *
+     * @param graphics graphics context to draw into
+     * @param data     encoded vector sprite
+     * @param x        left coordinate in screen space
+     * @param bottom   bottom coordinate in screen space
+     * @param scale    sprite scale
+     */
     static void draw(Graphics2D graphics, int[] data, double x, double bottom, double scale) {
         draw(graphics, data, x, bottom, scale, 1.0f);
     }
 
+    /**
+     * Draws a sprite with the supplied opacity.
+     *
+     * @param graphics graphics context to draw into
+     * @param data     encoded vector sprite
+     * @param x        left coordinate in screen space
+     * @param bottom   bottom coordinate in screen space
+     * @param scale    sprite scale
+     * @param alpha    opacity, from 0.0 (transparent) to 1.0 (opaque)
+     */
     static void draw(Graphics2D graphics, int[] data, double x, double bottom, double scale, float alpha) {
         BufferedImage image = RASTER_IMAGES.computeIfAbsent(data, Sprites::rasterize);
         int logicalWidth = data == BALL ? 5 : image.getWidth();
@@ -72,6 +118,12 @@ final class Sprites {
         spriteGraphics.dispose();
     }
 
+    /**
+     * Rasterizes the encoded vector sprite and returns its image.
+     *
+     * @param data encoded sprite coordinates
+     * @return the raster image
+     */
     private static BufferedImage rasterize(int[] data) {
         if (data == BALL) {
             return rasterizeBall();
@@ -129,6 +181,13 @@ final class Sprites {
         return image;
     }
 
+    /**
+     * Returns the paint used for the encoded sprite fill style.
+     *
+     * @param interior encoded fill interior mode
+     * @param style    the fill style value
+     * @return the paint corresponding to the sprite fill settings
+     */
     private static Paint fillPaint(int interior, int style) {
         if (interior == 1) {
             return INK;
@@ -143,6 +202,12 @@ final class Sprites {
         return INK;
     }
 
+    /**
+     * Calculates the pixel dimensions needed for the encoded sprite.
+     *
+     * @param data the encoded sprite coordinates
+     * @return the width and height required to rasterize the sprite
+     */
     private static int[] spriteSize(int[] data) {
         int maximumX = 0;
         int maximumY = 0;
@@ -163,6 +228,11 @@ final class Sprites {
         return new int[]{maximumX + 1, maximumY + 1};
     }
 
+    /**
+     * Creates the fixed raster image used for the cannonball sprite.
+     *
+     * @return the raster image of the cannonball sprite
+     */
     @SuppressWarnings("java:S1192") // Repeated rows encode the ball's raster shape.
     private static BufferedImage rasterizeBall() {
         BufferedImage image = new BufferedImage(7, 7, BufferedImage.TYPE_INT_ARGB);

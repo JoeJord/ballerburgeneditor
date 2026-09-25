@@ -5,9 +5,20 @@ import hgb.gui.menu.IMenuAction;
 
 import java.awt.event.ActionEvent;
 
+/**
+ * Adds a cannon to the selected castle when a document is open.
+ */
 public class AddCannonAction implements IMenuAction {
+    /**
+     * The main application frame.
+     */
     private final MainFrame frame;
 
+    /**
+     * Creates an action that adds a cannon through the application frame.
+     *
+     * @param frame application frame whose selected castle is edited
+     */
     public AddCannonAction(MainFrame frame) {
         this.frame = frame;
     }

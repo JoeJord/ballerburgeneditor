@@ -9,20 +9,55 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.function.IntConsumer;
 
+/**
+ * The application status bar, including zoom controls.
+ */
 public class StatusBar extends HGBaseStatusBar {
+    /**
+     * Index of the status-bar panel that contains the zoom controls.
+     */
     private static final int ZOOM_PANEL_INDEX = 1;
+    /**
+     * Index of the status-bar panel used for progress display.
+     */
     private static final int PROGRESS_PANEL_INDEX = 2;
+    /**
+     * Preferred width of the zoom-controls panel in pixels.
+     */
     private static final int ZOOM_LEVEL_WIDTH = 150;
+    /**
+     * Preferred width of the progress panel in pixels.
+     */
     private static final int PROGRESS_PANEL_WIDTH = 100;
+    /**
+     * Lowest zoom percentage accepted by the slider.
+     */
     private static final int MIN_ZOOM_PERCENT = 10;
+    /**
+     * Highest zoom percentage accepted by the slider.
+     */
     private static final int MAX_ZOOM_PERCENT = 1000;
 
-    private final JSlider zoomSlider = new JSlider(SwingConstants.HORIZONTAL,
-            MIN_ZOOM_PERCENT, MAX_ZOOM_PERCENT, 100);
+    /**
+     * Slider used to set the editor zoom percentage.
+     */
+    private final JSlider zoomSlider = new JSlider(SwingConstants.HORIZONTAL, MIN_ZOOM_PERCENT, MAX_ZOOM_PERCENT, 100);
+    /**
+     * Displays the current zoom percentage.
+     */
     private final JLabel zoomLabel = new JLabel("100%");
+    /**
+     * Clickable control that restores zoom to 100%.
+     */
     private final JLabel zoomResetLabel = new JLabel("1:1");
+    /**
+     * The listener notified when zoom changes.
+     */
     private transient IntConsumer zoomListener;
 
+    /**
+     * Creates the status bar's zoom slider, readout, reset control, and progress panel.
+     */
     StatusBar() {
         super(new int[]{0, ZOOM_LEVEL_WIDTH, PROGRESS_PANEL_WIDTH});
         getPanel(ZOOM_PANEL_INDEX).remove(getLabel(ZOOM_PANEL_INDEX));
@@ -60,16 +95,31 @@ public class StatusBar extends HGBaseStatusBar {
         zoomResetLabel.setToolTipText(HGBaseText.getText("zoom.reset_tooltip"));
     }
 
+    /**
+     * Clamps and displays the requested zoom percentage.
+     *
+     * @param zoomPercent the desired zoom percentage
+     */
     void setZoomLevel(int zoomPercent) {
         int boundedZoomPercent = Math.clamp(zoomPercent, MIN_ZOOM_PERCENT, MAX_ZOOM_PERCENT);
         zoomSlider.setValue(boundedZoomPercent);
         zoomLabel.setText(boundedZoomPercent + "%");
     }
 
+    /**
+     * Registers the callback invoked when zoom changes.
+     *
+     * @param zoomListener the callback notified when zoom changes
+     */
     void setZoomListener(IntConsumer zoomListener) {
         this.zoomListener = zoomListener;
     }
 
+    /**
+     * Displays a hint in the status bar.
+     *
+     * @param hint status-bar message to display in the first panel
+     */
     void setHint(String hint) {
         setText(0, hint);
     }

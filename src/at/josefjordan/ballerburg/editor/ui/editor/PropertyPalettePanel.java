@@ -15,18 +15,54 @@ import java.util.function.Consumer;
  * Property palette for the editable values of the selected castle.
  */
 final class PropertyPalettePanel extends HGBasePanel {
+    /**
+     * Localized heading for the selected castle's editable properties.
+     */
     private final JLabel titleLabel = new JLabel();
+    /**
+     * Label for the starting-money spinner.
+     */
     private final JLabel moneyLabel = new JLabel();
+    /**
+     * Label for the starting-powder spinner.
+     */
     private final JLabel powderLabel = new JLabel();
+    /**
+     * Label for the starting-cannonball spinner.
+     */
     private final JLabel ballsLabel = new JLabel();
+    /**
+     * Label for the starting-people spinner.
+     */
     private final JLabel peopleLabel = new JLabel();
+    /**
+     * The money spinner.
+     */
     private final JSpinner moneySpinner = createSpinner();
+    /**
+     * The powder spinner.
+     */
     private final JSpinner powderSpinner = createSpinner();
+    /**
+     * The balls spinner.
+     */
     private final JSpinner ballsSpinner = createSpinner();
+    /**
+     * The people spinner.
+     */
     private final JSpinner peopleSpinner = createSpinner();
+    /**
+     * The listener notified when resource values change.
+     */
     private transient Consumer<Resources> resourcesListener;
+    /**
+     * Whether spinner changes are being applied programmatically.
+     */
     private boolean updating;
 
+    /**
+     * Creates the localized resource controls and wires their change notifications.
+     */
     PropertyPalettePanel() {
         super(new GridBagLayout());
         setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
@@ -56,10 +92,20 @@ final class PropertyPalettePanel extends HGBasePanel {
         setCastle(null);
     }
 
+    /**
+     * Registers the callback invoked when resource values change.
+     *
+     * @param resourcesListener the callback notified when resource values change
+     */
     void setResourcesListener(Consumer<Resources> resourcesListener) {
         this.resourcesListener = resourcesListener;
     }
 
+    /**
+     * Displays the castle's resource values and enables the controls when a castle is present.
+     *
+     * @param castle castle whose resource values and storage capacities to display, or {@code null} to clear
+     */
     void setCastle(Castle castle) {
         updating = true;
         try {
@@ -84,10 +130,20 @@ final class PropertyPalettePanel extends HGBasePanel {
         peopleLabel.setText(HGBaseText.getText("properties.people"));
     }
 
+    /**
+     * Creates a non-negative integer spinner with unit increments.
+     *
+     * @return the configured resource-value spinner
+     */
     private static JSpinner createSpinner() {
         return new JSpinner(new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 1));
     }
 
+    /**
+     * Sets each resource spinner maximum from its storage-area capacity.
+     *
+     * @param castle castle whose storage areas define the spinner limits, or {@code null} for zero capacity
+     */
     private void setResourceMaximums(Castle castle) {
         Size moneyRoom = castle == null ? new Size(0, 0) : castle.moneyRoom();
         Size powderRoom = castle == null ? new Size(0, 0) : castle.powderRoom();
@@ -103,11 +159,27 @@ final class PropertyPalettePanel extends HGBasePanel {
                         1));
     }
 
+    /**
+     * Calculates the maximum resource value that fits in the storage area.
+     *
+     * @param room         storage-area dimensions in castle coordinates
+     * @param slotWidth    width of one resource slot
+     * @param slotHeight   height of one resource slot
+     * @param valuePerSlot resource quantity represented by one slot
+     * @return the maximum quantity that fits in the area's complete slots
+     */
     private int resourceValueCapacity(Size room, int slotWidth, int slotHeight, int valuePerSlot) {
         long slots = (long) (room.width() / slotWidth) * (room.height() / slotHeight);
         return (int) Math.min(Integer.MAX_VALUE, slots * valuePerSlot);
     }
 
+    /**
+     * Adds one label-and-spinner row using and advancing the shared grid constraints.
+     *
+     * @param label       descriptive label for the resource value
+     * @param spinner     control for editing that value
+     * @param constraints layout constraints shared by the property rows
+     */
     private void addRow(JLabel label, JSpinner spinner, GridBagConstraints constraints) {
         constraints.gridx = 0;
         constraints.gridy++;
@@ -120,6 +192,11 @@ final class PropertyPalettePanel extends HGBasePanel {
         add(spinner, constraints);
     }
 
+    /**
+     * Enables or disables all resource-value spinners.
+     *
+     * @param enabled whether the component should be enabled
+     */
     private void setFieldsEnabled(boolean enabled) {
         moneySpinner.setEnabled(enabled);
         powderSpinner.setEnabled(enabled);
@@ -127,6 +204,9 @@ final class PropertyPalettePanel extends HGBasePanel {
         peopleSpinner.setEnabled(enabled);
     }
 
+    /**
+     * Sends the current spinner values to the registered listener when values change outside refreshes.
+     */
     private void fireResourcesChanged() {
         if (!updating && resourcesListener != null) {
             resourcesListener.accept(new Resources((Integer) moneySpinner.getValue(),

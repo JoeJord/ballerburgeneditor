@@ -14,10 +14,22 @@ import java.util.List;
  * Displays validation problems for the current castle.
  */
 final class ProblemsPanel extends HGBasePanel {
+    /**
+     * Model holding the severity and localized description for each validation finding.
+     */
     private final ProblemTableModel tableModel = new ProblemTableModel();
+    /**
+     * Look-and-feel icon shown for blocking validation errors.
+     */
     private final transient Icon errorIcon = UIManager.getIcon("OptionPane.errorIcon");
+    /**
+     * Look-and-feel icon shown for non-blocking warnings.
+     */
     private final transient Icon warningIcon = UIManager.getIcon("OptionPane.warningIcon");
 
+    /**
+     * Builds the sortable validation table with severity icons and localized headings.
+     */
     ProblemsPanel() {
         super(new BorderLayout());
         setBorder(BorderFactory.createTitledBorder(HGBaseText.getText("problems.title")));
@@ -32,6 +44,11 @@ final class ProblemsPanel extends HGBasePanel {
         add(new JScrollPane(table), BorderLayout.CENTER);
     }
 
+    /**
+     * Replaces the validation problems shown in the table.
+     *
+     * @param problems the problems to display
+     */
     void setProblems(List<Problem> problems) {
         tableModel.setProblems(problems);
     }
@@ -45,6 +62,9 @@ final class ProblemsPanel extends HGBasePanel {
         });
     }
 
+    /**
+     * Renders a problem severity as an icon and tooltip.
+     */
     private final class SeverityCellRenderer extends DefaultTableCellRenderer {
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value, boolean selected,
@@ -61,7 +81,15 @@ final class ProblemsPanel extends HGBasePanel {
         }
     }
 
+    /**
+     * Sorts problem rows and cycles back to the unsorted order.
+     */
     private static final class ProblemTableRowSorter extends TableRowSorter<ProblemTableModel> {
+        /**
+         * Creates a sorter for the validation-problem rows.
+         *
+         * @param model table model whose rows are sorted
+         */
         ProblemTableRowSorter(ProblemTableModel model) {
             super(model);
         }
@@ -79,7 +107,13 @@ final class ProblemsPanel extends HGBasePanel {
         }
     }
 
+    /**
+     * Stores the severity and text of validation problems.
+     */
     private static final class ProblemTableModel extends DefaultTableModel {
+        /**
+         * Creates an initially empty table model with localized columns.
+         */
         ProblemTableModel() {
             super(new Object[][]{}, new Object[]{
                     HGBaseText.getText("problems.type"),
@@ -87,6 +121,11 @@ final class ProblemsPanel extends HGBasePanel {
             });
         }
 
+        /**
+         * Replaces the validation problems shown in the table.
+         *
+         * @param problems the problems to display
+         */
         void setProblems(List<Problem> problems) {
             setRowCount(0);
             for (Problem problem : problems) {
@@ -100,11 +139,26 @@ final class ProblemsPanel extends HGBasePanel {
         }
     }
 
+    /**
+     * The severity levels assigned to validation problems.
+     */
     enum ProblemSeverity {
+        /**
+         * A problem that prevents a castle from being saved without confirmation.
+         */
         ERROR,
+        /**
+         * A problem that is informational or does not prevent saving.
+         */
         WARNING
     }
 
+    /**
+     * A validation problem and its severity.
+     *
+     * @param severity severity of the problem
+     * @param text     user-visible problem description
+     */
     record Problem(ProblemSeverity severity, String text) {
     }
 }

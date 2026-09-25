@@ -15,9 +15,22 @@ import java.util.List;
  * Writes a canonical BALLER.DAT file using CP437 and CRLF line endings.
  */
 public final class CastleWriter {
+    /**
+     * The line separator used in output.
+     */
     private static final String NEW_LINE = "\r\n";
+    /**
+     * The first castle number.
+     */
     private static final int FIRST_CASTLE_NUMBER = 1;
 
+    /**
+     * Writes the document as a canonical CP437-encoded BALLER.DAT file with CRLF line endings.
+     *
+     * @param path     the BALLER.DAT file path
+     * @param document the document to process
+     * @throws IOException if the output file cannot be written or coordinates are invalid
+     */
     public void write(Path path, CastleDocument document) throws IOException {
         try (BufferedWriter writer = Files.newBufferedWriter(path, CastleReader.CHARSET)) {
             writer.write("* BALLER.DAT written by Ballerburgen Editor *");
@@ -35,6 +48,13 @@ public final class CastleWriter {
         }
     }
 
+    /**
+     * Writes a castle's fields and drawing commands in BALLER.DAT order.
+     *
+     * @param writer destination for the serialized values
+     * @param castle normalized castle data to serialize
+     * @throws IOException if output cannot be written or normalized polygon coordinates are negative
+     */
     private void writeCastle(BufferedWriter writer, Castle castle) throws IOException {
         validateCoordinates(castle);
         writeLine(writer, List.of(castleWidth(castle)));
@@ -63,6 +83,12 @@ public final class CastleWriter {
         writeLine(writer, drawing);
     }
 
+    /**
+     * Returns the greatest vertex x-coordinate among the castle polygons, or zero if no polygon exists.
+     *
+     * @param castle castle whose polygon vertices determine the width
+     * @return the maximum polygon x-coordinate, or zero if there are no polygons
+     */
     private int castleWidth(Castle castle) {
         int width = 0;
         for (DrawingCommand command : castle.drawing()) {
@@ -75,6 +101,12 @@ public final class CastleWriter {
         return width;
     }
 
+    /**
+     * Translates set castle coordinates so the minimum x and y coordinates are zero.
+     *
+     * @param castle castle whose set coordinates are translated
+     * @return a castle translated so set coordinates start at a non-negative origin
+     */
     private Castle normalize(Castle castle) {
         CoordinateOffset offset = coordinateOffset(castle);
         if (offset.x() == 0 && offset.y() == 0) {
@@ -99,6 +131,12 @@ public final class CastleWriter {
         }).toList());
     }
 
+    /**
+     * Calculates the translation that moves set coordinates to a non-negative origin.
+     *
+     * @param castle castle whose set coordinates determine the translation
+     * @return the x and y translation needed to normalize set coordinates
+     */
     private CoordinateOffset coordinateOffset(Castle castle) {
         int minimumX = Integer.MAX_VALUE;
         int minimumY = Integer.MAX_VALUE;
@@ -126,6 +164,12 @@ public final class CastleWriter {
                 : new CoordinateOffset(-minimumX, -minimumY);
     }
 
+    /**
+     * Rejects negative polygon coordinates after coordinate normalization.
+     *
+     * @param castle normalized castle to validate
+     * @throws IOException if any polygon coordinate is negative after normalization
+     */
     private void validateCoordinates(Castle castle) throws IOException {
         for (DrawingCommand command : castle.drawing()) {
             if (command instanceof Polygon(List<Point> points)) {
@@ -139,18 +183,44 @@ public final class CastleWriter {
         }
     }
 
+    /**
+     * Returns whether both coordinates identify a set point.
+     *
+     * @param point point to test
+     * @return {@code true} unless either coordinate uses the unset-point sentinel
+     */
     private boolean isSet(Point point) {
         return point.x() != Integer.MIN_VALUE && point.y() != Integer.MIN_VALUE;
     }
 
+    /**
+     * Translates the point only when it is set.
+     *
+     * @param point  point to translate if set
+     * @param offset horizontal and vertical translation
+     * @return the original unset point, or the translated point when it is set
+     */
     private Point translateIfSet(Point point, CoordinateOffset offset) {
         return isSet(point) ? translate(point, offset) : point;
     }
 
+    /**
+     * Translates a castle point by the supplied coordinate offset.
+     *
+     * @param point  point to translate
+     * @param offset horizontal and vertical translation
+     * @return the point translated by the supplied x and y offset
+     */
     private Point translate(Point point, CoordinateOffset offset) {
         return new Point(point.x() + offset.x(), point.y() + offset.y());
     }
 
+    /**
+     * Returns the two-value coordinate representation used in the file.
+     *
+     * @param point point to encode
+     * @return its x/y values, or the file-format unused-coordinate markers when unset
+     */
     private List<Integer> point(Point point) {
         return isSet(point)
                 ? List.of(point.x(), point.y())
@@ -158,6 +228,12 @@ public final class CastleWriter {
                 CastleFileFormat.UNUSED_CANNON_COORDINATE);
     }
 
+    /**
+     * Flattens ordered points into alternating x and y values.
+     *
+     * @param points the ordered polygon vertices
+     * @return the flattened x and y coordinates of the supplied points
+     */
     private List<Integer> points(List<Point> points) {
         List<Integer> values = new ArrayList<>(points.size() * CastleFileFormat.COORDINATE_COMPONENT_COUNT);
         for (Point point : points) {
@@ -167,6 +243,12 @@ public final class CastleWriter {
         return values;
     }
 
+    /**
+     * Pads cannon coordinates with unused markers to the required slot count.
+     *
+     * @param cannons cannon positions in castle order
+     * @return cannon coordinates padded to the fixed file-format count and flattened
+     */
     private List<Integer> cannonPoints(List<Point> cannons) {
         List<Point> positions = new ArrayList<>(cannons);
         while (positions.size() < CastleFileFormat.CANNON_POSITION_COUNT) {
@@ -175,6 +257,12 @@ public final class CastleWriter {
         return points(positions);
     }
 
+    /**
+     * Concatenates the supplied integer lists in order.
+     *
+     * @param parts integer lists to append, in output order
+     * @return the input integer lists joined in order
+     */
     @SafeVarargs
     private List<Integer> concat(List<Integer>... parts) {
         List<Integer> values = new ArrayList<>();
@@ -184,6 +272,13 @@ public final class CastleWriter {
         return values;
     }
 
+    /**
+     * Writes comma-separated values followed by the configured line ending.
+     *
+     * @param writer destination for the output line
+     * @param values numeric fields to write, in file order
+     * @throws IOException if writing the output line fails
+     */
     private void writeLine(BufferedWriter writer, List<Integer> values) throws IOException {
         for (int i = 0; i < values.size(); i++) {
             if (i > 0) {
@@ -194,6 +289,12 @@ public final class CastleWriter {
         writer.write(NEW_LINE);
     }
 
+    /**
+     * Coordinate translation required to move set geometry to a non-negative origin.
+     *
+     * @param x horizontal translation
+     * @param y vertical translation
+     */
     private record CoordinateOffset(int x, int y) {
     }
 }

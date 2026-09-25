@@ -22,53 +22,161 @@ import java.util.Objects;
  * Draws one castle without owning or modifying editor state.
  */
 final class CastleViewPanel extends HGBasePanel {
+    /**
+     * Minimum supported zoom factor (10%).
+     */
     public static final double MIN_ZOOM_FACTOR = 0.10; // corresponds 10 %
+    /**
+     * Maximum supported zoom factor (1000%).
+     */
     public static final double MAX_ZOOM_FACTOR = 10.0; // corresponds 1000 %
+    /**
+     * Additional multiplier applied to mouse-wheel scrolling.
+     */
     private static final int WHEEL_SCROLL_MULTIPLIER = 4;
+    /**
+     * Base drawing scale at 100% zoom.
+     */
     private static final double BASE_SCALE = 4.0; // Base scale multiplier for 100% zoom
+    /**
+     * Padding around castle contents in screen pixels.
+     */
     private static final double MARGIN = 24.0;
+    /**
+     * Grid interval in castle-coordinate units.
+     */
     private static final int GRID_SPACING = 1;
+    /**
+     * Grid-line color.
+     */
     private static final Color COLOR_GRID = new Color(210, 210, 210);
+    /**
+     * Selection highlight color.
+     */
     private static final Color COLOR_SELECTED = new Color(255, 255, 0);
+    /**
+     * Point and hover highlight color.
+     */
     private static final Color COLOR_HIGHLIGHTED = new Color(255, 100, 100);
+    /**
+     * Polygon outline color.
+     */
     private static final Color COLOR_OUTLINE = new Color(45, 45, 45);
+    /**
+     * Default polygon fill color.
+     */
     private static final Color COLOR_FILL_DEFAULT = new Color(120, 130, 140);
+    /**
+     * Roof fill color.
+     */
     private static final Color COLOR_FILL_ROOF = new Color(145, 65, 55);
+    /**
+     * Masonry fill color.
+     */
     private static final Color COLOR_FILL_MASONRY = new Color(150, 150, 145);
+    /**
+     * Castle currently rendered by this view, or {@code null} when no castle is selected.
+     */
     private transient Castle castle;
+    /**
+     * Currently selected polygon, or {@code null} when no polygon is selected.
+     */
     private transient Polygon selectedPolygon;
+    /**
+     * Index of the selected vertex in the selected polygon, or {@code -1}.
+     */
     private int selectedPointIndex = -1;
+    /**
+     * Index of the selected cannon, or {@code -1}.
+     */
     private int selectedCannonIndex = -1;
+    /**
+     * Whether the throne is highlighted as selected.
+     */
     private boolean selectedThrone = false;
+    /**
+     * Whether the wind vane is highlighted as selected.
+     */
     private boolean selectedWindVane = false;
+    /**
+     * Whether the grid is displayed.
+     */
     private boolean gridVisible;
+    /**
+     * Storage area currently selected for moving or resizing, if any.
+     */
     private ResourceArea selectedResourceArea;
+    /**
+     * The corner currently being resized, or -1 when none is active.
+     */
     private int draggingResourceCorner = -1; // 0-3 for corners, -1 if not dragging
+    /**
+     * Editor controller that receives view edits.
+     */
     private EditorPanel editorPanel;
+    /**
+     * The current zoom factor.
+     */
     private double zoomFactor = 1.0;
+    /**
+     * Horizontal screen-space correction used to keep the zoom anchor in place.
+     */
     private double renderingOffsetX;
+    /**
+     * Vertical screen-space correction used to keep the zoom anchor in place.
+     */
     private double renderingOffsetY;
+    /**
+     * The listener notified when zoom changes.
+     */
     private transient Runnable zoomListener;
-
-    // Polygon creation mode
+    /**
+     * Whether clicks are currently adding vertices to a new polygon.
+     */
     private boolean polygonCreationMode = false;
+    /**
+     * The fill category used for the polygon being created.
+     */
     private String polygonType = null; // "wall" or "roof"
+    /**
+     * Vertices entered for the polygon being created, in click order.
+     */
     private final List<Point> creationPoints = new ArrayList<>();
+    /**
+     * Current screen-space pointer position used to draw the polygon preview.
+     */
     private transient Point2D mousePosition = null;
-
-    // Edge hover for selected polygon
+    /**
+     * Current screen-space pointer position used to highlight a selected polygon edge.
+     */
     private transient Point2D edgeHoverPosition = null;
+    /**
+     * The polygon selection listener.
+     */
     private transient Runnable polygonSelectionListener;
 
+    /**
+     * Creates the castle canvas and installs its mouse and wheel handlers.
+     */
     CastleViewPanel() {
         addMouseListener(new CastleMouseHandler(this));
         addMouseWheelListener(new CastleZoomHandler(this));
     }
 
+    /**
+     * Associates the editor panel with this castle view.
+     *
+     * @param editorPanel editor that receives edits made in this view
+     */
     void setEditorPanel(EditorPanel editorPanel) {
         this.editorPanel = editorPanel;
     }
 
+    /**
+     * Sets whether the castle grid is displayed.
+     *
+     * @param visible whether the grid should be visible
+     */
     void setGridVisible(boolean visible) {
         if (gridVisible != visible) {
             gridVisible = visible;
@@ -76,18 +184,38 @@ final class CastleViewPanel extends HGBasePanel {
         }
     }
 
+    /**
+     * Returns whether the grid is displayed.
+     *
+     * @return {@code true} if the castle grid is currently visible
+     */
     boolean isGridVisible() {
         return gridVisible;
     }
 
+    /**
+     * Registers the callback invoked when zoom changes.
+     *
+     * @param zoomListener the callback notified when zoom changes
+     */
     void setZoomListener(Runnable zoomListener) {
         this.zoomListener = zoomListener;
     }
 
+    /**
+     * Registers the callback invoked when the selected polygon changes.
+     *
+     * @param listener the callback to notify when selection changes
+     */
     void setPolygonSelectionListener(Runnable listener) {
         this.polygonSelectionListener = listener;
     }
 
+    /**
+     * Sets the displayed castle and resets its selection, polygon creation, zoom, and rendering offsets.
+     *
+     * @param castle castle data to display, or {@code null} to clear the view
+     */
     void setCastle(Castle castle) {
         this.castle = castle;
         selectedPolygon = null;
@@ -109,20 +237,40 @@ final class CastleViewPanel extends HGBasePanel {
         repaint();
     }
 
+    /**
+     * Replaces the displayed castle data and refreshes preferred size and painting.
+     *
+     * @param castle replacement castle data for the current view
+     */
     void updateCastle(Castle castle) {
         this.castle = castle;
         updatePreferredSize();
         repaint();
     }
 
+    /**
+     * Returns the castle data currently displayed.
+     *
+     * @return the currently displayed castle, or null when none is selected
+     */
     Castle getCastle() {
         return castle;
     }
 
+    /**
+     * Returns the editor panel.
+     *
+     * @return the editor panel associated with this view
+     */
     EditorPanel getEditorPanel() {
         return editorPanel;
     }
 
+    /**
+     * Changes the selected polygon and notifies the selection listener when it changes.
+     *
+     * @param polygon polygon to select, or {@code null} to clear polygon selection
+     */
     void setSelectedPolygon(Polygon polygon) {
         if (polygon != selectedPolygon) {
             selectedPolygon = polygon;
@@ -134,14 +282,29 @@ final class CastleViewPanel extends HGBasePanel {
         }
     }
 
+    /**
+     * Returns the selected polygon.
+     *
+     * @return the selected polygon, or null when none is selected
+     */
     Polygon getSelectedPolygon() {
         return selectedPolygon;
     }
 
+    /**
+     * Returns the selected point index.
+     *
+     * @return the selected vertex index, or -1 when none is selected
+     */
     int getSelectedPointIndex() {
         return selectedPointIndex;
     }
 
+    /**
+     * Changes the selected polygon vertex and repaints when it changes.
+     *
+     * @param index selected vertex index, or {@code -1} to clear vertex selection
+     */
     void setSelectedPointIndex(int index) {
         if (selectedPointIndex != index) {
             selectedPointIndex = index;
@@ -149,10 +312,20 @@ final class CastleViewPanel extends HGBasePanel {
         }
     }
 
+    /**
+     * Returns the selected cannon index.
+     *
+     * @return the selected cannon index, or -1 when none is selected
+     */
     int getSelectedCannonIndex() {
         return selectedCannonIndex;
     }
 
+    /**
+     * Changes the selected cannon and repaints when it changes.
+     *
+     * @param index selected cannon index, or {@code -1} to clear cannon selection
+     */
     void setSelectedCannonIndex(int index) {
         if (selectedCannonIndex != index) {
             selectedCannonIndex = index;
@@ -160,10 +333,20 @@ final class CastleViewPanel extends HGBasePanel {
         }
     }
 
+    /**
+     * Returns whether the throne is selected.
+     *
+     * @return {@code true} if the throne is selected
+     */
     boolean isSelectedThrone() {
         return selectedThrone;
     }
 
+    /**
+     * Changes the throne selection and repaints when it changes.
+     *
+     * @param selected whether the throne should be selected
+     */
     void setSelectedThrone(boolean selected) {
         if (selectedThrone != selected) {
             selectedThrone = selected;
@@ -171,10 +354,20 @@ final class CastleViewPanel extends HGBasePanel {
         }
     }
 
+    /**
+     * Returns whether the wind vane is selected.
+     *
+     * @return {@code true} if the wind vane is selected
+     */
     boolean isSelectedWindVane() {
         return selectedWindVane;
     }
 
+    /**
+     * Changes the wind-vane selection and repaints when it changes.
+     *
+     * @param selected whether the wind vane should be selected
+     */
     void setSelectedWindVane(boolean selected) {
         if (selectedWindVane != selected) {
             selectedWindVane = selected;
@@ -182,10 +375,20 @@ final class CastleViewPanel extends HGBasePanel {
         }
     }
 
+    /**
+     * Returns the selected resource area.
+     *
+     * @return the selected resource area, or null when none is selected
+     */
     ResourceArea getSelectedResourceArea() {
         return selectedResourceArea;
     }
 
+    /**
+     * Changes the selected resource area and clears corner-resize state.
+     *
+     * @param resourceArea selected storage area, or {@code null} to clear the selection
+     */
     void setSelectedResourceArea(ResourceArea resourceArea) {
         if (!java.util.Objects.equals(selectedResourceArea, resourceArea)) {
             selectedResourceArea = resourceArea;
@@ -194,6 +397,11 @@ final class CastleViewPanel extends HGBasePanel {
         }
     }
 
+    /**
+     * Updates the resource-area corner currently being resized.
+     *
+     * @param cornerIndex active resize handle index, or {@code -1} when none is being dragged
+     */
     void setDraggingResourceCorner(int cornerIndex) {
         if (draggingResourceCorner != cornerIndex) {
             draggingResourceCorner = cornerIndex;
@@ -201,10 +409,21 @@ final class CastleViewPanel extends HGBasePanel {
         }
     }
 
+    /**
+     * Multiplies and clamps the current zoom factor.
+     *
+     * @param multiplier the zoom multiplier to apply
+     */
     void adjustZoom(double multiplier) {
         adjustZoom(multiplier, null);
     }
 
+    /**
+     * Changes zoom while keeping the supplied cursor position anchored in the viewport.
+     *
+     * @param multiplier the zoom multiplier to apply
+     * @param mousePoint the cursor point to keep fixed during zoom
+     */
     void adjustZoom(double multiplier, java.awt.Point mousePoint) {
         JViewport viewport = getViewport();
         java.awt.Point oldViewPosition = viewport == null ? null : viewport.getViewPosition();
@@ -259,10 +478,21 @@ final class CastleViewPanel extends HGBasePanel {
         repaint();
     }
 
+    /**
+     * Returns the viewport.
+     *
+     * @return the containing viewport, or null when this panel is not in one
+     */
     private JViewport getViewport() {
         return getParent() instanceof JViewport viewport ? viewport : null;
     }
 
+    /**
+     * Scrolls the viewport by the wheel's requested amount.
+     *
+     * @param event      wheel event whose scroll units determine the amount to move
+     * @param horizontal whether to scroll horizontally
+     */
     void scrollByWheel(MouseWheelEvent event, boolean horizontal) {
         JViewport viewport = getViewport();
         if (viewport == null || !(viewport.getParent() instanceof JScrollPane scrollPane)) {
@@ -283,10 +513,20 @@ final class CastleViewPanel extends HGBasePanel {
         scrollBar.setValue(scrollBar.getValue() + units * unitIncrement * WHEEL_SCROLL_MULTIPLIER);
     }
 
+    /**
+     * Returns the zoom factor.
+     *
+     * @return the current zoom factor
+     */
     double getZoomFactor() {
         return zoomFactor;
     }
 
+    /**
+     * Clamps and applies the requested zoom factor.
+     *
+     * @param zoomFactor the desired zoom factor
+     */
     void setZoomFactor(double zoomFactor) {
         double boundedZoomFactor = Math.clamp(zoomFactor, MIN_ZOOM_FACTOR, MAX_ZOOM_FACTOR);
         if (this.zoomFactor == boundedZoomFactor) {
@@ -295,12 +535,18 @@ final class CastleViewPanel extends HGBasePanel {
         adjustZoom(boundedZoomFactor / this.zoomFactor);
     }
 
+    /**
+     * Notifies the registered listener that the zoom factor changed.
+     */
     private void notifyZoomChanged() {
         if (zoomListener != null) {
             zoomListener.run();
         }
     }
 
+    /**
+     * Recalculates the preferred drawing size from the castle bounds and zoom.
+     */
     private void updatePreferredSize() {
         int[] bounds = calculateContentBounds();
         int minimumX = bounds[0];
@@ -333,6 +579,11 @@ final class CastleViewPanel extends HGBasePanel {
         }
     }
 
+    /**
+     * Calculates the extents of the castle drawing and positioned objects.
+     *
+     * @return four castle-coordinate bounds in {@code [minX, minY, maxY, maxX]} order
+     */
     private int[] calculateContentBounds() {
         int minimumX = 0;
         int minimumY = 0;
@@ -379,6 +630,15 @@ final class CastleViewPanel extends HGBasePanel {
         return new int[]{minimumX, minimumY, maximumY, maximumX};
     }
 
+    /**
+     * Expands the castle bounds to include positioned resource-storage areas.
+     *
+     * @param minimumX current minimum horizontal castle coordinate
+     * @param minimumY current minimum vertical castle coordinate
+     * @param maximumY current maximum vertical castle coordinate
+     * @param maximumX current maximum horizontal castle coordinate
+     * @return bounds in {@code [minX, minY, maxY, maxX]} order
+     */
     private int[] updateResourceBounds(int minimumX, int minimumY, int maximumY, int maximumX) {
         Point money = castle.money();
         Size moneyRoom = castle.moneyRoom();
@@ -407,10 +667,24 @@ final class CastleViewPanel extends HGBasePanel {
         return new int[]{minimumX, minimumY, maximumY, maximumX};
     }
 
+    /**
+     * Returns whether both coordinates identify a positioned object.
+     *
+     * @param point coordinate pair to test for the unset-position sentinel
+     * @return {@code true} if neither coordinate uses the unset-position sentinel
+     */
     private boolean isPositioned(Point point) {
         return point.x() != Integer.MIN_VALUE && point.y() != Integer.MIN_VALUE;
     }
 
+    /**
+     * Adjusts the preferred dimension.
+     *
+     * @param preferred         current preferred panel dimension in pixels
+     * @param viewportDimension viewport extent along this axis in pixels
+     * @param renderingOffset   screen-space correction along this axis
+     * @return a dimension large enough for both the preferred size and viewport
+     */
     private int adjustPreferredDimension(int preferred, int viewportDimension, double renderingOffset) {
         if (preferred > viewportDimension) {
             preferred += (int) Math.ceil(Math.abs(renderingOffset));
@@ -418,6 +692,11 @@ final class CastleViewPanel extends HGBasePanel {
         return Math.max(preferred, viewportDimension);
     }
 
+    /**
+     * Calculates the greatest y-coordinate occupied by the castle and its objects.
+     *
+     * @return greatest occupied vertical coordinate, or {@code 1} when no content extends above 1
+     */
     private int calculateMaximumY() {
         int maximumY = 1;
         if (castle != null) {
@@ -441,6 +720,9 @@ final class CastleViewPanel extends HGBasePanel {
         return maximumY;
     }
 
+    /**
+     * Centers the view within its scroll pane after the preferred size is updated.
+     */
     private void centerCastle() {
         JViewport viewport = getViewport();
         if (viewport != null && viewport.getParent() instanceof JScrollPane) {
@@ -456,11 +738,21 @@ final class CastleViewPanel extends HGBasePanel {
         }
     }
 
-    // Returns rendering parameters for mouse interaction
+    /**
+     * Returns the rendering origin and scale used to transform castle coordinates to screen coordinates.
+     *
+     * @return an array containing the left origin, bottom origin, and scale
+     */
     double[] getRenderingParameters() {
         return calculateRenderingParameters(renderingOffsetX == 0 && renderingOffsetY == 0);
     }
 
+    /**
+     * Returns the drawing origin and scale used for screen-coordinate conversion.
+     *
+     * @param center whether to center the content within the panel before applying offsets
+     * @return an array containing the left origin, bottom origin, and scale
+     */
     private double[] calculateRenderingParameters(boolean center) {
         int[] bounds = calculateBounds();
         int minimumX = bounds[0];
@@ -472,6 +764,15 @@ final class CastleViewPanel extends HGBasePanel {
         return new double[]{left, bottom, scale};
     }
 
+    /**
+     * Calculates the on-screen origin from the content bounds, scale, and centering state.
+     *
+     * @param minimumX minimum castle x-coordinate included in the content bounds
+     * @param maximumY maximum castle y-coordinate included in the content bounds
+     * @param scale    the rendering scale
+     * @param center   whether to center the content within the panel before applying offsets
+     * @return left and bottom screen-space origins as {@code [x, y]}
+     */
     private double[] calculateRenderingOrigin(int minimumX, int maximumY, double scale, boolean center) {
         int[] bounds = calculateBounds();
         int minimumY = bounds[1];
@@ -490,6 +791,11 @@ final class CastleViewPanel extends HGBasePanel {
         };
     }
 
+    /**
+     * Returns the castle content bounds in minimum-x, minimum-y, maximum-x, maximum-y order.
+     *
+     * @return bounds in {@code [minX, minY, maxX, maxY]} order
+     */
     private int[] calculateBounds() {
         int[] bounds = calculateContentBounds();
         return new int[]{bounds[0], bounds[1], bounds[3], bounds[2]};
@@ -518,6 +824,11 @@ final class CastleViewPanel extends HGBasePanel {
         }
     }
 
+    /**
+     * Draws the grid.
+     *
+     * @param g graphics context used to draw the grid
+     */
     private void drawGrid(Graphics2D g) {
         int[] bounds = calculateBounds();
         double scale = BASE_SCALE * zoomFactor;
@@ -542,6 +853,11 @@ final class CastleViewPanel extends HGBasePanel {
         }
     }
 
+    /**
+     * Draws the castle.
+     *
+     * @param g graphics context used to draw the castle
+     */
     private void drawCastle(Graphics2D g) {
         int[] bounds = calculateBounds();
         int minimumX = bounds[0];
@@ -560,6 +876,14 @@ final class CastleViewPanel extends HGBasePanel {
         drawEdgeHover(g, left, bottom, scale);
     }
 
+    /**
+     * Draws the castle polygons.
+     *
+     * @param g      graphics context used to draw the castle polygons
+     * @param left   the castle origin x-coordinate
+     * @param bottom the castle baseline y-coordinate
+     * @param scale  the rendering scale
+     */
     private void drawCastlePolygons(Graphics2D g, double left, double bottom, double scale) {
         // Start fill style is 2,9 (masonry) according to BALLER.DAT
         Color fill = colorFor(new FillStyle(CastleFileFormat.FILL_STYLE_PATTERN, CastleFileFormat.FILL_INDEX_MASONRY));
@@ -573,6 +897,16 @@ final class CastleViewPanel extends HGBasePanel {
         }
     }
 
+    /**
+     * Draws the polygon.
+     *
+     * @param g       graphics context used to draw the polygon
+     * @param polygon castle polygon to render
+     * @param fill    color used to fill the polygon
+     * @param left    the castle origin x-coordinate
+     * @param bottom  the castle baseline y-coordinate
+     * @param scale   the rendering scale
+     */
     private void drawPolygon(Graphics2D g, Polygon polygon, Color fill, double left, double bottom, double scale) {
         Path2D path = new Path2D.Double();
         Point first = polygon.points().getFirst();
@@ -591,6 +925,15 @@ final class CastleViewPanel extends HGBasePanel {
         }
     }
 
+    /**
+     * Draws the selected polygon points.
+     *
+     * @param g       graphics context used to draw the vertex markers
+     * @param polygon selected polygon whose vertices are marked
+     * @param left    the castle origin x-coordinate
+     * @param bottom  the castle baseline y-coordinate
+     * @param scale   the rendering scale
+     */
     private void drawSelectedPolygonPoints(Graphics2D g, Polygon polygon, double left, double bottom, double scale) {
         for (int i = 0; i < polygon.points().size(); i++) {
             Point point = polygon.points().get(i);
@@ -606,6 +949,14 @@ final class CastleViewPanel extends HGBasePanel {
         }
     }
 
+    /**
+     * Draws the castle objects.
+     *
+     * @param g      graphics context used to draw the castle objects
+     * @param left   the castle origin x-coordinate
+     * @param bottom the castle baseline y-coordinate
+     * @param scale  the rendering scale
+     */
     private void drawCastleObjects(Graphics2D g, double left, double bottom, double scale) {
         drawThrone(g, left, bottom, scale);
         drawResourceAreas(g, left, bottom, scale);
@@ -614,6 +965,14 @@ final class CastleViewPanel extends HGBasePanel {
         drawWindVane(g, left, bottom, scale);
     }
 
+    /**
+     * Draws the throne.
+     *
+     * @param g      graphics context used to draw the throne
+     * @param left   the castle origin x-coordinate
+     * @param bottom the castle baseline y-coordinate
+     * @param scale  the rendering scale
+     */
     private void drawThrone(Graphics2D g, double left, double bottom, double scale) {
         if (!isPositioned(castle.throne())) {
             return;
@@ -632,6 +991,14 @@ final class CastleViewPanel extends HGBasePanel {
         drawSprite(g, Sprites.KING, castle.throne(), left, bottom, scale);
     }
 
+    /**
+     * Draws the resource areas.
+     *
+     * @param g      graphics context used to draw storage areas
+     * @param left   the castle origin x-coordinate
+     * @param bottom the castle baseline y-coordinate
+     * @param scale  the rendering scale
+     */
     private void drawResourceAreas(Graphics2D g, double left, double bottom, double scale) {
         drawArea(g, castle.money(), castle.moneyRoom(), left, bottom, scale);
         if (selectedResourceArea == ResourceArea.MONEY) {
@@ -647,6 +1014,14 @@ final class CastleViewPanel extends HGBasePanel {
         }
     }
 
+    /**
+     * Draws the cannons.
+     *
+     * @param g      graphics context used to draw cannons
+     * @param left   the castle origin x-coordinate
+     * @param bottom the castle baseline y-coordinate
+     * @param scale  the rendering scale
+     */
     private void drawCannons(Graphics2D g, double left, double bottom, double scale) {
         for (int i = 0; i < castle.cannons().size(); i++) {
             Point cannon = castle.cannons().get(i);
@@ -660,6 +1035,14 @@ final class CastleViewPanel extends HGBasePanel {
         }
     }
 
+    /**
+     * Draws the resource contents.
+     *
+     * @param g      graphics context used to draw stored resource sprites
+     * @param left   the castle origin x-coordinate
+     * @param bottom the castle baseline y-coordinate
+     * @param scale  the rendering scale
+     */
     private void drawResourceContents(Graphics2D g, double left, double bottom, double scale) {
         drawResources(g, new ResourceDisplay(Sprites.MONEY, castle.money(), castle.moneyRoom(),
                 CastleFileFormat.MONEY_WIDTH, CastleFileFormat.MONEY_HEIGHT,
@@ -672,6 +1055,14 @@ final class CastleViewPanel extends HGBasePanel {
                 castle.resources().balls()), left, bottom, scale);
     }
 
+    /**
+     * Draws the wind vane.
+     *
+     * @param g      graphics context used to draw the wind vane
+     * @param left   the castle origin x-coordinate
+     * @param bottom the castle baseline y-coordinate
+     * @param scale  the rendering scale
+     */
     private void drawWindVane(Graphics2D g, double left, double bottom, double scale) {
         if (!isPositioned(castle.windVane())) {
             return;
@@ -686,6 +1077,14 @@ final class CastleViewPanel extends HGBasePanel {
         }
     }
 
+    /**
+     * Draws the edge hover.
+     *
+     * @param g      graphics context used to draw the edge-hover marker
+     * @param left   the castle origin x-coordinate
+     * @param bottom the castle baseline y-coordinate
+     * @param scale  the rendering scale
+     */
     private void drawEdgeHover(Graphics2D g, double left, double bottom, double scale) {
         if (selectedPolygon != null && edgeHoverPosition != null) {
             Point2D hoverPoint = findClosestPointOnEdge(selectedPolygon, edgeHoverPosition, left, bottom, scale);
@@ -696,10 +1095,27 @@ final class CastleViewPanel extends HGBasePanel {
         }
     }
 
+    /**
+     * Returns the upper y-coordinate of the positioned area.
+     *
+     * @param position lower-left castle coordinate of the area
+     * @param size     width and height of the area
+     * @return the y-coordinate of the top edge of the positioned area
+     */
     private int areaTop(Point position, Size size) {
         return position.y() + size.height();
     }
 
+    /**
+     * Draws the area.
+     *
+     * @param g        graphics context used to draw the storage area
+     * @param position lower-left castle coordinate of the area
+     * @param size     width and height of the area
+     * @param left     the castle origin x-coordinate
+     * @param bottom   the castle baseline y-coordinate
+     * @param scale    the rendering scale
+     */
     private void drawArea(Graphics2D g, Point position, Size size,
                           double left, double bottom, double scale) {
         Rectangle2D area = new Rectangle2D.Double(left + position.x() * scale,
@@ -709,12 +1125,31 @@ final class CastleViewPanel extends HGBasePanel {
         g.fill(area);
     }
 
+    /**
+     * Draws the sprite.
+     *
+     * @param g        graphics context used to draw the sprite
+     * @param sprite   encoded vector data for the sprite
+     * @param position lower-left castle coordinate where the sprite is placed
+     * @param left     the castle origin x-coordinate
+     * @param bottom   the castle baseline y-coordinate
+     * @param scale    the rendering scale
+     */
     private void drawSprite(Graphics2D g, int[] sprite, Point position,
                             double left, double bottom, double scale) {
         Sprites.draw(g, sprite, left + position.x() * scale,
                 bottom - position.y() * scale, scale);
     }
 
+    /**
+     * Draws the resources.
+     *
+     * @param g       graphics context used to draw the slots
+     * @param display sprite, slot spacing, area, and occupied count to render
+     * @param left    the castle origin x-coordinate
+     * @param bottom  the castle baseline y-coordinate
+     * @param scale   the rendering scale
+     */
     private void drawResources(Graphics2D g, ResourceDisplay display, double left, double bottom, double scale) {
         int remaining = Math.max(0, display.count());
         for (int y = 0; remaining > 0 && y < display.room().height(); y += display.stepY()) {
@@ -738,6 +1173,16 @@ final class CastleViewPanel extends HGBasePanel {
         }
     }
 
+    /**
+     * Describes the sprite and storage geometry used to render resource slots.
+     *
+     * @param sprite   sprite data to draw in each slot
+     * @param position lower-left storage-area position
+     * @param room     storage-area dimensions
+     * @param stepX    horizontal spacing between slots
+     * @param stepY    vertical spacing between slots
+     * @param count    number of occupied slots to draw
+     */
     private record ResourceDisplay(int[] sprite, Point position, Size room, int stepX, int stepY, int count) {
         @Override
         public boolean equals(Object other) {
@@ -773,10 +1218,23 @@ final class CastleViewPanel extends HGBasePanel {
         }
     }
 
+    /**
+     * Returns zero for non-positive values; otherwise rounds the quotient up to the next integer.
+     *
+     * @param value   starting resource quantity
+     * @param divisor resource quantity represented by one occupied slot
+     * @return zero for non-positive values, otherwise the quotient rounded upward
+     */
     private int divideRoundedUp(int value, int divisor) {
         return value <= 0 ? 0 : (value + divisor - 1) / divisor;
     }
 
+    /**
+     * Chooses the display color corresponding to a drawing fill style.
+     *
+     * @param style the fill style value
+     * @return the display color mapped from the fill style
+     */
     private Color colorFor(FillStyle style) {
         if (style.style() == CastleFileFormat.FILL_STYLE_PATTERN && style.index() == CastleFileFormat.FILL_INDEX_ROOF) {
             return COLOR_FILL_ROOF;
@@ -787,6 +1245,15 @@ final class CastleViewPanel extends HGBasePanel {
         return COLOR_FILL_DEFAULT;
     }
 
+    /**
+     * Calculates the cannon bounds in screen coordinates.
+     *
+     * @param cannon cannon position in castle coordinates
+     * @param left   left edge of the rendered castle
+     * @param bottom bottom edge of the rendered castle
+     * @param scale  scale from castle coordinates to screen coordinates
+     * @return the screen-space rectangle occupied by the cannon
+     */
     static Rectangle2D.Double calculateCannonRectangle(Point cannon, double left, double bottom, double scale) {
         double screenX = left + cannon.x() * scale;
         double screenY = bottom - cannon.y() * scale;
@@ -795,6 +1262,15 @@ final class CastleViewPanel extends HGBasePanel {
         return new Rectangle2D.Double(screenX, screenY - (CastleFileFormat.CANNON_HEIGHT - 1) * scale, screenWidth, screenHeight);
     }
 
+    /**
+     * Calculates the wind-vane bounds in screen coordinates.
+     *
+     * @param windVane wind-vane position in castle coordinates
+     * @param left     left edge of the rendered castle
+     * @param bottom   bottom edge of the rendered castle
+     * @param scale    scale from castle coordinates to screen coordinates
+     * @return the screen-space rectangle occupied by the wind vane
+     */
     static Rectangle2D.Double calculateWindVaneRectangle(Point windVane, double left, double bottom, double scale) {
         double screenX = left + windVane.x() * scale;
         double screenY = bottom - windVane.y() * scale;
@@ -803,6 +1279,12 @@ final class CastleViewPanel extends HGBasePanel {
         return new Rectangle2D.Double(screenX, screenY - (CastleFileFormat.WIND_VANE_HEIGHT + 1) * scale, screenWidth, screenHeight);
     }
 
+    /**
+     * Finds the highest y-coordinate reached by a cannon in the castle.
+     *
+     * @param castle castle whose cannon positions are inspected
+     * @return the maximum cannon top coordinate, or 1 when the castle has no cannons
+     */
     static int calculateMaximumCannonY(Castle castle) {
         int maximumY = 1;
         for (Point cannon : castle.cannons()) {
@@ -811,6 +1293,16 @@ final class CastleViewPanel extends HGBasePanel {
         return maximumY;
     }
 
+    /**
+     * Draws the corner points.
+     *
+     * @param g        graphics context used to draw the resize handles
+     * @param position lower-left castle coordinate of the selected storage area
+     * @param size     width and height of the selected storage area
+     * @param left     the castle origin x-coordinate
+     * @param bottom   the castle baseline y-coordinate
+     * @param scale    the rendering scale
+     */
     private void drawCornerPoints(Graphics2D g, Point position, Size size, double left, double bottom, double scale) {
         double x = left + position.x() * scale;
         double y = bottom - (position.y() + size.height()) * scale;
@@ -854,6 +1346,11 @@ final class CastleViewPanel extends HGBasePanel {
         }
     }
 
+    /**
+     * Starts the polygon creation.
+     *
+     * @param type fill category for the new polygon ({@code "wall"} or {@code "roof"})
+     */
     void startPolygonCreation(String type) {
         polygonCreationMode = true;
         polygonType = type;
@@ -868,6 +1365,9 @@ final class CastleViewPanel extends HGBasePanel {
         repaint();
     }
 
+    /**
+     * Cancels polygon creation and clears its status-bar hint.
+     */
     void cancelPolygonCreation() {
         polygonCreationMode = false;
         polygonType = null;
@@ -876,23 +1376,48 @@ final class CastleViewPanel extends HGBasePanel {
         repaint();
     }
 
+    /**
+     * Returns whether polygon creation is active.
+     *
+     * @return {@code true} while the view is collecting vertices for a new polygon
+     */
     boolean isInPolygonCreationMode() {
         return polygonCreationMode;
     }
 
+    /**
+     * Returns the polygon type.
+     *
+     * @return the active polygon category, or {@code null} when creation is inactive
+     */
     String getPolygonType() {
         return polygonType;
     }
 
+    /**
+     * Returns the creation points.
+     *
+     * @return a copy of the vertices entered so far, in click order
+     */
     List<Point> getCreationPoints() {
         return new ArrayList<>(creationPoints);
     }
 
+    /**
+     * Adds the creation point.
+     *
+     * @param point new vertex in castle coordinates
+     */
     void addCreationPoint(Point point) {
         creationPoints.add(point);
         repaint();
     }
 
+    /**
+     * Draws the polygon creation.
+     *
+     * @param g graphics context used to draw the in-progress polygon
+     */
     private void drawPolygonCreation(Graphics2D g) {
         if (creationPoints.isEmpty() && mousePosition == null) {
             return;
@@ -946,6 +1471,14 @@ final class CastleViewPanel extends HGBasePanel {
         }
     }
 
+    /**
+     * Creates the polygon preview path.
+     *
+     * @param left   the castle origin x-coordinate
+     * @param bottom the castle baseline y-coordinate
+     * @param scale  the rendering scale
+     * @return the created polygon preview path
+     */
     private Path2D createPolygonPreviewPath(double left, double bottom, double scale) {
         Path2D path = createPolygonPath(left, bottom, scale);
         path.lineTo(mousePosition.getX(), mousePosition.getY());
@@ -953,6 +1486,14 @@ final class CastleViewPanel extends HGBasePanel {
         return path;
     }
 
+    /**
+     * Creates the polygon path.
+     *
+     * @param left   the castle origin x-coordinate
+     * @param bottom the castle baseline y-coordinate
+     * @param scale  the rendering scale
+     * @return the created polygon path
+     */
     private Path2D createPolygonPath(double left, double bottom, double scale) {
         Path2D path = new Path2D.Double();
         Point first = creationPoints.getFirst();
@@ -964,6 +1505,9 @@ final class CastleViewPanel extends HGBasePanel {
         return path;
     }
 
+    /**
+     * Clears the in-progress polygon and exits polygon-creation mode.
+     */
     void finishPolygonCreation() {
         polygonCreationMode = false;
         polygonType = null;
@@ -972,16 +1516,34 @@ final class CastleViewPanel extends HGBasePanel {
         repaint();
     }
 
+    /**
+     * Updates the pointer position used to preview polygon creation.
+     *
+     * @param position current pointer position in screen coordinates, or {@code null} when no preview is shown
+     */
     void setMousePosition(Point2D position) {
         mousePosition = position;
         repaint();
     }
 
+    /**
+     * Updates the pointer position used to highlight a selected polygon edge.
+     *
+     * @param position current pointer position in screen coordinates, or {@code null} to clear edge highlighting
+     */
     void setEdgeHoverPosition(Point2D position) {
         edgeHoverPosition = position;
         repaint();
     }
 
+    /**
+     * Finds the selected polygon edge nearest to the current hover point.
+     *
+     * @param left   the castle origin x-coordinate
+     * @param bottom the castle baseline y-coordinate
+     * @param scale  the rendering scale
+     * @return zero-based edge-start vertex index, or {@code -1} when the pointer is not near an eligible edge
+     */
     int findEdgeIndexForHoverPosition(double left, double bottom, double scale) {
         if (selectedPolygon == null || edgeHoverPosition == null) {
             return -1;
@@ -1024,6 +1586,16 @@ final class CastleViewPanel extends HGBasePanel {
         return -1;
     }
 
+    /**
+     * Finds the nearest eligible edge point within the hover threshold.
+     *
+     * @param polygon    polygon whose edges are searched
+     * @param mousePoint pointer position in screen coordinates
+     * @param left       the castle origin x-coordinate
+     * @param bottom     the castle baseline y-coordinate
+     * @param scale      the rendering scale
+     * @return nearest screen-space edge point, or {@code null} when no edge is near the pointer
+     */
     private Point2D findClosestPointOnEdge(Polygon polygon, Point2D mousePoint,
                                            double left, double bottom, double scale) {
         final double edgeThreshold = 8.0; // Maximum distance to consider as "near edge"
@@ -1065,6 +1637,16 @@ final class CastleViewPanel extends HGBasePanel {
         return closestPoint;
     }
 
+    /**
+     * Finds the point on a segment nearest to the supplied query point.
+     *
+     * @param point query point in screen coordinates
+     * @param x1    first segment endpoint's x-coordinate
+     * @param y1    first segment endpoint's y-coordinate
+     * @param x2    second segment endpoint's x-coordinate
+     * @param y2    second segment endpoint's y-coordinate
+     * @return nearest point on the closed segment in screen coordinates
+     */
     private Point2D closestPointOnSegment(Point2D point, double x1, double y1,
                                           double x2, double y2) {
         double dx = x2 - x1;
