@@ -9,17 +9,16 @@ import at.josefjordan.ballerburg.editor.model.CastleFileFormat;
 import hgb.gui.HGBasePanel;
 import hgb.lib.HGBaseText;
 
-import javax.swing.JSplitPane;
-import javax.swing.JScrollPane;
-import java.awt.BorderLayout;
-import java.awt.Dimension;
+import javax.swing.*;
+import java.awt.*;
 import java.awt.geom.Path2D;
 import java.awt.geom.Rectangle2D;
-import java.awt.geom.Area;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Editor containing the castle view, property palette, and problems panel. */
+/**
+ * Editor containing the castle view, property palette, and problems panel.
+ */
 public class EditorPanel extends HGBasePanel {
     private static final int MAX_CASTLE_ELEMENT_WIDTH = 200;
     private static final int PROPERTY_PALETTE_MIN_WIDTH = 200;
@@ -29,14 +28,14 @@ public class EditorPanel extends HGBasePanel {
     private final CastleViewPanel castleView = new CastleViewPanel();
     private final PropertyPalettePanel propertyPalette = new PropertyPalettePanel();
     private final ProblemsPanel problemsPanel = new ProblemsPanel();
-    private CastleDocument document;
+    private transient CastleDocument document;
     private int castleIndex = -1;
-    private Runnable selectionListener;
-    private Runnable changeListener;
-    private Runnable beginHistoryGroupListener;
-    private Runnable endHistoryGroupListener;
-    private Runnable zoomListener;
-    private java.util.function.Consumer<String> statusBarListener;
+    private transient Runnable selectionListener;
+    private transient Runnable changeListener;
+    private transient Runnable beginHistoryGroupListener;
+    private transient Runnable endHistoryGroupListener;
+    private transient Runnable zoomListener;
+    private transient java.util.function.Consumer<String> statusBarListener;
 
     public EditorPanel() {
         super(new BorderLayout());
@@ -48,8 +47,8 @@ public class EditorPanel extends HGBasePanel {
         });
         castleView.setPolygonSelectionListener(this::onPolygonSelectionChanged);
         JScrollPane scrollPane = new JScrollPane(castleView);
-        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
-        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+        scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
+        scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_ALWAYS);
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, scrollPane, propertyPalette);
         splitPane.setContinuousLayout(true);
         splitPane.setResizeWeight(1.0);
@@ -149,13 +148,6 @@ public class EditorPanel extends HGBasePanel {
         return balls.x() != Integer.MIN_VALUE && balls.y() != Integer.MIN_VALUE;
     }
 
-    public boolean hasWall() {
-        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return false;
-        }
-        return hasWall(document.castles().get(castleIndex));
-    }
-
     private boolean hasWall(Castle castle) {
         // Start fill style is 2,9 (masonry) according to BALLER.DAT
         int fillStyle = CastleFileFormat.FILL_STYLE_PATTERN;
@@ -164,46 +156,43 @@ public class EditorPanel extends HGBasePanel {
             if (command instanceof CastleDocument.FillStyle(int style, int index)) {
                 fillStyle = style;
                 fillIndex = index;
-            } else if (command instanceof CastleDocument.Polygon) {
-                if (fillStyle == CastleFileFormat.FILL_STYLE_PATTERN && fillIndex == CastleFileFormat.FILL_INDEX_MASONRY) {
-                    return true;
-                }
+            } else if (command instanceof CastleDocument.Polygon && fillStyle == CastleFileFormat.FILL_STYLE_PATTERN && fillIndex == CastleFileFormat.FILL_INDEX_MASONRY) {
+                return true;
             }
+
         }
         return false;
     }
 
-    public boolean addCastle() {
+    public void addCastle() {
         if (document == null) {
-            return false;
+            return;
         }
         List<Castle> castles = new ArrayList<>(document.castles());
         castleIndex = castleIndex < 0 ? castles.size() : castleIndex + 1;
         castles.add(castleIndex, createEmptyCastle());
         document = new CastleDocument(castles);
         documentChanged();
-        return true;
     }
 
-    public boolean deleteCastle() {
+    public void deleteCastle() {
         if (document == null || castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return false;
+            return;
         }
         List<Castle> castles = new ArrayList<>(document.castles());
         castles.remove(castleIndex);
         document = new CastleDocument(castles);
         castleIndex = Math.min(castleIndex, castles.size() - 1);
         documentChanged();
-        return true;
     }
 
-    public boolean addCannon() {
+    public void addCannon() {
         if (document == null || castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return false;
+            return;
         }
         Castle oldCastle = document.castles().get(castleIndex);
         if (oldCastle.cannons().size() >= CastleFileFormat.CANNON_POSITION_COUNT) {
-            return false;
+            return;
         }
 
         List<Point> newCannons = new ArrayList<>(oldCastle.cannons());
@@ -218,16 +207,15 @@ public class EditorPanel extends HGBasePanel {
         document = new CastleDocument(castles);
         castleView.updateCastle(updatedCastle);
         documentChanged();
-        return true;
     }
 
-    public boolean addThrone() {
+    public void addThrone() {
         if (document == null || castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return false;
+            return;
         }
         Castle oldCastle = document.castles().get(castleIndex);
         if (hasThrone()) {
-            return false;
+            return;
         }
 
         Point thronePosition = new Point(0, 0);
@@ -241,16 +229,15 @@ public class EditorPanel extends HGBasePanel {
         document = new CastleDocument(castles);
         castleView.updateCastle(updatedCastle);
         documentChanged();
-        return true;
     }
 
-    public boolean addWindVane() {
+    public void addWindVane() {
         if (document == null || castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return false;
+            return;
         }
         Castle oldCastle = document.castles().get(castleIndex);
         if (hasWindVane()) {
-            return false;
+            return;
         }
 
         Point windVanePosition = new Point(0, 0);
@@ -264,16 +251,15 @@ public class EditorPanel extends HGBasePanel {
         document = new CastleDocument(castles);
         castleView.updateCastle(updatedCastle);
         documentChanged();
-        return true;
     }
 
-    public boolean addMoney() {
+    public void addMoney() {
         if (document == null || castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return false;
+            return;
         }
         Castle oldCastle = document.castles().get(castleIndex);
         if (hasMoney()) {
-            return false;
+            return;
         }
 
         Point moneyPosition = new Point(0, 0);
@@ -288,16 +274,15 @@ public class EditorPanel extends HGBasePanel {
         document = new CastleDocument(castles);
         castleView.updateCastle(updatedCastle);
         documentChanged();
-        return true;
     }
 
-    public boolean addPowder() {
+    public void addPowder() {
         if (document == null || castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return false;
+            return;
         }
         Castle oldCastle = document.castles().get(castleIndex);
         if (hasPowder()) {
-            return false;
+            return;
         }
 
         Point powderPosition = new Point(0, 0);
@@ -312,31 +297,32 @@ public class EditorPanel extends HGBasePanel {
         document = new CastleDocument(castles);
         castleView.updateCastle(updatedCastle);
         documentChanged();
-        return true;
     }
 
-    public boolean addCannonballs() {
+    public void addCannonballs() {
         if (document == null || castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return false;
+            return;
         }
         Castle oldCastle = document.castles().get(castleIndex);
         if (hasBalls()) {
-            return false;
+            return;
         }
 
-        Point ballsPosition = new Point(0, 0);
-        Size ballRoomSize = new Size(CastleFileFormat.CANNONBALL_WIDTH, CastleFileFormat.CANNONBALL_HEIGHT);
-
-        Castle updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
-                oldCastle.windVane(), oldCastle.money(), oldCastle.powder(), ballsPosition,
-                oldCastle.moneyRoom(), oldCastle.powderRoom(), ballRoomSize, oldCastle.resources(),
-                oldCastle.reserved(), oldCastle.drawing());
+        Castle updatedCastle = addCannonballsToCastle(oldCastle);
         List<Castle> castles = new ArrayList<>(document.castles());
         castles.set(castleIndex, updatedCastle);
         document = new CastleDocument(castles);
         castleView.updateCastle(updatedCastle);
         documentChanged();
-        return true;
+    }
+
+    private Castle addCannonballsToCastle(Castle castle) {
+        Point ballsPosition = new Point(0, 0);
+        Size ballRoomSize = new Size(CastleFileFormat.CANNONBALL_WIDTH, CastleFileFormat.CANNONBALL_HEIGHT);
+        return new Castle(castle.width(), castle.cannons(), castle.throne(),
+                castle.windVane(), castle.money(), castle.powder(), ballsPosition,
+                castle.moneyRoom(), castle.powderRoom(), ballRoomSize, castle.resources(),
+                castle.reserved(), castle.drawing());
     }
 
     public void addWall() {
@@ -367,6 +353,18 @@ public class EditorPanel extends HGBasePanel {
             return;
         }
 
+        Castle updatedCastle = createCastleWithPolygon(points);
+        List<Castle> castles = new ArrayList<>(document.castles());
+        castles.set(castleIndex, updatedCastle);
+        document = new CastleDocument(castles);
+        castleView.updateCastle(updatedCastle);
+        castleView.finishPolygonCreation();
+        clearPolygonCreationHint();
+        documentChanged();
+        notifySelectionChanged();
+    }
+
+    private Castle createCastleWithPolygon(List<Point> points) {
         Castle oldCastle = document.castles().get(castleIndex);
         List<CastleDocument.DrawingCommand> newDrawing = new ArrayList<>(oldCastle.drawing());
 
@@ -377,18 +375,10 @@ public class EditorPanel extends HGBasePanel {
         newDrawing.add(new CastleDocument.FillStyle(CastleFileFormat.FILL_STYLE_PATTERN, fillIndex));
         newDrawing.add(new CastleDocument.Polygon(points));
 
-        Castle updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
+        return new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
                 oldCastle.windVane(), oldCastle.money(), oldCastle.powder(), oldCastle.balls(),
                 oldCastle.moneyRoom(), oldCastle.powderRoom(), oldCastle.ballRoom(), oldCastle.resources(),
                 oldCastle.reserved(), newDrawing);
-        List<Castle> castles = new ArrayList<>(document.castles());
-        castles.set(castleIndex, updatedCastle);
-        document = new CastleDocument(castles);
-        castleView.updateCastle(updatedCastle);
-        castleView.finishPolygonCreation();
-        clearPolygonCreationHint();
-        documentChanged();
-        notifySelectionChanged();
     }
 
     public void cancelPolygonCreation() {
@@ -463,7 +453,7 @@ public class EditorPanel extends HGBasePanel {
         }
         Castle oldCastle = document.castles().get(castleIndex);
         List<CastleDocument.DrawingCommand> oldDrawing = oldCastle.drawing();
-        
+
         int currentPolygonIndex = 0;
         List<CastleDocument.DrawingCommand> newDrawing = new ArrayList<>();
         for (CastleDocument.DrawingCommand command : oldDrawing) {
@@ -480,7 +470,7 @@ public class EditorPanel extends HGBasePanel {
                 newDrawing.add(command);
             }
         }
-        
+
         Castle updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
                 oldCastle.windVane(), oldCastle.money(), oldCastle.powder(), oldCastle.balls(),
                 oldCastle.moneyRoom(), oldCastle.powderRoom(), oldCastle.ballRoom(), oldCastle.resources(),
@@ -597,7 +587,7 @@ public class EditorPanel extends HGBasePanel {
         }
     }
 
-    public void updateResourceAreaSize(String resourceArea, Point newPosition, Size newSize) {
+    public void updateResourceAreaSize(ResourceArea resourceArea, Point newPosition, Size newSize) {
         if (castleIndex < 0 || castleIndex >= getCastleCount()) {
             return;
         }
@@ -605,19 +595,19 @@ public class EditorPanel extends HGBasePanel {
 
         Castle updatedCastle;
         switch (resourceArea) {
-            case "money":
+            case MONEY:
                 updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
                         oldCastle.windVane(), newPosition, oldCastle.powder(), oldCastle.balls(),
                         newSize, oldCastle.powderRoom(), oldCastle.ballRoom(), oldCastle.resources(),
                         oldCastle.reserved(), oldCastle.drawing());
                 break;
-            case "powder":
+            case POWDER:
                 updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
                         oldCastle.windVane(), oldCastle.money(), newPosition, oldCastle.balls(),
                         oldCastle.moneyRoom(), newSize, oldCastle.ballRoom(), oldCastle.resources(),
                         oldCastle.reserved(), oldCastle.drawing());
                 break;
-            case "balls":
+            case BALLS:
                 updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
                         oldCastle.windVane(), oldCastle.money(), oldCastle.powder(), newPosition,
                         oldCastle.moneyRoom(), oldCastle.powderRoom(), newSize, oldCastle.resources(),
@@ -638,7 +628,7 @@ public class EditorPanel extends HGBasePanel {
         }
     }
 
-    public void updateResourceAreaPosition(String resourceArea, Point newPosition) {
+    public void updateResourceAreaPosition(ResourceArea resourceArea, Point newPosition) {
         if (castleIndex < 0 || castleIndex >= getCastleCount()) {
             return;
         }
@@ -646,19 +636,19 @@ public class EditorPanel extends HGBasePanel {
 
         Castle updatedCastle;
         switch (resourceArea) {
-            case "money":
+            case MONEY:
                 updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
                         oldCastle.windVane(), newPosition, oldCastle.powder(), oldCastle.balls(),
                         oldCastle.moneyRoom(), oldCastle.powderRoom(), oldCastle.ballRoom(), oldCastle.resources(),
                         oldCastle.reserved(), oldCastle.drawing());
                 break;
-            case "powder":
+            case POWDER:
                 updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
                         oldCastle.windVane(), oldCastle.money(), newPosition, oldCastle.balls(),
                         oldCastle.moneyRoom(), oldCastle.powderRoom(), oldCastle.ballRoom(), oldCastle.resources(),
                         oldCastle.reserved(), oldCastle.drawing());
                 break;
-            case "balls":
+            case BALLS:
                 updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
                         oldCastle.windVane(), oldCastle.money(), oldCastle.powder(), newPosition,
                         oldCastle.moneyRoom(), oldCastle.powderRoom(), oldCastle.ballRoom(), oldCastle.resources(),
@@ -678,22 +668,22 @@ public class EditorPanel extends HGBasePanel {
         }
     }
 
-    public boolean addPolygonPoint(int edgeIndex, Point newPoint) {
+    public void addPolygonPoint(int edgeIndex, Point newPoint) {
         CastleDocument.Polygon selectedPolygon = castleView.getSelectedPolygon();
         if (selectedPolygon == null) {
-            return false;
+            return;
         }
-        
+
         int polygonIndex = findPolygonIndex(selectedPolygon);
         if (polygonIndex < 0) {
-            return false;
+            return;
         }
-        
+
         List<Point> newPoints = new ArrayList<>(selectedPolygon.points());
         // Insert the new point after the edge index (edgeIndex is the index of the point where the edge starts)
         newPoints.add(edgeIndex + 1, newPoint);
         updatePolygonPoints(polygonIndex, newPoints);
-        
+
         // Update the selected polygon reference to the new polygon
         Castle updatedCastle = document.castles().get(castleIndex);
         int currentPolygonIndex = 0;
@@ -706,33 +696,32 @@ public class EditorPanel extends HGBasePanel {
                 currentPolygonIndex++;
             }
         }
-        
+
         // Select the newly added point
         castleView.setSelectedPointIndex(edgeIndex + 1);
         onPointSelectionChanged();
-        return true;
     }
 
-    public boolean removePolygonPoint() {
+    public void removePolygonPoint() {
         CastleDocument.Polygon selectedPolygon = castleView.getSelectedPolygon();
         if (selectedPolygon == null || selectedPolygon.points().size() <= 3) {
-            return false;
+            return;
         }
-        
+
         int selectedPointIndex = castleView.getSelectedPointIndex();
         if (selectedPointIndex < 0) {
-            return false;
+            return;
         }
-        
+
         int polygonIndex = findPolygonIndex(selectedPolygon);
         if (polygonIndex < 0) {
-            return false;
+            return;
         }
-        
+
         List<Point> newPoints = new ArrayList<>(selectedPolygon.points());
         newPoints.remove(selectedPointIndex);
         updatePolygonPoints(polygonIndex, newPoints);
-        
+
         // Update the selected polygon reference to the new polygon
         Castle updatedCastle = document.castles().get(castleIndex);
         int currentPolygonIndex = 0;
@@ -745,11 +734,10 @@ public class EditorPanel extends HGBasePanel {
                 currentPolygonIndex++;
             }
         }
-        
+
         // Clear the selected point after removal
         castleView.setSelectedPointIndex(-1);
         onPointSelectionChanged();
-        return true;
     }
 
     private int findPolygonIndex(CastleDocument.Polygon targetPolygon) {
@@ -781,15 +769,15 @@ public class EditorPanel extends HGBasePanel {
         return castleView.getSelectedPointIndex() >= 0;
     }
 
-    public boolean removePolygon() {
+    public void removePolygon() {
         CastleDocument.Polygon selectedPolygon = castleView.getSelectedPolygon();
         if (selectedPolygon == null) {
-            return false;
+            return;
         }
 
         int polygonIndex = findPolygonIndex(selectedPolygon);
         if (polygonIndex < 0) {
-            return false;
+            return;
         }
 
         Castle oldCastle = document.castles().get(castleIndex);
@@ -814,7 +802,6 @@ public class EditorPanel extends HGBasePanel {
             changeListener.run();
         }
         notifySelectionChanged();
-        return true;
     }
 
     public boolean hasSelectedPolygon() {
@@ -837,23 +824,19 @@ public class EditorPanel extends HGBasePanel {
         return castleView.getSelectedResourceArea() != null;
     }
 
-    public String getSelectedResourceArea() {
-        return castleView.getSelectedResourceArea();
-    }
-
-    public boolean removeCannon() {
+    public void removeCannon() {
         int selectedCannonIndex = castleView.getSelectedCannonIndex();
         if (selectedCannonIndex < 0) {
-            return false;
+            return;
         }
 
         if (castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return false;
+            return;
         }
 
         Castle oldCastle = document.castles().get(castleIndex);
-        if (selectedCannonIndex < 0 || selectedCannonIndex >= oldCastle.cannons().size()) {
-            return false;
+        if (selectedCannonIndex >= oldCastle.cannons().size()) {
+            return;
         }
 
         List<Point> newCannons = new ArrayList<>(oldCastle.cannons());
@@ -873,16 +856,15 @@ public class EditorPanel extends HGBasePanel {
             changeListener.run();
         }
         notifySelectionChanged();
-        return true;
     }
 
-    public boolean removeThrone() {
+    public void removeThrone() {
         if (!castleView.isSelectedThrone()) {
-            return false;
+            return;
         }
 
         if (castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return false;
+            return;
         }
 
         Castle oldCastle = document.castles().get(castleIndex);
@@ -902,16 +884,15 @@ public class EditorPanel extends HGBasePanel {
             changeListener.run();
         }
         notifySelectionChanged();
-        return true;
     }
 
-    public boolean removeWindVane() {
+    public void removeWindVane() {
         if (!castleView.isSelectedWindVane()) {
-            return false;
+            return;
         }
 
         if (castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return false;
+            return;
         }
 
         Castle oldCastle = document.castles().get(castleIndex);
@@ -931,17 +912,16 @@ public class EditorPanel extends HGBasePanel {
             changeListener.run();
         }
         notifySelectionChanged();
-        return true;
     }
 
-    public boolean removeResourceArea() {
-        String selectedResourceArea = castleView.getSelectedResourceArea();
+    public void removeResourceArea() {
+        ResourceArea selectedResourceArea = castleView.getSelectedResourceArea();
         if (selectedResourceArea == null) {
-            return false;
+            return;
         }
 
         if (castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return false;
+            return;
         }
 
         Castle oldCastle = document.castles().get(castleIndex);
@@ -950,26 +930,26 @@ public class EditorPanel extends HGBasePanel {
         Resources oldResources = oldCastle.resources();
 
         Castle updatedCastle;
-        if ("money".equals(selectedResourceArea)) {
+        if (selectedResourceArea == ResourceArea.MONEY) {
             Resources newResources = new Resources(0, oldResources.powder(), oldResources.balls(), oldResources.people());
             updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
                     oldCastle.windVane(), unusedPosition, oldCastle.powder(), oldCastle.balls(),
                     emptySize, oldCastle.powderRoom(), oldCastle.ballRoom(), newResources,
                     oldCastle.reserved(), oldCastle.drawing());
-        } else if ("powder".equals(selectedResourceArea)) {
+        } else if (selectedResourceArea == ResourceArea.POWDER) {
             Resources newResources = new Resources(oldResources.money(), 0, oldResources.balls(), oldResources.people());
             updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
                     oldCastle.windVane(), oldCastle.money(), unusedPosition, oldCastle.balls(),
                     oldCastle.moneyRoom(), emptySize, oldCastle.ballRoom(), newResources,
                     oldCastle.reserved(), oldCastle.drawing());
-        } else if ("balls".equals(selectedResourceArea)) {
+        } else if (selectedResourceArea == ResourceArea.BALLS) {
             Resources newResources = new Resources(oldResources.money(), oldResources.powder(), 0, oldResources.people());
             updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
                     oldCastle.windVane(), oldCastle.money(), oldCastle.powder(), unusedPosition,
                     oldCastle.moneyRoom(), oldCastle.powderRoom(), emptySize, newResources,
                     oldCastle.reserved(), oldCastle.drawing());
         } else {
-            return false;
+            return;
         }
 
         List<Castle> castles = new ArrayList<>(document.castles());
@@ -983,7 +963,6 @@ public class EditorPanel extends HGBasePanel {
             changeListener.run();
         }
         notifySelectionChanged();
-        return true;
     }
 
     public void onPointSelectionChanged() {
@@ -994,13 +973,13 @@ public class EditorPanel extends HGBasePanel {
         }
         notifySelectionChanged();
     }
-    
+
     private void setPolygonSelectedHint() {
         if (statusBarListener != null) {
             statusBarListener.accept(HGBaseText.getText("polygon.selected_hint"));
         }
     }
-    
+
     private void clearPolygonSelectedHint() {
         if (statusBarListener != null && !castleView.isInPolygonCreationMode()) {
             statusBarListener.accept("");
@@ -1010,7 +989,7 @@ public class EditorPanel extends HGBasePanel {
     public void onCannonSelectionChanged() {
         notifySelectionChanged();
     }
-    
+
     private void onPolygonSelectionChanged() {
         if (castleView.getSelectedPolygon() != null) {
             setPolygonSelectedHint();
@@ -1052,7 +1031,7 @@ public class EditorPanel extends HGBasePanel {
             addMissingProblem(problems, hasElementWidth(castle), "problems.elements_too_wide");
             if (wallPresent) {
                 addMissingProblem(problems, isInsideWall(castle, castle.throne(),
-                        new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT)),
+                                new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT)),
                         "problems.throne_outside_wall");
                 addMissingProblem(problems, isInsideWall(castle, castle.money(), castle.moneyRoom()),
                         "problems.money_outside_wall");
@@ -1137,8 +1116,8 @@ public class EditorPanel extends HGBasePanel {
         int minimumX = Integer.MAX_VALUE;
         int maximumX = Integer.MIN_VALUE;
         for (CastleDocument.DrawingCommand command : castle.drawing()) {
-            if (command instanceof CastleDocument.Polygon polygon) {
-                for (Point point : polygon.points()) {
+            if (command instanceof CastleDocument.Polygon(List<Point> points)) {
+                for (Point point : points) {
                     minimumX = Math.min(minimumX, point.x());
                     maximumX = Math.max(maximumX, point.x());
                 }
@@ -1265,20 +1244,19 @@ public class EditorPanel extends HGBasePanel {
             if (command instanceof CastleDocument.FillStyle(int style, int index)) {
                 fillStyle = style;
                 fillIndex = index;
-            } else if (command instanceof CastleDocument.Polygon polygon) {
-                if (fillStyle == CastleFileFormat.FILL_STYLE_PATTERN
-                        && fillIndex == CastleFileFormat.FILL_INDEX_MASONRY
-                        && polygonContains(polygon, area)) {
-                    return true;
-                }
+            } else if (command instanceof CastleDocument.Polygon polygon && fillStyle == CastleFileFormat.FILL_STYLE_PATTERN
+                    && fillIndex == CastleFileFormat.FILL_INDEX_MASONRY
+                    && polygonContains(polygon, area)) {
+                return true;
             }
+
         }
         return false;
     }
 
     private boolean polygonContains(CastleDocument.Polygon polygon, Rectangle2D area) {
         Path2D path = new Path2D.Double();
-        Point first = polygon.points().get(0);
+        Point first = polygon.points().getFirst();
         path.moveTo(first.x(), first.y());
         for (int index = 1; index < polygon.points().size(); index++) {
             Point point = polygon.points().get(index);
@@ -1290,7 +1268,7 @@ public class EditorPanel extends HGBasePanel {
 
     private boolean polygonIntersects(CastleDocument.Polygon polygon, Rectangle2D rectangle) {
         Path2D path = new Path2D.Double();
-        Point first = polygon.points().get(0);
+        Point first = polygon.points().getFirst();
         path.moveTo(first.x(), first.y());
         for (int index = 1; index < polygon.points().size(); index++) {
             Point point = polygon.points().get(index);
@@ -1337,7 +1315,6 @@ public class EditorPanel extends HGBasePanel {
     }
 
     private Castle createEmptyCastle() {
-        Point origin = new Point(0, 0);
         Point absent = new Point(Integer.MIN_VALUE, Integer.MIN_VALUE);
         Size emptySize = new Size(0, 0);
         return new Castle(0, List.of(), absent, absent, absent, absent, absent,

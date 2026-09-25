@@ -1,11 +1,7 @@
 package at.josefjordan.ballerburg.editor.io;
 
 import at.josefjordan.ballerburg.editor.model.CastleDocument;
-import at.josefjordan.ballerburg.editor.model.CastleDocument.Castle;
-import at.josefjordan.ballerburg.editor.model.CastleDocument.DrawingCommand;
-import at.josefjordan.ballerburg.editor.model.CastleDocument.FillStyle;
-import at.josefjordan.ballerburg.editor.model.CastleDocument.Point;
-import at.josefjordan.ballerburg.editor.model.CastleDocument.Polygon;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.*;
 import at.josefjordan.ballerburg.editor.model.CastleFileFormat;
 
 import java.io.BufferedWriter;
@@ -15,7 +11,9 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Writes a canonical BALLER.DAT file using CP437 and CRLF line endings. */
+/**
+ * Writes a canonical BALLER.DAT file using CP437 and CRLF line endings.
+ */
 public final class CastleWriter {
     private static final String NEW_LINE = "\r\n";
     private static final int FIRST_CASTLE_NUMBER = 1;
@@ -52,12 +50,12 @@ public final class CastleWriter {
         writeLine(writer, castle.reserved());
         List<Integer> drawing = new ArrayList<>();
         for (DrawingCommand command : castle.drawing()) {
-            if (command instanceof FillStyle fill) {
+            if (command instanceof FillStyle(int style, int index)) {
                 drawing.add(CastleFileFormat.FILL_STYLE_COMMAND);
-                drawing.add(fill.style());
-                drawing.add(fill.index());
-            } else if (command instanceof Polygon polygon) {
-                drawing.addAll(points(polygon.points()));
+                drawing.add(style);
+                drawing.add(index);
+            } else if (command instanceof Polygon(List<Point> points)) {
+                drawing.addAll(points(points));
                 drawing.add(CastleFileFormat.POLYGON_TERMINATOR);
             }
         }
@@ -68,8 +66,8 @@ public final class CastleWriter {
     private int castleWidth(Castle castle) {
         int width = 0;
         for (DrawingCommand command : castle.drawing()) {
-            if (command instanceof Polygon polygon) {
-                for (Point point : polygon.points()) {
+            if (command instanceof Polygon(List<Point> points)) {
+                for (Point point : points) {
                     width = Math.max(width, point.x());
                 }
             }
@@ -91,14 +89,14 @@ public final class CastleWriter {
                 translateIfSet(castle.powder(), offset), translateIfSet(castle.balls(), offset),
                 castle.moneyRoom(), castle.powderRoom(), castle.ballRoom(), castle.resources(),
                 castle.reserved(), castle.drawing().stream().map(command -> {
-                    if (command instanceof FillStyle) {
-                        return command;
-                    }
-                    Polygon polygon = (Polygon) command;
-                    return new Polygon(polygon.points().stream()
-                            .map(point -> translate(point, offset))
-                            .toList());
-                }).toList());
+            if (command instanceof FillStyle) {
+                return command;
+            }
+            Polygon polygon = (Polygon) command;
+            return new Polygon(polygon.points().stream()
+                    .map(point -> translate(point, offset))
+                    .toList());
+        }).toList());
     }
 
     private CoordinateOffset coordinateOffset(Castle castle) {
@@ -107,8 +105,8 @@ public final class CastleWriter {
         List<Point> points = new ArrayList<>();
         points.addAll(castle.cannons());
         points.addAll(castle.drawing().stream()
-                .filter(command -> command instanceof Polygon)
-                .map(command -> (Polygon) command)
+                .filter(Polygon.class::isInstance)
+                .map(Polygon.class::cast)
                 .flatMap(polygon -> polygon.points().stream())
                 .toList());
         points.add(castle.throne());
@@ -130,8 +128,8 @@ public final class CastleWriter {
 
     private void validateCoordinates(Castle castle) throws IOException {
         for (DrawingCommand command : castle.drawing()) {
-            if (command instanceof Polygon polygon) {
-                for (Point point : polygon.points()) {
+            if (command instanceof Polygon(List<Point> points)) {
+                for (Point point : points) {
                     if (point.x() < 0 || point.y() < 0) {
                         throw new IOException("Negative polygon coordinate after normalization: "
                                 + point.x() + "," + point.y());
@@ -157,7 +155,7 @@ public final class CastleWriter {
         return isSet(point)
                 ? List.of(point.x(), point.y())
                 : List.of(CastleFileFormat.UNUSED_CANNON_COORDINATE,
-                        CastleFileFormat.UNUSED_CANNON_COORDINATE);
+                CastleFileFormat.UNUSED_CANNON_COORDINATE);
     }
 
     private List<Integer> points(List<Point> points) {
@@ -178,7 +176,7 @@ public final class CastleWriter {
     }
 
     @SafeVarargs
-    private final List<Integer> concat(List<Integer>... parts) {
+    private List<Integer> concat(List<Integer>... parts) {
         List<Integer> values = new ArrayList<>();
         for (List<Integer> part : parts) {
             values.addAll(part);

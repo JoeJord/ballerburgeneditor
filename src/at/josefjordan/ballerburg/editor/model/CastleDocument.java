@@ -2,7 +2,9 @@ package at.josefjordan.ballerburg.editor.model;
 
 import java.util.List;
 
-/** The editable contents of a BALLER.DAT file. */
+/**
+ * The editable contents of a BALLER.DAT file.
+ */
 public record CastleDocument(List<Castle> castles) {
     public CastleDocument {
         castles = List.copyOf(castles);
@@ -38,11 +40,15 @@ public record CastleDocument(List<Castle> castles) {
     public sealed interface DrawingCommand permits FillStyle, Polygon {
     }
 
-    /** The BALLER.DAT command {@code -2, style, index}. */
+    /**
+     * The BALLER.DAT command {@code -2, style, index}.
+     */
     public record FillStyle(int style, int index) implements DrawingCommand {
     }
 
-    /** A polygon terminated by {@code -9} in BALLER.DAT. */
+    /**
+     * A polygon terminated by {@code -9} in BALLER.DAT.
+     */
     public record Polygon(List<Point> points) implements DrawingCommand {
         public Polygon {
             points = List.copyOf(points);

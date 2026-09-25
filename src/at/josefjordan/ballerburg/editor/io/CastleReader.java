@@ -1,13 +1,7 @@
 package at.josefjordan.ballerburg.editor.io;
 
 import at.josefjordan.ballerburg.editor.model.CastleDocument;
-import at.josefjordan.ballerburg.editor.model.CastleDocument.Castle;
-import at.josefjordan.ballerburg.editor.model.CastleDocument.DrawingCommand;
-import at.josefjordan.ballerburg.editor.model.CastleDocument.FillStyle;
-import at.josefjordan.ballerburg.editor.model.CastleDocument.Point;
-import at.josefjordan.ballerburg.editor.model.CastleDocument.Polygon;
-import at.josefjordan.ballerburg.editor.model.CastleDocument.Resources;
-import at.josefjordan.ballerburg.editor.model.CastleDocument.Size;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.*;
 import at.josefjordan.ballerburg.editor.model.CastleFileFormat;
 
 import java.io.IOException;
@@ -19,7 +13,9 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/** Reads the CP437 encoded, comment-aware BALLER.DAT format. */
+/**
+ * Reads the CP437 encoded, comment-aware BALLER.DAT format.
+ */
 public final class CastleReader {
     public static final Charset CHARSET = Charset.forName("IBM437");
     private static final Pattern INTEGER = Pattern.compile("[+-]?\\d+");
@@ -66,29 +62,37 @@ public final class CastleReader {
             if (command == CastleFileFormat.CASTLE_TERMINATOR) {
                 return commands;
             }
-            if (command == CastleFileFormat.FILL_STYLE_COMMAND) {
-                commands.add(new FillStyle(cursor.next("fill style"), cursor.next("fill index")));
-            } else if (command >= 0) {
-                List<Point> points = new ArrayList<>();
-                points.add(new Point(command, cursor.next("polygon y coordinate")));
-                while (true) {
-                    int x = cursor.next("polygon x coordinate or "
-                            + CastleFileFormat.POLYGON_TERMINATOR + " terminator");
-                    if (x == CastleFileFormat.POLYGON_TERMINATOR) {
-                        break;
-                    }
-                    if (x < 0) {
-                        throw cursor.error("Unexpected polygon marker " + x);
-                    }
-                    points.add(new Point(x, cursor.next("polygon y coordinate")));
-                }
-                commands.add(new Polygon(points));
-            } else {
-                throw cursor.error("Unknown drawing command " + command);
-            }
+            commands.add(readDrawingCommand(cursor, command));
         }
     }
 
+    private DrawingCommand readDrawingCommand(Cursor cursor, int command) throws IOException {
+        if (command == CastleFileFormat.FILL_STYLE_COMMAND) {
+            return new FillStyle(cursor.next("fill style"), cursor.next("fill index"));
+        }
+        if (command >= 0) {
+            return readPolygon(cursor, command);
+        }
+        throw cursor.error("Unknown drawing command " + command);
+    }
+
+    private Polygon readPolygon(Cursor cursor, int firstX) throws IOException {
+        List<Point> points = new ArrayList<>();
+        points.add(new Point(firstX, cursor.next("polygon y coordinate")));
+        while (true) {
+            int x = cursor.next("polygon x coordinate or "
+                    + CastleFileFormat.POLYGON_TERMINATOR + " terminator");
+            if (x == CastleFileFormat.POLYGON_TERMINATOR) {
+                return new Polygon(points);
+            }
+            if (x < 0) {
+                throw cursor.error("Unexpected polygon marker " + x);
+            }
+            points.add(new Point(x, cursor.next("polygon y coordinate")));
+        }
+    }
+
+    @SuppressWarnings("SameParameterValue") // Keep this helper reusable for point groups with different fixed sizes.
     private List<Point> readPoints(Cursor cursor, int count) throws IOException {
         List<Point> points = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
@@ -104,6 +108,7 @@ public final class CastleReader {
         return cannons;
     }
 
+    @SuppressWarnings("SameParameterValue") // Keep this helper reusable for value groups with different fixed sizes.
     private List<Integer> readValues(Cursor cursor, int count, String expected) throws IOException {
         List<Integer> values = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
@@ -138,7 +143,11 @@ public final class CastleReader {
                 comment = !comment;
                 data.append(' ');
             } else {
-                data.append(comment ? (character == '\n' ? '\n' : ' ') : character);
+                char outputCharacter = character;
+                if (comment && character != '\n') {
+                    outputCharacter = ' ';
+                }
+                data.append(outputCharacter);
             }
         }
         if (comment) {

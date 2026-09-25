@@ -7,16 +7,11 @@ import at.josefjordan.ballerburg.editor.ui.editor.EditorPanel;
 import hgb.gui.HGBaseDialog;
 import hgb.gui.HGBaseFrame;
 import hgb.lib.HGBaseConfig;
-import hgb.lib.HGBaseTools;
 import hgb.lib.HGBaseText;
+import hgb.lib.HGBaseTools;
 
-import javax.swing.JButton;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JSeparator;
-import javax.swing.JToolBar;
-import javax.swing.SwingConstants;
-import java.awt.Dimension;
+import javax.swing.*;
+import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayDeque;
@@ -24,7 +19,9 @@ import java.util.Deque;
 import java.util.List;
 import java.util.Objects;
 
-/// The main frame for the editor.
+/**
+ * The main frame for the editor.
+ */
 public class MainFrame extends HGBaseFrame {
     private EditorPanel editorPanel;
     private JButton previousCastleButton;
@@ -32,7 +29,7 @@ public class MainFrame extends HGBaseFrame {
     private JLabel castlePositionLabel;
     private final Deque<CastleDocument> undoHistory = new ArrayDeque<>();
     private final Deque<CastleDocument> redoHistory = new ArrayDeque<>();
-    private CastleDocument historyDocument;
+    private transient CastleDocument historyDocument;
     private boolean restoringHistory;
     private boolean historyGroupActive;
     private boolean historyGroupChanged;
@@ -51,6 +48,7 @@ public class MainFrame extends HGBaseFrame {
      *
      * @param args The command line arguments.
      */
+    @SuppressWarnings("java:S9149") // Keep the application entry point required by the run configuration.
     public static void main(String[] args) {
         MainFrame mainFrame = new MainFrame("/xml/settings.xml");
         mainFrame.setMenu(new MainMenu(mainFrame));
@@ -85,7 +83,7 @@ public class MainFrame extends HGBaseFrame {
         int insertionIndex = Math.max(0, toolbar.getComponentCount() - 1);
         toolbar.add(new JSeparator(SwingConstants.VERTICAL), insertionIndex++);
 
-        previousCastleButton = new JButton("\u25c0");
+        previousCastleButton = new JButton("◀");
         previousCastleButton.setFocusable(false);
         previousCastleButton.addActionListener(event -> editorPanel.showPreviousCastle());
         toolbar.add(previousCastleButton, insertionIndex++);
@@ -95,7 +93,7 @@ public class MainFrame extends HGBaseFrame {
         castlePositionLabel.setPreferredSize(new Dimension(90, 24));
         toolbar.add(castlePositionLabel, insertionIndex++);
 
-        nextCastleButton = new JButton("\u25b6");
+        nextCastleButton = new JButton("▶");
         nextCastleButton.setFocusable(false);
         nextCastleButton.addActionListener(event -> editorPanel.showNextCastle());
         toolbar.add(nextCastleButton, insertionIndex);
@@ -236,10 +234,6 @@ public class MainFrame extends HGBaseFrame {
 
     public boolean hasBalls() {
         return editorPanel != null && editorPanel.hasBalls();
-    }
-
-    public boolean hasWall(){
-        return editorPanel != null && editorPanel.hasWall();
     }
 
     public void removeCannon() {

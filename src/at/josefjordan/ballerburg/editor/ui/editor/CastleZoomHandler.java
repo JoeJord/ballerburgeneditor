@@ -3,7 +3,9 @@ package at.josefjordan.ballerburg.editor.ui.editor;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 
-/** Handles mouse wheel zoom for the castle view. */
+/**
+ * Handles mouse wheel zoom for the castle view.
+ */
 final class CastleZoomHandler implements MouseWheelListener {
     private static final double ZOOM_STEP = 0.1;
     private final CastleViewPanel panel;

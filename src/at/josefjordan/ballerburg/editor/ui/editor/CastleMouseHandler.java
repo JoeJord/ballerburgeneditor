@@ -1,25 +1,19 @@
 package at.josefjordan.ballerburg.editor.ui.editor;
 
-import at.josefjordan.ballerburg.editor.model.CastleDocument.Castle;
-import at.josefjordan.ballerburg.editor.model.CastleDocument.DrawingCommand;
-import at.josefjordan.ballerburg.editor.model.CastleDocument.Point;
-import at.josefjordan.ballerburg.editor.model.CastleDocument.Polygon;
-import at.josefjordan.ballerburg.editor.model.CastleDocument.Size;
+import at.josefjordan.ballerburg.editor.model.CastleDocument.*;
 import at.josefjordan.ballerburg.editor.model.CastleFileFormat;
 
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
+import javax.swing.*;
+import java.awt.event.*;
 import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
-import java.awt.event.MouseMotionAdapter;
 import java.util.ArrayList;
 import java.util.List;
-import javax.swing.Timer;
 
-/** Handles mouse interactions for the castle view (selection, editing, etc.). */
+/**
+ * Handles mouse interactions for the castle view (selection, editing, etc.).
+ */
 final class CastleMouseHandler extends MouseAdapter {
     private final CastleViewPanel panel;
     private int draggingPolygonIndex = -1;
@@ -31,21 +25,17 @@ final class CastleMouseHandler extends MouseAdapter {
     private Point2D throneDragOffset;
     private boolean draggingWindVane = false;
     private Point2D windVaneDragOffset;
-    private String draggingResourceArea = null;
+    private ResourceArea draggingResourceArea;
     private int draggingCornerIndex = -1;
     private boolean draggingResourceAreaMove = false;
     private Point2D resourceAreaDragOffset;
     private Size originalResourceSize;
     private Point originalResourcePosition;
-    private double dragScale = 0;
-    private double dragLeft = 0;
-    private double dragBottom = 0;
     private Point2D dragStartPoint;
     private Point2D polygonDragOffset;
-    private Timer edgeScrollTimer;
+    private final Timer edgeScrollTimer;
     private Point2D lastDragPoint;
     private Point2D accumulatedScrollDelta;
-    private Point2D edgeScrollStartPoint;
 
     CastleMouseHandler(CastleViewPanel panel) {
         this.panel = panel;
@@ -57,7 +47,14 @@ final class CastleMouseHandler extends MouseAdapter {
             }
         });
 
-        panel.addMouseMotionListener(new MouseMotionAdapter() {
+        panel.addMouseMotionListener(createMouseMotionListener());
+        panel.addKeyListener(createKeyListener());
+        panel.setFocusable(true);
+        panel.requestFocusInWindow();
+    }
+
+    private MouseMotionAdapter createMouseMotionListener() {
+        return new MouseMotionAdapter() {
             @Override
             public void mouseDragged(MouseEvent e) {
                 handleDrag(e);
@@ -70,15 +67,14 @@ final class CastleMouseHandler extends MouseAdapter {
                 } else {
                     panel.setMousePosition(null);
                     // Update edge hover for selected polygon
-                    double[] params = panel.getRenderingParameters();
-                    double left = params[0];
-                    double bottom = params[1];
-                    double scale = params[2];
                     panel.setEdgeHoverPosition(e.getPoint());
                 }
             }
-        });
-        panel.addKeyListener(new KeyListener() {
+        };
+    }
+
+    private KeyListener createKeyListener() {
+        return new KeyListener() {
             @Override
             public void keyTyped(KeyEvent e) {
                 // Not used
@@ -86,61 +82,36 @@ final class CastleMouseHandler extends MouseAdapter {
 
             @Override
             public void keyPressed(KeyEvent e) {
-                if (panel.isInPolygonCreationMode()) {
-                    if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
-                        panel.getEditorPanel().cancelPolygonCreation();
-                    } else if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-                        List<Point> points = panel.getCreationPoints();
-                        if (points.size() >= 3) {
-                            panel.getEditorPanel().finishPolygonCreation(points);
-                        } else {
-                            panel.getEditorPanel().cancelPolygonCreation();
-                        }
-                    }
-                }
+                handleKeyPressed(e);
             }
 
             @Override
             public void keyReleased(KeyEvent e) {
                 // Not used
             }
-        });
-        panel.setFocusable(true);
-        panel.requestFocusInWindow();
+        };
+    }
+
+    private void handleKeyPressed(KeyEvent e) {
+        if (!panel.isInPolygonCreationMode()) {
+            return;
+        }
+        if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+            panel.getEditorPanel().cancelPolygonCreation();
+        } else if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+            List<Point> points = panel.getCreationPoints();
+            if (points.size() >= 3) {
+                panel.getEditorPanel().finishPolygonCreation(points);
+            } else {
+                panel.getEditorPanel().cancelPolygonCreation();
+            }
+        }
     }
 
     @Override
     public void mousePressed(MouseEvent e) {
-        // Handle polygon creation mode
         if (panel.isInPolygonCreationMode()) {
-            if (e.getButton() == MouseEvent.BUTTON1) {
-                // Left click adds a point
-                Castle castle = panel.getCastle();
-                if (castle == null) {
-                    return;
-                }
-                double[] params = panel.getRenderingParameters();
-                double left = params[0];
-                double bottom = params[1];
-                double scale = params[2];
-                if (scale <= 0) {
-                    return;
-                }
-
-                Point2D clickPoint = e.getPoint();
-                int newX = (int) Math.round((clickPoint.getX() - left) / scale);
-                int newY = (int) Math.round((bottom - clickPoint.getY()) / scale);
-
-                panel.addCreationPoint(new Point(newX, newY));
-            } else if (e.getButton() == MouseEvent.BUTTON3) {
-                // Right click finishes the polygon
-                List<Point> points = panel.getCreationPoints();
-                if (points.size() >= 3) {
-                    panel.getEditorPanel().finishPolygonCreation(points);
-                } else {
-                    panel.getEditorPanel().cancelPolygonCreation();
-                }
-            }
+            handlePolygonCreationClick(e);
             return;
         }
 
@@ -158,202 +129,238 @@ final class CastleMouseHandler extends MouseAdapter {
             return;
         }
 
-        // Handle edge hover for adding points to selected polygon
-        if (e.getButton() == MouseEvent.BUTTON1 && panel.getSelectedPolygon() != null) {
-            int edgeIndex = panel.findEdgeIndexForHoverPosition(left, bottom, scale);
-            if (edgeIndex >= 0) {
-                Point2D clickPoint = e.getPoint();
-                int newX = (int) Math.round((clickPoint.getX() - left) / scale);
-                int newY = (int) Math.round((bottom - clickPoint.getY()) / scale);
-                panel.getEditorPanel().addPolygonPoint(edgeIndex, new Point(newX, newY));
-                panel.setEdgeHoverPosition(null);
-                return;
-            }
-        }
-
         Point2D clickPoint = e.getPoint();
+        if (tryAddPolygonPoint(e, left, bottom, scale, clickPoint)
+                || tryStartResourceCornerDrag(castle, left, bottom, scale, clickPoint)
+                || tryStartResourceAreaDrag(castle, left, bottom, scale, clickPoint)
+                || tryStartWindVaneDrag(castle, left, bottom, scale, clickPoint)
+                || tryStartThroneDrag(castle, left, bottom, scale, clickPoint)
+                || tryStartCannonDrag(castle, left, bottom, scale, clickPoint)
+                || tryStartSelectedPolygonDrag(castle, left, bottom, scale, clickPoint)) {
+            return;
+        }
+        selectClickedPolygon(castle, left, bottom, scale, clickPoint);
+    }
 
-        // First check if clicking on a corner of a selected resource area
-        String selectedResourceArea = panel.getSelectedResourceArea();
-        if (selectedResourceArea != null) {
-            int clickedCorner = findClickedResourceCorner(castle, selectedResourceArea, left, bottom, scale, clickPoint);
-            if (clickedCorner >= 0) {
-                draggingResourceArea = selectedResourceArea;
-                draggingCornerIndex = clickedCorner;
-                dragScale = scale;
-                dragLeft = left;
-                dragBottom = bottom;
-                dragStartPoint = clickPoint;
-                originalResourceSize = getResourceSize(castle, selectedResourceArea);
-                originalResourcePosition = getResourcePosition(castle, selectedResourceArea);
-                panel.setDraggingResourceCorner(clickedCorner);
+    private void handlePolygonCreationClick(MouseEvent e) {
+        if (e.getButton() == MouseEvent.BUTTON1) {
+            Castle castle = panel.getCastle();
+            if (castle == null) {
                 return;
             }
-        }
-
-        // First check if clicking on resource areas
-        String clickedResourceArea = findClickedResourceArea(castle, left, bottom, scale, clickPoint);
-        if (clickedResourceArea != null) {
-            panel.setSelectedResourceArea(clickedResourceArea);
-            panel.setSelectedPolygon(null);
-            panel.setSelectedPointIndex(-1);
-            panel.setSelectedCannonIndex(-1);
-            panel.setSelectedThrone(false);
-            panel.getEditorPanel().onPointSelectionChanged();
-            panel.getEditorPanel().onCannonSelectionChanged();
-
-            // Start dragging the resource area
-            draggingResourceArea = clickedResourceArea;
-            draggingResourceAreaMove = true;
-            dragScale = scale;
-            dragLeft = left;
-            dragBottom = bottom;
-            Point resourcePosition = getResourcePosition(castle, clickedResourceArea);
-            double resourceScreenX = left + resourcePosition.x() * scale;
-            double resourceScreenY = bottom - resourcePosition.y() * scale;
-            resourceAreaDragOffset = new Point2D.Double(clickPoint.getX() - resourceScreenX, clickPoint.getY() - resourceScreenY);
-            return;
-        }
-
-        // First check if clicking on the wind vane
-        if (isWindVaneClicked(castle, left, bottom, scale, clickPoint)) {
-            panel.setSelectedWindVane(true);
-            panel.setSelectedPolygon(null);
-            panel.setSelectedPointIndex(-1);
-            panel.setSelectedCannonIndex(-1);
-            panel.setSelectedThrone(false);
-            panel.setSelectedResourceArea(null);
-            panel.getEditorPanel().onPointSelectionChanged();
-            panel.getEditorPanel().onCannonSelectionChanged();
-            draggingWindVane = true;
-            dragScale = scale;
-            dragLeft = left;
-            dragBottom = bottom;
-            Point windVane = castle.windVane();
-            double windVaneScreenX = left + windVane.x() * scale;
-            double windVaneScreenY = bottom - windVane.y() * scale;
-            windVaneDragOffset = new Point2D.Double(clickPoint.getX() - windVaneScreenX, clickPoint.getY() - windVaneScreenY);
-            return;
-        }
-
-        // First check if clicking on the throne
-        if (isThroneClicked(castle, left, bottom, scale, clickPoint)) {
-            panel.setSelectedThrone(true);
-            panel.setSelectedPolygon(null);
-            panel.setSelectedPointIndex(-1);
-            panel.setSelectedCannonIndex(-1);
-            panel.setSelectedWindVane(false);
-            panel.setSelectedResourceArea(null);
-            panel.getEditorPanel().onPointSelectionChanged();
-            panel.getEditorPanel().onCannonSelectionChanged();
-            draggingThrone = true;
-            dragScale = scale;
-            dragLeft = left;
-            dragBottom = bottom;
-            Point throne = castle.throne();
-            double throneScreenX = left + throne.x() * scale;
-            double throneScreenY = bottom - throne.y() * scale;
-            throneDragOffset = new Point2D.Double(clickPoint.getX() - throneScreenX, clickPoint.getY() - throneScreenY);
-            return;
-        }
-
-        // First check if clicking on a cannon
-        int clickedCannonIndex = findClickedCannonIndex(castle, left, bottom, scale, clickPoint);
-        if (clickedCannonIndex >= 0) {
-            panel.setSelectedCannonIndex(clickedCannonIndex);
-            panel.setSelectedPolygon(null);
-            panel.setSelectedPointIndex(-1);
-            panel.setSelectedThrone(false);
-            panel.setSelectedWindVane(false);
-            panel.setSelectedResourceArea(null);
-            panel.getEditorPanel().onCannonSelectionChanged();
-            draggingCannonIndex = clickedCannonIndex;
-            dragScale = scale;
-            dragLeft = left;
-            dragBottom = bottom;
-            dragStartPoint = clickPoint;
-            Point cannon = castle.cannons().get(clickedCannonIndex);
-            double cannonScreenX = left + cannon.x() * scale;
-            double cannonScreenY = bottom - cannon.y() * scale;
-            cannonDragOffset = new Point2D.Double(clickPoint.getX() - cannonScreenX, clickPoint.getY() - cannonScreenY);
-            return;
-        }
-
-        // First check if clicking on a point of the selected polygon
-        Polygon selectedPolygon = panel.getSelectedPolygon();
-        if (selectedPolygon != null) {
-            int polygonIndex = findPolygonIndex(castle, selectedPolygon);
-            if (polygonIndex >= 0) {
-                int pointIndex = findClickedPointIndex(selectedPolygon, left, bottom, scale, clickPoint);
-                if (pointIndex >= 0) {
-                    draggingPolygonIndex = polygonIndex;
-                    draggingPointIndex = pointIndex;
-                    draggingEntirePolygon = false;
-                    dragScale = scale;
-                    dragLeft = left;
-                    dragBottom = bottom;
-                    panel.setSelectedPointIndex(pointIndex);
-                    panel.setSelectedCannonIndex(-1);
-                    panel.setSelectedThrone(false);
-                    panel.setSelectedWindVane(false);
-                    panel.setSelectedResourceArea(null);
-                    panel.getEditorPanel().onPointSelectionChanged();
-                    panel.getEditorPanel().onCannonSelectionChanged();
-                    return;
-                }
-                // Check if clicking inside the selected polygon (but not on a point)
-                Path2D path = createPolygonPath(selectedPolygon, left, bottom, scale);
-                if (path.contains(clickPoint)) {
-                    draggingPolygonIndex = polygonIndex;
-                    draggingPointIndex = -1;
-                    draggingEntirePolygon = true;
-                    dragScale = scale;
-                    dragLeft = left;
-                    dragBottom = bottom;
-                    polygonDragOffset = createPolygonDragOffset(selectedPolygon, left, bottom, scale, clickPoint);
-                    panel.setSelectedPointIndex(-1);
-                    panel.setSelectedCannonIndex(-1);
-                    panel.setSelectedThrone(false);
-                    panel.setSelectedWindVane(false);
-                    panel.setSelectedResourceArea(null);
-                    panel.getEditorPanel().onPointSelectionChanged();
-                    panel.getEditorPanel().onCannonSelectionChanged();
-                    return;
-                }
+            double[] params = panel.getRenderingParameters();
+            double left = params[0];
+            double bottom = params[1];
+            double scale = params[2];
+            if (scale <= 0) {
+                return;
             }
-        }
 
-        // If not clicking on selected polygon, check if clicking on any polygon
+            panel.addCreationPoint(toCastlePoint(e.getPoint(), left, bottom, scale));
+        } else if (e.getButton() == MouseEvent.BUTTON3) {
+            finishPolygonCreation();
+        }
+    }
+
+    private void finishPolygonCreation() {
+        List<Point> points = panel.getCreationPoints();
+        if (points.size() >= 3) {
+            panel.getEditorPanel().finishPolygonCreation(points);
+        } else {
+            panel.getEditorPanel().cancelPolygonCreation();
+        }
+    }
+
+    private boolean tryAddPolygonPoint(MouseEvent e, double left, double bottom, double scale, Point2D clickPoint) {
+        if (e.getButton() != MouseEvent.BUTTON1 || panel.getSelectedPolygon() == null) {
+            return false;
+        }
+        int edgeIndex = panel.findEdgeIndexForHoverPosition(left, bottom, scale);
+        if (edgeIndex < 0) {
+            return false;
+        }
+        panel.getEditorPanel().addPolygonPoint(edgeIndex, toCastlePoint(clickPoint, left, bottom, scale));
+        panel.setEdgeHoverPosition(null);
+        return true;
+    }
+
+    private boolean tryStartResourceCornerDrag(Castle castle, double left, double bottom, double scale,
+                                               Point2D clickPoint) {
+        ResourceArea selectedResourceArea = panel.getSelectedResourceArea();
+        if (selectedResourceArea == null) {
+            return false;
+        }
+        int clickedCorner = findClickedResourceCorner(castle, selectedResourceArea, left, bottom, scale, clickPoint);
+        if (clickedCorner < 0) {
+            return false;
+        }
+        draggingResourceArea = selectedResourceArea;
+        draggingCornerIndex = clickedCorner;
+        dragStartPoint = clickPoint;
+        originalResourceSize = getResourceSize(castle, selectedResourceArea);
+        originalResourcePosition = getResourcePosition(castle, selectedResourceArea);
+        panel.setDraggingResourceCorner(clickedCorner);
+        return true;
+    }
+
+    private boolean tryStartResourceAreaDrag(Castle castle, double left, double bottom, double scale,
+                                             Point2D clickPoint) {
+        ResourceArea clickedResourceArea = findClickedResourceArea(castle, left, bottom, scale, clickPoint);
+        if (clickedResourceArea == null) {
+            return false;
+        }
+        panel.setSelectedResourceArea(clickedResourceArea);
+        panel.setSelectedPolygon(null);
+        panel.setSelectedPointIndex(-1);
+        panel.setSelectedCannonIndex(-1);
+        panel.setSelectedThrone(false);
+        panel.getEditorPanel().onPointSelectionChanged();
+        panel.getEditorPanel().onCannonSelectionChanged();
+        draggingResourceArea = clickedResourceArea;
+        draggingResourceAreaMove = true;
+        Point resourcePosition = getResourcePosition(castle, clickedResourceArea);
+        double resourceScreenX = left + resourcePosition.x() * scale;
+        double resourceScreenY = bottom - resourcePosition.y() * scale;
+        resourceAreaDragOffset = new Point2D.Double(clickPoint.getX() - resourceScreenX,
+                clickPoint.getY() - resourceScreenY);
+        return true;
+    }
+
+    private boolean tryStartWindVaneDrag(Castle castle, double left, double bottom, double scale,
+                                         Point2D clickPoint) {
+        if (!isWindVaneClicked(castle, left, bottom, scale, clickPoint)) {
+            return false;
+        }
+        panel.setSelectedWindVane(true);
+        panel.setSelectedPolygon(null);
+        panel.setSelectedPointIndex(-1);
+        panel.setSelectedCannonIndex(-1);
+        panel.setSelectedThrone(false);
+        panel.setSelectedResourceArea(null);
+        panel.getEditorPanel().onPointSelectionChanged();
+        panel.getEditorPanel().onCannonSelectionChanged();
+        draggingWindVane = true;
+        Point windVane = castle.windVane();
+        double windVaneScreenX = left + windVane.x() * scale;
+        double windVaneScreenY = bottom - windVane.y() * scale;
+        windVaneDragOffset = new Point2D.Double(clickPoint.getX() - windVaneScreenX,
+                clickPoint.getY() - windVaneScreenY);
+        return true;
+    }
+
+    private boolean tryStartThroneDrag(Castle castle, double left, double bottom, double scale, Point2D clickPoint) {
+        if (!isThroneClicked(castle, left, bottom, scale, clickPoint)) {
+            return false;
+        }
+        panel.setSelectedThrone(true);
+        panel.setSelectedPolygon(null);
+        panel.setSelectedPointIndex(-1);
+        panel.setSelectedCannonIndex(-1);
+        panel.setSelectedWindVane(false);
+        panel.setSelectedResourceArea(null);
+        panel.getEditorPanel().onPointSelectionChanged();
+        panel.getEditorPanel().onCannonSelectionChanged();
+        draggingThrone = true;
+        Point throne = castle.throne();
+        double throneScreenX = left + throne.x() * scale;
+        double throneScreenY = bottom - throne.y() * scale;
+        throneDragOffset = new Point2D.Double(clickPoint.getX() - throneScreenX, clickPoint.getY() - throneScreenY);
+        return true;
+    }
+
+    private boolean tryStartCannonDrag(Castle castle, double left, double bottom, double scale, Point2D clickPoint) {
+        int clickedCannonIndex = findClickedCannonIndex(castle, left, bottom, scale, clickPoint);
+        if (clickedCannonIndex < 0) {
+            return false;
+        }
+        panel.setSelectedCannonIndex(clickedCannonIndex);
+        panel.setSelectedPolygon(null);
+        panel.setSelectedPointIndex(-1);
+        panel.setSelectedThrone(false);
+        panel.setSelectedWindVane(false);
+        panel.setSelectedResourceArea(null);
+        panel.getEditorPanel().onCannonSelectionChanged();
+        draggingCannonIndex = clickedCannonIndex;
+        dragStartPoint = clickPoint;
+        Point cannon = castle.cannons().get(clickedCannonIndex);
+        double cannonScreenX = left + cannon.x() * scale;
+        double cannonScreenY = bottom - cannon.y() * scale;
+        cannonDragOffset = new Point2D.Double(clickPoint.getX() - cannonScreenX, clickPoint.getY() - cannonScreenY);
+        return true;
+    }
+
+    private boolean tryStartSelectedPolygonDrag(Castle castle, double left, double bottom, double scale,
+                                                Point2D clickPoint) {
+        Polygon selectedPolygon = panel.getSelectedPolygon();
+        if (selectedPolygon == null) {
+            return false;
+        }
+        int polygonIndex = findPolygonIndex(castle, selectedPolygon);
+        if (polygonIndex < 0) {
+            return false;
+        }
+        int pointIndex = findClickedPointIndex(selectedPolygon, left, bottom, scale, clickPoint);
+        if (pointIndex >= 0) {
+            startPolygonPointDrag(polygonIndex, pointIndex);
+            return true;
+        }
+        if (!createPolygonPath(selectedPolygon, left, bottom, scale).contains(clickPoint)) {
+            return false;
+        }
+        startPolygonMove(polygonIndex, selectedPolygon, left, bottom, scale, clickPoint);
+        return true;
+    }
+
+    private void startPolygonPointDrag(int polygonIndex, int pointIndex) {
+        draggingPolygonIndex = polygonIndex;
+        draggingPointIndex = pointIndex;
+        draggingEntirePolygon = false;
+        panel.setSelectedPointIndex(pointIndex);
+        clearNonPolygonSelections();
+    }
+
+    private void startPolygonMove(int polygonIndex, Polygon polygon, double left, double bottom, double scale,
+                                  Point2D clickPoint) {
+        draggingPolygonIndex = polygonIndex;
+        draggingPointIndex = -1;
+        draggingEntirePolygon = true;
+        polygonDragOffset = createPolygonDragOffset(polygon, left, bottom, scale, clickPoint);
+        panel.setSelectedPointIndex(-1);
+        clearNonPolygonSelections();
+    }
+
+    private void clearNonPolygonSelections() {
+        panel.setSelectedCannonIndex(-1);
+        panel.setSelectedThrone(false);
+        panel.setSelectedWindVane(false);
+        panel.setSelectedResourceArea(null);
+        panel.getEditorPanel().onPointSelectionChanged();
+        panel.getEditorPanel().onCannonSelectionChanged();
+    }
+
+    private void selectClickedPolygon(Castle castle, double left, double bottom, double scale, Point2D clickPoint) {
         Polygon clickedPolygon = findClickedPolygon(castle, left, bottom, scale, clickPoint);
         if (clickedPolygon != null) {
-            panel.setSelectedPolygon(clickedPolygon);
-            panel.setSelectedPointIndex(-1);
-            panel.setSelectedCannonIndex(-1);
-            panel.setSelectedThrone(false);
-            panel.setSelectedWindVane(false);
-            panel.setSelectedResourceArea(null);
-            panel.getEditorPanel().onPointSelectionChanged();
-            panel.getEditorPanel().onCannonSelectionChanged();
+            selectPolygon(clickedPolygon);
             int polygonIndex = findPolygonIndex(castle, clickedPolygon);
             if (polygonIndex >= 0) {
-                draggingPolygonIndex = polygonIndex;
-                draggingPointIndex = -1;
-                draggingEntirePolygon = true;
-                dragScale = scale;
-                dragLeft = left;
-                dragBottom = bottom;
-                polygonDragOffset = createPolygonDragOffset(clickedPolygon, left, bottom, scale, clickPoint);
+                startPolygonMove(polygonIndex, clickedPolygon, left, bottom, scale, clickPoint);
             }
         } else {
-            panel.setSelectedPolygon(null);
-            panel.setSelectedPointIndex(-1);
-            panel.setSelectedCannonIndex(-1);
-            panel.setSelectedThrone(false);
-            panel.setSelectedWindVane(false);
-            panel.setSelectedResourceArea(null);
-            panel.getEditorPanel().onPointSelectionChanged();
-            panel.getEditorPanel().onCannonSelectionChanged();
+            selectPolygon(null);
         }
+    }
+
+    private void selectPolygon(Polygon polygon) {
+        panel.setSelectedPolygon(polygon);
+        panel.setSelectedPointIndex(-1);
+        clearNonPolygonSelections();
+    }
+
+    private Point toCastlePoint(Point2D point, double left, double bottom, double scale) {
+        int x = (int) Math.round((point.getX() - left) / scale);
+        int y = (int) Math.round((bottom - point.getY()) / scale);
+        return new Point(x, y);
     }
 
     @Override
@@ -379,12 +386,11 @@ final class CastleMouseHandler extends MouseAdapter {
         panel.setDraggingResourceCorner(-1);
         lastDragPoint = null;
         accumulatedScrollDelta = null;
-        edgeScrollStartPoint = null;
         edgeScrollTimer.stop();
     }
 
     private void handleDrag(MouseEvent e) {
-        if (draggingPolygonIndex < 0 && draggingCannonIndex < 0 && !draggingThrone && !draggingWindVane && draggingResourceArea == null) {
+        if (!hasActiveDrag()) {
             return;
         }
 
@@ -394,158 +400,148 @@ final class CastleMouseHandler extends MouseAdapter {
         }
 
         double[] params = panel.getRenderingParameters();
-        double currentLeft = params[0];
-        double currentBottom = params[1];
-        double currentScale = params[2];
-
-        // Store last drag point for edge scrolling
+        double left = params[0];
+        double bottom = params[1];
+        double scale = params[2];
         lastDragPoint = e.getPoint();
-        // Reset accumulated scroll delta when mouse actually moves
         accumulatedScrollDelta = null;
-        edgeScrollStartPoint = null;
 
         if (draggingResourceArea != null) {
-            if (draggingResourceAreaMove) {
-                // Move the resource area
-                Point2D dragPoint = e.getPoint();
-                int newX = (int) Math.round((dragPoint.getX() - resourceAreaDragOffset.getX() - currentLeft) / currentScale);
-                int newY = (int) Math.round((currentBottom - (dragPoint.getY() - resourceAreaDragOffset.getY())) / currentScale);
-
-                Point newPosition = new Point(newX, newY);
-                panel.getEditorPanel().updateResourceAreaPosition(draggingResourceArea, newPosition);
-                autoScrollToKeepVisible(dragPoint);
-                return;
-            }
-
-            // Resize the resource area by dragging a corner
-            Point2D dragPoint = e.getPoint();
-            double deltaX = (dragPoint.getX() - dragStartPoint.getX()) / currentScale;
-            double deltaY = (dragPoint.getY() - dragStartPoint.getY()) / currentScale;
-
-            // Get step sizes for the resource type
-            int stepX = getResourceStepX(draggingResourceArea);
-            int stepY = getResourceStepY(draggingResourceArea);
-
-            // Calculate minimum size needed for current resources
-            int resourceCount = getResourceCount(castle, draggingResourceArea);
-            Size minSize = calculateMinimumSize(resourceCount, stepX, stepY);
-
-            // Round delta to step sizes
-            int deltaXRounded = (int) Math.round(deltaX / stepX) * stepX;
-            int deltaYRounded = (int) Math.round(deltaY / stepY) * stepY;
-
-            Size newSize = originalResourceSize;
-
-            // Corner indices: 0 = bottom-left, 1 = bottom-right, 2 = top-left, 3 = top-right
-            // Note: In castle coordinates, Y increases upward (opposite to Swing)
-            switch (draggingCornerIndex) {
-                case 0: // bottom-left
-                    newSize = new Size(originalResourceSize.width() - deltaXRounded,
-                            originalResourceSize.height() + deltaYRounded);
-                    break;
-                case 1: // bottom-right
-                    newSize = new Size(originalResourceSize.width() + deltaXRounded,
-                            originalResourceSize.height() + deltaYRounded);
-                    break;
-                case 2: // top-left
-                    newSize = new Size(originalResourceSize.width() - deltaXRounded,
-                            originalResourceSize.height() - deltaYRounded);
-                    break;
-                case 3: // top-right
-                    newSize = new Size(originalResourceSize.width() + deltaXRounded,
-                            originalResourceSize.height() - deltaYRounded);
-                    break;
-            }
-
-            // Snap to multiples of step sizes
-            int newWidth = Math.max(minSize.width(), (newSize.width() / stepX) * stepX);
-            int newHeight = Math.max(minSize.height(), (newSize.height() / stepY) * stepY);
-
-            // Ensure the size can fit the resources
-            if (!canFitResources(resourceCount, newWidth, newHeight, stepX, stepY)) {
-                // If the new size can't fit resources, try to find the nearest valid size
-                Size validSize = findNearestValidSize(resourceCount, newWidth, newHeight, stepX, stepY);
-                newWidth = validSize.width();
-                newHeight = validSize.height();
-            }
-
-            newSize = new Size(newWidth, newHeight);
-            Point newPosition = switch (draggingCornerIndex) {
-                case 0 -> new Point(originalResourcePosition.x() + originalResourceSize.width() - newWidth,
-                        originalResourcePosition.y() + originalResourceSize.height() - newHeight);
-                case 1 -> new Point(originalResourcePosition.x(),
-                        originalResourcePosition.y() + originalResourceSize.height() - newHeight);
-                case 2 -> new Point(originalResourcePosition.x() + originalResourceSize.width() - newWidth,
-                        originalResourcePosition.y());
-                default -> originalResourcePosition;
-            };
-
-            panel.getEditorPanel().updateResourceAreaSize(draggingResourceArea, newPosition, newSize);
-            autoScrollToKeepVisible(e.getPoint());
+            handleResourceAreaDrag(e.getPoint(), castle, left, bottom, scale);
             return;
         }
 
         if (draggingThrone) {
-            // Drag the throne
-            Point2D dragPoint = e.getPoint();
-            int newX = (int) Math.round((dragPoint.getX() - throneDragOffset.getX() - currentLeft) / currentScale);
-            int newY = (int) Math.round((currentBottom - (dragPoint.getY() - throneDragOffset.getY())) / currentScale);
-
-            Point newPoint = new Point(newX, newY);
-            panel.getEditorPanel().updateThronePosition(newPoint);
-            autoScrollToKeepVisible(dragPoint);
+            handleThroneDrag(e.getPoint(), left, bottom, scale);
             return;
         }
 
         if (draggingWindVane) {
-            // Drag the wind vane
-            Point2D dragPoint = e.getPoint();
-            int newX = (int) Math.round((dragPoint.getX() - windVaneDragOffset.getX() - currentLeft) / currentScale);
-            int newY = (int) Math.round((currentBottom - (dragPoint.getY() - windVaneDragOffset.getY())) / currentScale);
-
-            Point newPoint = new Point(newX, newY);
-            panel.getEditorPanel().updateWindVanePosition(newPoint);
-            autoScrollToKeepVisible(dragPoint);
+            handleWindVaneDrag(e.getPoint(), left, bottom, scale);
             return;
         }
 
         if (draggingCannonIndex >= 0) {
-            // Drag a cannon
-            Point2D dragPoint = e.getPoint();
-            int newX = (int) Math.round((dragPoint.getX() - cannonDragOffset.getX() - currentLeft) / currentScale);
-            int newY = (int) Math.round((currentBottom - (dragPoint.getY() - cannonDragOffset.getY())) / currentScale);
-
-            Point newPoint = new Point(newX, newY);
-            panel.getEditorPanel().updateCannonPosition(draggingCannonIndex, newPoint);
-            autoScrollToKeepVisible(dragPoint);
+            handleCannonDrag(e.getPoint(), left, bottom, scale);
             return;
         }
 
         if (draggingEntirePolygon) {
             Point2D dragPoint = e.getPoint();
-            updateDraggedPolygonPosition(dragPoint, currentLeft, currentBottom, currentScale);
+            updateDraggedPolygonPosition(dragPoint, left, bottom, scale);
             autoScrollToKeepVisible(dragPoint);
         } else if (draggingPointIndex >= 0) {
-            // Drag a single point
-            Point2D dragPoint = e.getPoint();
-            int newX = (int) Math.round((dragPoint.getX() - currentLeft) / currentScale);
-            int newY = (int) Math.round((currentBottom - dragPoint.getY()) / currentScale);
+            handlePolygonPointDrag(e.getPoint(), left, bottom, scale);
+        }
+    }
 
-            Point newPoint = new Point(newX, newY);
-            panel.getEditorPanel().updatePolygonPoint(draggingPolygonIndex, draggingPointIndex, newPoint);
-            autoScrollToKeepVisible(dragPoint);
+    private boolean hasActiveDrag() {
+        return draggingPolygonIndex >= 0 || draggingCannonIndex >= 0 || draggingThrone || draggingWindVane
+                || draggingResourceArea != null;
+    }
 
-            // Update the selected polygon reference to the new polygon
-            Castle updatedCastle = panel.getCastle();
-            int currentPolygonIndex = 0;
-            for (DrawingCommand command : updatedCastle.drawing()) {
-                if (command instanceof Polygon polygon) {
-                    if (currentPolygonIndex == draggingPolygonIndex) {
-                        panel.setSelectedPolygon(polygon);
-                        break;
-                    }
-                    currentPolygonIndex++;
+    private void handleResourceAreaDrag(Point2D dragPoint, Castle castle, double left, double bottom, double scale) {
+        if (draggingResourceAreaMove) {
+            int newX = (int) Math.round((dragPoint.getX() - resourceAreaDragOffset.getX() - left) / scale);
+            int newY = (int) Math.round((bottom - (dragPoint.getY() - resourceAreaDragOffset.getY())) / scale);
+            panel.getEditorPanel().updateResourceAreaPosition(draggingResourceArea, new Point(newX, newY));
+        } else {
+            resizeResourceArea(dragPoint, castle, scale);
+        }
+        autoScrollToKeepVisible(dragPoint);
+    }
+
+    private void resizeResourceArea(Point2D dragPoint, Castle castle, double scale) {
+        double deltaX = (dragPoint.getX() - dragStartPoint.getX()) / scale;
+        double deltaY = (dragPoint.getY() - dragStartPoint.getY()) / scale;
+        int stepX = getResourceStepX(draggingResourceArea);
+        int stepY = getResourceStepY(draggingResourceArea);
+        int resourceCount = getResourceCount(castle, draggingResourceArea);
+        Size minSize = calculateMinimumSize(resourceCount, stepX, stepY);
+        int deltaXRounded = (int) Math.round(deltaX / stepX) * stepX;
+        int deltaYRounded = (int) Math.round(deltaY / stepY) * stepY;
+        Size newSize = calculateNewResourceSize(deltaXRounded, deltaYRounded, minSize, resourceCount, stepX, stepY);
+
+        Point newPosition = calculateNewResourcePosition(newSize);
+        panel.getEditorPanel().updateResourceAreaSize(draggingResourceArea, newPosition, newSize);
+    }
+
+    private Point calculateNewResourcePosition(Size newSize) {
+        int newWidth = newSize.width();
+        int newHeight = newSize.height();
+        return switch (draggingCornerIndex) {
+            case 0 -> new Point(originalResourcePosition.x() + originalResourceSize.width() - newWidth,
+                    originalResourcePosition.y() + originalResourceSize.height() - newHeight);
+            case 1 -> new Point(originalResourcePosition.x(),
+                    originalResourcePosition.y() + originalResourceSize.height() - newHeight);
+            case 2 -> new Point(originalResourcePosition.x() + originalResourceSize.width() - newWidth,
+                    originalResourcePosition.y());
+            default -> originalResourcePosition;
+        };
+    }
+
+    private Size calculateNewResourceSize(int deltaXRounded, int deltaYRounded, Size minSize,
+                                          int resourceCount, int stepX, int stepY) {
+        Size resizedSize = switch (draggingCornerIndex) {
+            case 0 -> new Size(originalResourceSize.width() - deltaXRounded,
+                    originalResourceSize.height() + deltaYRounded);
+            case 1 -> new Size(originalResourceSize.width() + deltaXRounded,
+                    originalResourceSize.height() + deltaYRounded);
+            case 2 -> new Size(originalResourceSize.width() - deltaXRounded,
+                    originalResourceSize.height() - deltaYRounded);
+            case 3 -> new Size(originalResourceSize.width() + deltaXRounded,
+                    originalResourceSize.height() - deltaYRounded);
+            default -> originalResourceSize;
+        };
+
+        int width = Math.max(minSize.width(), (resizedSize.width() / stepX) * stepX);
+        int height = Math.max(minSize.height(), (resizedSize.height() / stepY) * stepY);
+        if (!canFitResources(resourceCount, width, height, stepX, stepY)) {
+            Size validSize = findNearestValidSize(resourceCount, width, height, stepX, stepY);
+            width = validSize.width();
+            height = validSize.height();
+        }
+        return new Size(width, height);
+    }
+
+    private void handleThroneDrag(Point2D dragPoint, double left, double bottom, double scale) {
+        Point newPoint = toCastlePoint(dragPoint, throneDragOffset, left, bottom, scale);
+        panel.getEditorPanel().updateThronePosition(newPoint);
+        autoScrollToKeepVisible(dragPoint);
+    }
+
+    private void handleWindVaneDrag(Point2D dragPoint, double left, double bottom, double scale) {
+        Point newPoint = toCastlePoint(dragPoint, windVaneDragOffset, left, bottom, scale);
+        panel.getEditorPanel().updateWindVanePosition(newPoint);
+        autoScrollToKeepVisible(dragPoint);
+    }
+
+    private void handleCannonDrag(Point2D dragPoint, double left, double bottom, double scale) {
+        Point newPoint = toCastlePoint(dragPoint, cannonDragOffset, left, bottom, scale);
+        panel.getEditorPanel().updateCannonPosition(draggingCannonIndex, newPoint);
+        autoScrollToKeepVisible(dragPoint);
+    }
+
+    private Point toCastlePoint(Point2D point, Point2D offset, double left, double bottom, double scale) {
+        int x = (int) Math.round((point.getX() - offset.getX() - left) / scale);
+        int y = (int) Math.round((bottom - (point.getY() - offset.getY())) / scale);
+        return new Point(x, y);
+    }
+
+    private void handlePolygonPointDrag(Point2D dragPoint, double left, double bottom, double scale) {
+        Point newPoint = toCastlePoint(dragPoint, left, bottom, scale);
+        panel.getEditorPanel().updatePolygonPoint(draggingPolygonIndex, draggingPointIndex, newPoint);
+        autoScrollToKeepVisible(dragPoint);
+
+        Castle updatedCastle = panel.getCastle();
+        int currentPolygonIndex = 0;
+        for (DrawingCommand command : updatedCastle.drawing()) {
+            if (command instanceof Polygon polygon) {
+                if (currentPolygonIndex == draggingPolygonIndex) {
+                    panel.setSelectedPolygon(polygon);
+                    break;
                 }
+                currentPolygonIndex++;
             }
         }
     }
@@ -581,8 +577,8 @@ final class CastleMouseHandler extends MouseAdapter {
             }
             // Check if mouse is near right edge of viewport
             else if (viewportX > viewRect.width - margin) {
-                scrollX = Math.max(0, Math.min(panel.getPreferredSize().width - viewRect.width,
-                                               mouseX - viewRect.width + margin));
+                int maxScrollX = Math.max(0, panel.getPreferredSize().width - viewRect.width);
+                scrollX = Math.clamp((long) mouseX - viewRect.width + margin, 0, maxScrollX);
                 needsScroll = true;
             }
 
@@ -593,8 +589,8 @@ final class CastleMouseHandler extends MouseAdapter {
             }
             // Check if mouse is near bottom edge of viewport
             else if (viewportY > viewRect.height - margin) {
-                scrollY = Math.max(0, Math.min(panel.getPreferredSize().height - viewRect.height,
-                                               mouseY - viewRect.height + margin));
+                int maxScrollY = Math.max(0, panel.getPreferredSize().height - viewRect.height);
+                scrollY = Math.clamp((long) mouseY - viewRect.height + margin, 0, maxScrollY);
                 needsScroll = true;
             }
 
@@ -616,162 +612,140 @@ final class CastleMouseHandler extends MouseAdapter {
             return;
         }
 
-        // Simulate drag at the edge by extending the drag point beyond the viewport
-        if (panel.getParent() instanceof javax.swing.JViewport viewport) {
-            javax.swing.JScrollPane scrollPane = (javax.swing.JScrollPane) viewport.getParent();
-            if (scrollPane == null) {
-                return;
-            }
+        javax.swing.JViewport viewport = getScrollViewport();
+        if (viewport == null) {
+            return;
+        }
+        java.awt.Rectangle viewRect = viewport.getViewRect();
+        int mouseX = (int) lastDragPoint.getX();
+        int mouseY = (int) lastDragPoint.getY();
+        int viewportX = mouseX - viewRect.x;
+        int viewportY = mouseY - viewRect.y;
+        boolean nearLeft = viewportX < 50;
+        boolean nearRight = viewportX > viewRect.width - 50;
+        boolean nearTop = viewportY < 50;
+        boolean nearBottom = viewportY > viewRect.height - 50;
+        if (!(nearLeft || nearRight || nearTop || nearBottom)) {
+            edgeScrollTimer.stop();
+            return;
+        }
 
-            java.awt.Rectangle viewRect = viewport.getViewRect();
-            int margin = 50;
-            int scrollSpeed = 10; // Pixels to scroll per timer tick
+        int scrollX = calculateEdgeScroll(viewRect.x, panel.getPreferredSize().width - viewRect.width, nearLeft, nearRight);
+        int scrollY = calculateEdgeScroll(viewRect.y, panel.getPreferredSize().height - viewRect.height, nearTop, nearBottom);
+        viewport.setViewPosition(new java.awt.Point(scrollX, scrollY));
+        updateDraggedObjectForEdgeScroll(viewRect, scrollX, scrollY, nearLeft, nearRight, nearTop, nearBottom);
+    }
 
-            int mouseX = (int) lastDragPoint.getX();
-            int mouseY = (int) lastDragPoint.getY();
+    private javax.swing.JViewport getScrollViewport() {
+        if (panel.getParent() instanceof javax.swing.JViewport viewport
+                && viewport.getParent() instanceof javax.swing.JScrollPane) {
+            return viewport;
+        }
+        return null;
+    }
 
-            // Calculate viewport-relative position
-            int viewportX = mouseX - viewRect.x;
-            int viewportY = mouseY - viewRect.y;
+    private int calculateEdgeScroll(int currentPosition, int contentOverflow, boolean nearStart, boolean nearEnd) {
+        if (nearStart) {
+            return Math.max(0, currentPosition - 10);
+        }
+        if (nearEnd) {
+            int maxScroll = Math.max(0, contentOverflow);
+            return Math.clamp((long) currentPosition + 10, 0, maxScroll);
+        }
+        return currentPosition;
+    }
 
-            int scrollX = viewRect.x;
-            int scrollY = viewRect.y;
-            boolean needsScroll = false;
+    private void updateDraggedObjectForEdgeScroll(java.awt.Rectangle viewRect, int scrollX, int scrollY,
+                                                  boolean nearLeft, boolean nearRight,
+                                                  boolean nearTop, boolean nearBottom) {
+        Castle castle = panel.getCastle();
+        if (castle == null) {
+            return;
+        }
+        double[] params = panel.getRenderingParameters();
+        int deltaX = effectiveScrollDelta(scrollX - viewRect.x, nearLeft, nearRight);
+        int deltaY = effectiveScrollDelta(scrollY - viewRect.y, nearTop, nearBottom);
+        accumulateScrollDelta(deltaX, deltaY);
+        applyScrollDeltaToObject(deltaX, deltaY, params[0], params[1], params[2]);
+    }
 
-            // Check if mouse is near left edge
-            if (viewportX < margin) {
-                scrollX = Math.max(0, viewRect.x - scrollSpeed);
-                needsScroll = true;
-            }
-            // Check if mouse is near right edge
-            else if (viewportX > viewRect.width - margin) {
-                scrollX = Math.max(0, Math.min(panel.getPreferredSize().width - viewRect.width,
-                                               viewRect.x + scrollSpeed));
-                needsScroll = true;
-            }
+    private int effectiveScrollDelta(int actualDelta, boolean nearStart, boolean nearEnd) {
+        if (actualDelta != 0) {
+            return actualDelta;
+        }
+        if (nearStart) {
+            return -10;
+        }
+        return nearEnd ? 10 : 0;
+    }
 
-            // Check if mouse is near top edge
-            if (viewportY < margin) {
-                scrollY = Math.max(0, viewRect.y - scrollSpeed);
-                needsScroll = true;
-            }
-            // Check if mouse is near bottom edge
-            else if (viewportY > viewRect.height - margin) {
-                scrollY = Math.max(0, Math.min(panel.getPreferredSize().height - viewRect.height,
-                                               viewRect.y + scrollSpeed));
-                needsScroll = true;
-            }
-
-            if (needsScroll) {
-                viewport.setViewPosition(new java.awt.Point(scrollX, scrollY));
-
-                // Also update the dragged object position based on scroll direction
-                Castle castle = panel.getCastle();
-                if (castle == null) {
-                    return;
-                }
-
-                double[] params = panel.getRenderingParameters();
-                double currentLeft = params[0];
-                double currentBottom = params[1];
-                double currentScale = params[2];
-
-                // Calculate the scroll delta for this tick
-                // If scroll was blocked at edge, use the intended scroll speed instead
-                int deltaX = scrollX - viewRect.x;
-                int deltaY = scrollY - viewRect.y;
-
-                // If scroll was blocked (delta is 0 but mouse is at edge), use scroll speed
-                if (deltaX == 0 && viewportX < margin) {
-                    deltaX = -scrollSpeed;
-                }
-                if (deltaX == 0 && viewportX > viewRect.width - margin) {
-                    deltaX = scrollSpeed;
-                }
-                if (deltaY == 0 && viewportY < margin) {
-                    deltaY = -scrollSpeed;
-                }
-                if (deltaY == 0 && viewportY > viewRect.height - margin) {
-                    deltaY = scrollSpeed;
-                }
-
-                // Accumulate scroll delta for this session
-                if (accumulatedScrollDelta == null) {
-                    accumulatedScrollDelta = new Point2D.Double(deltaX, deltaY);
-                } else {
-                    accumulatedScrollDelta.setLocation(
-                        accumulatedScrollDelta.getX() + deltaX,
-                        accumulatedScrollDelta.getY() + deltaY
-                    );
-                }
-
-                // Apply scroll delta directly to objects without modifying drag state
-                applyScrollDeltaToObject(deltaX, deltaY, currentLeft, currentBottom, currentScale);
-            } else {
-                edgeScrollTimer.stop();
-            }
+    private void accumulateScrollDelta(int deltaX, int deltaY) {
+        if (accumulatedScrollDelta == null) {
+            accumulatedScrollDelta = new Point2D.Double(deltaX, deltaY);
+        } else {
+            accumulatedScrollDelta.setLocation(
+                    accumulatedScrollDelta.getX() + deltaX,
+                    accumulatedScrollDelta.getY() + deltaY
+            );
         }
     }
 
     private void applyScrollDeltaToObject(int deltaX, int deltaY, double currentLeft, double currentBottom, double currentScale) {
         if (draggingEntirePolygon) {
-            if (polygonDragOffset != null) {
-                polygonDragOffset = new Point2D.Double(
-                        polygonDragOffset.getX() - deltaX,
-                        polygonDragOffset.getY() - deltaY);
-            }
-            updateDraggedObjectPosition(lastDragPoint, currentLeft, currentBottom, currentScale, null);
+            adjustPolygonDragOffset(deltaX, deltaY);
+            updateDraggedObjectPosition(lastDragPoint, currentLeft, currentBottom, currentScale);
         } else if (draggingPointIndex >= 0) {
-            double castleDeltaX = deltaX / currentScale;
-            double castleDeltaY = -deltaY / currentScale;
-            Point currentPoint = getCurrentPolygonPoint(draggingPolygonIndex, draggingPointIndex);
-            if (currentPoint != null) {
-                int newX = (int) Math.round(currentPoint.x() + castleDeltaX);
-                int newY = (int) Math.round(currentPoint.y() + castleDeltaY);
-                Point newPoint = new Point(newX, newY);
-                panel.getEditorPanel().updatePolygonPoint(draggingPolygonIndex, draggingPointIndex, newPoint);
-            }
-            // Update dragStartPoint to match the scroll so normal drag continues correctly
-            if (dragStartPoint != null) {
-                dragStartPoint = new Point2D.Double(
-                    dragStartPoint.getX() + deltaX,
-                    dragStartPoint.getY() + deltaY
-                );
-            }
+            shiftDraggedPolygonPoint(deltaX, deltaY, currentScale);
         } else {
-            // For offset-based objects (cannons, throne, etc.), update the offsets
-            // Subtract scroll delta to compensate for viewport movement
-            if (cannonDragOffset != null) {
-                cannonDragOffset = new Point2D.Double(
-                    cannonDragOffset.getX() - deltaX,
-                    cannonDragOffset.getY() - deltaY
-                );
-            }
-            if (throneDragOffset != null) {
-                throneDragOffset = new Point2D.Double(
-                    throneDragOffset.getX() - deltaX,
-                    throneDragOffset.getY() - deltaY
-                );
-            }
-            if (windVaneDragOffset != null) {
-                windVaneDragOffset = new Point2D.Double(
-                    windVaneDragOffset.getX() - deltaX,
-                    windVaneDragOffset.getY() - deltaY
-                );
-            }
-            if (resourceAreaDragOffset != null) {
-                resourceAreaDragOffset = new Point2D.Double(
-                    resourceAreaDragOffset.getX() - deltaX,
-                    resourceAreaDragOffset.getY() - deltaY
-                );
-            }
-
-            // Use the normal drag logic with the updated drag state
-            updateDraggedObjectPosition(lastDragPoint, currentLeft, currentBottom, currentScale, null);
+            adjustObjectDragOffsets(deltaX, deltaY);
+            updateDraggedObjectPosition(lastDragPoint, currentLeft, currentBottom, currentScale);
         }
     }
 
-    private void updateDraggedObjectPosition(Point2D dragPoint, double currentLeft, double currentBottom, double currentScale, Point2D scrollDelta) {
+    private void adjustPolygonDragOffset(int deltaX, int deltaY) {
+        if (polygonDragOffset != null) {
+            polygonDragOffset = new Point2D.Double(
+                    polygonDragOffset.getX() - deltaX,
+                    polygonDragOffset.getY() - deltaY);
+        }
+    }
+
+    private void shiftDraggedPolygonPoint(int deltaX, int deltaY, double currentScale) {
+        double castleDeltaX = deltaX / currentScale;
+        double castleDeltaY = -deltaY / currentScale;
+        Point currentPoint = getCurrentPolygonPoint(draggingPolygonIndex, draggingPointIndex);
+        if (currentPoint != null) {
+            int newX = (int) Math.round(currentPoint.x() + castleDeltaX);
+            int newY = (int) Math.round(currentPoint.y() + castleDeltaY);
+            panel.getEditorPanel().updatePolygonPoint(draggingPolygonIndex, draggingPointIndex,
+                    new Point(newX, newY));
+        }
+        shiftDragStartPoint(deltaX, deltaY);
+    }
+
+    private void shiftDragStartPoint(int deltaX, int deltaY) {
+        if (dragStartPoint != null) {
+            dragStartPoint = new Point2D.Double(
+                    dragStartPoint.getX() + deltaX,
+                    dragStartPoint.getY() + deltaY);
+        }
+    }
+
+    private void adjustObjectDragOffsets(int deltaX, int deltaY) {
+        cannonDragOffset = adjustDragOffset(cannonDragOffset, deltaX, deltaY);
+        throneDragOffset = adjustDragOffset(throneDragOffset, deltaX, deltaY);
+        windVaneDragOffset = adjustDragOffset(windVaneDragOffset, deltaX, deltaY);
+        resourceAreaDragOffset = adjustDragOffset(resourceAreaDragOffset, deltaX, deltaY);
+    }
+
+    private Point2D adjustDragOffset(Point2D offset, int deltaX, int deltaY) {
+        if (offset == null) {
+            return null;
+        }
+        return new Point2D.Double(offset.getX() - deltaX, offset.getY() - deltaY);
+    }
+
+    private void updateDraggedObjectPosition(Point2D dragPoint, double currentLeft, double currentBottom, double currentScale) {
         if (draggingResourceArea != null) {
             if (draggingResourceAreaMove) {
                 int newX = (int) Math.round((dragPoint.getX() - resourceAreaDragOffset.getX() - currentLeft) / currentScale);
@@ -805,13 +779,13 @@ final class CastleMouseHandler extends MouseAdapter {
     }
 
     private void updateDraggedPolygonPosition(Point2D dragPoint, double currentLeft,
-                                               double currentBottom, double currentScale) {
+                                              double currentBottom, double currentScale) {
         Polygon polygon = getPolygon(draggingPolygonIndex);
         if (polygon == null || polygonDragOffset == null) {
             return;
         }
 
-        Point anchor = polygon.points().get(0);
+        Point anchor = polygon.points().getFirst();
         int targetX = (int) Math.round(
                 (dragPoint.getX() - polygonDragOffset.getX() - currentLeft) / currentScale);
         int targetY = (int) Math.round(
@@ -833,7 +807,7 @@ final class CastleMouseHandler extends MouseAdapter {
 
     private Point2D createPolygonDragOffset(Polygon polygon, double left, double bottom,
                                             double scale, Point2D clickPoint) {
-        Point anchor = polygon.points().get(0);
+        Point anchor = polygon.points().getFirst();
         double anchorScreenX = left + anchor.x() * scale;
         double anchorScreenY = bottom - anchor.y() * scale;
         return new Point2D.Double(clickPoint.getX() - anchorScreenX,
@@ -864,9 +838,8 @@ final class CastleMouseHandler extends MouseAdapter {
         }
         int currentPolygonIndex = 0;
         for (DrawingCommand command : castle.drawing()) {
-            if (command instanceof Polygon polygon) {
+            if (command instanceof Polygon(List<Point> points)) {
                 if (currentPolygonIndex == polygonIndex) {
-                    List<Point> points = polygon.points();
                     if (pointIndex >= 0 && pointIndex < points.size()) {
                         return points.get(pointIndex);
                     }
@@ -892,7 +865,7 @@ final class CastleMouseHandler extends MouseAdapter {
 
     private Path2D createPolygonPath(Polygon polygon, double left, double bottom, double scale) {
         Path2D path = new Path2D.Double();
-        Point first = polygon.points().get(0);
+        Point first = polygon.points().getFirst();
         path.moveTo(left + first.x() * scale, bottom - first.y() * scale);
         for (int i = 1; i < polygon.points().size(); i++) {
             Point point = polygon.points().get(i);
@@ -900,10 +873,6 @@ final class CastleMouseHandler extends MouseAdapter {
         }
         path.closePath();
         return path;
-    }
-
-    private int areaTop(Point position, Size size) {
-        return position.y() + size.height();
     }
 
     private int findPolygonIndex(Castle castle, Polygon targetPolygon) {
@@ -964,13 +933,13 @@ final class CastleMouseHandler extends MouseAdapter {
         return throneRect.contains(clickPoint);
     }
 
-    private String findClickedResourceArea(Castle castle, double left, double bottom, double scale, Point2D clickPoint) {
+    private ResourceArea findClickedResourceArea(Castle castle, double left, double bottom, double scale, Point2D clickPoint) {
         // Check money area
         Rectangle2D moneyRect = new Rectangle2D.Double(left + castle.money().x() * scale,
                 bottom - (castle.money().y() + castle.moneyRoom().height()) * scale,
                 castle.moneyRoom().width() * scale, castle.moneyRoom().height() * scale);
         if (moneyRect.contains(clickPoint)) {
-            return "money";
+            return ResourceArea.MONEY;
         }
 
         // Check powder area
@@ -978,7 +947,7 @@ final class CastleMouseHandler extends MouseAdapter {
                 bottom - (castle.powder().y() + castle.powderRoom().height()) * scale,
                 castle.powderRoom().width() * scale, castle.powderRoom().height() * scale);
         if (powderRect.contains(clickPoint)) {
-            return "powder";
+            return ResourceArea.POWDER;
         }
 
         // Check balls area
@@ -986,13 +955,13 @@ final class CastleMouseHandler extends MouseAdapter {
                 bottom - (castle.balls().y() + castle.ballRoom().height()) * scale,
                 castle.ballRoom().width() * scale, castle.ballRoom().height() * scale);
         if (ballsRect.contains(clickPoint)) {
-            return "balls";
+            return ResourceArea.BALLS;
         }
 
         return null;
     }
 
-    private int findClickedResourceCorner(Castle castle, String resourceArea, double left, double bottom, double scale, Point2D clickPoint) {
+    private int findClickedResourceCorner(Castle castle, ResourceArea resourceArea, double left, double bottom, double scale, Point2D clickPoint) {
         final double hitRadius = 6.0;
         Point position = getResourcePosition(castle, resourceArea);
         Size size = getResourceSize(castle, resourceArea);
@@ -1003,9 +972,8 @@ final class CastleMouseHandler extends MouseAdapter {
         double height = size.height() * scale;
 
         // Check bottom-left corner (index 0)
-        double blX = x;
         double blY = y + height;
-        if (clickPoint.distance(blX, blY) <= hitRadius) {
+        if (clickPoint.distance(x, blY) <= hitRadius) {
             return 0;
         }
 
@@ -1017,64 +985,56 @@ final class CastleMouseHandler extends MouseAdapter {
         }
 
         // Check top-left corner (index 2)
-        double tlX = x;
-        double tlY = y;
-        if (clickPoint.distance(tlX, tlY) <= hitRadius) {
+        if (clickPoint.distance(x, y) <= hitRadius) {
             return 2;
         }
 
         // Check top-right corner (index 3)
         double trX = x + width;
-        double trY = y;
-        if (clickPoint.distance(trX, trY) <= hitRadius) {
+        if (clickPoint.distance(trX, y) <= hitRadius) {
             return 3;
         }
 
         return -1;
     }
 
-    private Point getResourcePosition(Castle castle, String resourceArea) {
+    private Point getResourcePosition(Castle castle, ResourceArea resourceArea) {
         return switch (resourceArea) {
-            case "money" -> castle.money();
-            case "powder" -> castle.powder();
-            case "balls" -> castle.balls();
-            default -> new Point(0, 0);
+            case MONEY -> castle.money();
+            case POWDER -> castle.powder();
+            case BALLS -> castle.balls();
         };
     }
 
-    private Size getResourceSize(Castle castle, String resourceArea) {
+    private Size getResourceSize(Castle castle, ResourceArea resourceArea) {
         return switch (resourceArea) {
-            case "money" -> castle.moneyRoom();
-            case "powder" -> castle.powderRoom();
-            case "balls" -> castle.ballRoom();
-            default -> new Size(0, 0);
+            case MONEY -> castle.moneyRoom();
+            case POWDER -> castle.powderRoom();
+            case BALLS -> castle.ballRoom();
         };
     }
 
-    private int getResourceStepX(String resourceArea) {
+    private int getResourceStepX(ResourceArea resourceArea) {
         return switch (resourceArea) {
-            case "money" -> CastleFileFormat.MONEY_WIDTH;
-            case "powder" -> CastleFileFormat.POWDER_WIDTH;
-            case "balls" -> CastleFileFormat.CANNONBALL_WIDTH;
-            default -> 1;
+            case MONEY -> CastleFileFormat.MONEY_WIDTH;
+            case POWDER -> CastleFileFormat.POWDER_WIDTH;
+            case BALLS -> CastleFileFormat.CANNONBALL_WIDTH;
         };
     }
 
-    private int getResourceStepY(String resourceArea) {
+    private int getResourceStepY(ResourceArea resourceArea) {
         return switch (resourceArea) {
-            case "money" -> CastleFileFormat.MONEY_HEIGHT;
-            case "powder" -> CastleFileFormat.POWDER_HEIGHT;
-            case "balls" -> CastleFileFormat.CANNONBALL_HEIGHT;
-            default -> 1;
+            case MONEY -> CastleFileFormat.MONEY_HEIGHT;
+            case POWDER -> CastleFileFormat.POWDER_HEIGHT;
+            case BALLS -> CastleFileFormat.CANNONBALL_HEIGHT;
         };
     }
 
-    private int getResourceCount(Castle castle, String resourceArea) {
+    private int getResourceCount(Castle castle, ResourceArea resourceArea) {
         return switch (resourceArea) {
-            case "money" -> divideRoundedUp(castle.resources().money(), CastleFileFormat.MONEY_PER_UNIT);
-            case "powder" -> divideRoundedUp(castle.resources().powder(), CastleFileFormat.POWDER_PER_UNIT);
-            case "balls" -> castle.resources().balls();
-            default -> 0;
+            case MONEY -> divideRoundedUp(castle.resources().money(), CastleFileFormat.MONEY_PER_UNIT);
+            case POWDER -> divideRoundedUp(castle.resources().powder(), CastleFileFormat.POWDER_PER_UNIT);
+            case BALLS -> castle.resources().balls();
         };
     }
 
@@ -1140,10 +1100,8 @@ final class CastleMouseHandler extends MouseAdapter {
         Size sizeWithFixedHeight = new Size(validWidth, rows * stepY);
 
         // Choose the option closest to the target size
-        double diffWithFixedWidth = Math.abs(sizeWithFixedWidth.width() - targetWidth) +
-                                     Math.abs(sizeWithFixedWidth.height() - targetHeight);
-        double diffWithFixedHeight = Math.abs(sizeWithFixedHeight.width() - targetWidth) +
-                                      Math.abs(sizeWithFixedHeight.height() - targetHeight);
+        double diffWithFixedWidth = (double) Math.abs(sizeWithFixedWidth.width() - targetWidth) + Math.abs(sizeWithFixedWidth.height() - targetHeight);
+        double diffWithFixedHeight = (double) Math.abs(sizeWithFixedHeight.width() - targetWidth) + Math.abs(sizeWithFixedHeight.height() - targetHeight);
 
         if (diffWithFixedWidth <= diffWithFixedHeight) {
             return sizeWithFixedWidth;

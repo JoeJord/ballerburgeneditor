@@ -3,7 +3,7 @@ package at.josefjordan.ballerburg.editor.ui.menu;
 import at.josefjordan.ballerburg.editor.ui.MainFrame;
 import hgb.gui.menu.IMenuAction;
 
-import javax.swing.AbstractButton;
+import javax.swing.*;
 import java.awt.event.ActionEvent;
 
 public class ToggleGridAction implements IMenuAction {

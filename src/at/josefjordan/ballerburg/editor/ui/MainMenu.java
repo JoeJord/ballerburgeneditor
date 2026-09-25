@@ -44,58 +44,52 @@ public class MainMenu extends HGBaseMenu {
     }
 
     void setGridSelected(boolean selected) {
-        HGBaseMenuTools.setMenuItemSelected((MainFrame) getMainFrame(), GRID, selected);
+        HGBaseMenuTools.setMenuItemSelected(getMainFrame(), GRID, selected);
     }
 
     @Override
     public void setFileMenuStates() {
         super.setFileMenuStates();
         MainFrame frame = (MainFrame) getMainFrame();
-        boolean hasOpenCastleFile = frame != null && frame.getFile() != null;
+        if (frame == null) {
+            return;
+        }
+        boolean hasOpenCastleFile = frame.getFile() != null;
         boolean canUndo = frame.canUndo();
         boolean canRedo = frame.canRedo();
         boolean hasCastle = hasOpenCastleFile && frame.hasCastle();
-        boolean hasSelectedPolygon = hasCastle && frame.hasSelectedPolygon();
-        boolean hasSelectedPolygonPoint = hasCastle && frame.hasSelectedPolygonPoint();
-        boolean hasSelectedCannon = hasCastle && frame.hasSelectedCannon();
-        boolean hasSelectedThrone = hasCastle && frame.hasSelectedThrone();
-        boolean hasSelectedWindVane = hasCastle && frame.hasSelectedWindVane();
-        boolean hasSelectedResourceArea = hasCastle && frame.hasSelectedResourceArea();
-        boolean canRemove = hasSelectedPolygonPoint || (hasSelectedPolygon && !frame.hasSelectedPoint()) || hasSelectedCannon || hasSelectedThrone || hasSelectedWindVane || hasSelectedResourceArea;
-        boolean canAddCannon = hasCastle && frame.getCannonCount() < CastleFileFormat.CANNON_POSITION_COUNT;
-        boolean canAddThrone = hasCastle && !frame.hasThrone();
-        boolean canAddWindVane = hasCastle && !frame.hasWindVane();
-        boolean canAddMoney = hasCastle && !frame.hasMoney();
-        boolean canAddPowder = hasCastle && !frame.hasPowder();
-        boolean canAddCannonballs = hasCastle && !frame.hasBalls();
-        boolean canAddWall = hasCastle;
-        boolean canAddRoof = hasCastle;
-        HGBaseGuiTools.setEnabledNullSafe(getMenuItem(UNDO), canUndo);
-        HGBaseGuiTools.setEnabledNullSafe(getToolbarItem(UNDO), canUndo);
-        HGBaseGuiTools.setEnabledNullSafe(getMenuItem(REDO), canRedo);
-        HGBaseGuiTools.setEnabledNullSafe(getToolbarItem(REDO), canRedo);
-        HGBaseGuiTools.setEnabledNullSafe(getMenuItem(ADD_CASTLE), hasOpenCastleFile);
-        HGBaseGuiTools.setEnabledNullSafe(getToolbarItem(ADD_CASTLE), hasOpenCastleFile);
-        HGBaseGuiTools.setEnabledNullSafe(getMenuItem(ADD_CANNON), canAddCannon);
-        HGBaseGuiTools.setEnabledNullSafe(getToolbarItem(ADD_CANNON), canAddCannon);
-        HGBaseGuiTools.setEnabledNullSafe(getMenuItem(ADD_THRONE), canAddThrone);
-        HGBaseGuiTools.setEnabledNullSafe(getToolbarItem(ADD_THRONE), canAddThrone);
-        HGBaseGuiTools.setEnabledNullSafe(getMenuItem(ADD_WIND_VANE), canAddWindVane);
-        HGBaseGuiTools.setEnabledNullSafe(getToolbarItem(ADD_WIND_VANE), canAddWindVane);
-        HGBaseGuiTools.setEnabledNullSafe(getMenuItem(ADD_MONEY), canAddMoney);
-        HGBaseGuiTools.setEnabledNullSafe(getToolbarItem(ADD_MONEY), canAddMoney);
-        HGBaseGuiTools.setEnabledNullSafe(getMenuItem(ADD_POWDER), canAddPowder);
-        HGBaseGuiTools.setEnabledNullSafe(getToolbarItem(ADD_POWDER), canAddPowder);
-        HGBaseGuiTools.setEnabledNullSafe(getMenuItem(ADD_CANNONBALLS), canAddCannonballs);
-        HGBaseGuiTools.setEnabledNullSafe(getToolbarItem(ADD_CANNONBALLS), canAddCannonballs);
-        HGBaseGuiTools.setEnabledNullSafe(getMenuItem(ADD_WALL), canAddWall);
-        HGBaseGuiTools.setEnabledNullSafe(getToolbarItem(ADD_WALL), canAddWall);
-        HGBaseGuiTools.setEnabledNullSafe(getMenuItem(ADD_ROOF), canAddRoof);
-        HGBaseGuiTools.setEnabledNullSafe(getToolbarItem(ADD_ROOF), canAddRoof);
-        HGBaseGuiTools.setEnabledNullSafe(getMenuItem(DELETE_CASTLE), hasCastle);
-        HGBaseGuiTools.setEnabledNullSafe(getToolbarItem(DELETE_CASTLE), hasCastle);
-        HGBaseGuiTools.setEnabledNullSafe(getMenuItem(REMOVE), canRemove);
-        HGBaseGuiTools.setEnabledNullSafe(getToolbarItem(REMOVE), canRemove);
+        boolean canRemove = hasCastle && canRemoveSelection(frame);
+        boolean canAddCannon = canAddCannon(frame, hasCastle);
+        setEnabled(UNDO, canUndo);
+        setEnabled(REDO, canRedo);
+        setEnabled(ADD_CASTLE, hasOpenCastleFile);
+        setEnabled(ADD_CANNON, canAddCannon);
+        setEnabled(ADD_THRONE, hasCastle && !frame.hasThrone());
+        setEnabled(ADD_WIND_VANE, hasCastle && !frame.hasWindVane());
+        setEnabled(ADD_MONEY, hasCastle && !frame.hasMoney());
+        setEnabled(ADD_POWDER, hasCastle && !frame.hasPowder());
+        setEnabled(ADD_CANNONBALLS, hasCastle && !frame.hasBalls());
+        setEnabled(ADD_WALL, hasCastle);
+        setEnabled(ADD_ROOF, hasCastle);
+        setEnabled(DELETE_CASTLE, hasCastle);
+        setEnabled(REMOVE, canRemove);
+    }
+
+    private boolean canRemoveSelection(MainFrame frame) {
+        boolean hasPolygon = frame.hasSelectedPolygon();
+        boolean hasPolygonPoint = frame.hasSelectedPolygonPoint();
+        return hasPolygonPoint || hasPolygon && !frame.hasSelectedPoint()
+                || frame.hasSelectedCannon() || frame.hasSelectedThrone()
+                || frame.hasSelectedWindVane() || frame.hasSelectedResourceArea();
+    }
+
+    private boolean canAddCannon(MainFrame frame, boolean hasCastle) {
+        return hasCastle && frame.getCannonCount() < CastleFileFormat.CANNON_POSITION_COUNT;
+    }
+
+    private void setEnabled(String action, boolean enabled) {
+        HGBaseGuiTools.setEnabledNullSafe(getMenuItem(action), enabled);
+        HGBaseGuiTools.setEnabledNullSafe(getToolbarItem(action), enabled);
     }
 
     @Override

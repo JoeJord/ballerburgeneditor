@@ -1,6 +1,8 @@
 package at.josefjordan.ballerburg.editor.model;
 
-/** Constants defined by the original BALLER.DAT file format. */
+/**
+ * Constants defined by the original BALLER.DAT file format.
+ */
 public final class CastleFileFormat {
     public static final int FILE_TERMINATOR = -999;
     public static final int CASTLE_TERMINATOR = -1;

@@ -7,16 +7,13 @@ import at.josefjordan.ballerburg.editor.model.CastleFileFormat;
 import hgb.gui.HGBasePanel;
 import hgb.lib.HGBaseText;
 
-import javax.swing.BorderFactory;
-import javax.swing.JLabel;
-import javax.swing.JSpinner;
-import javax.swing.SpinnerNumberModel;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
+import javax.swing.*;
+import java.awt.*;
 import java.util.function.Consumer;
 
-/** Property palette for the editable values of the selected castle. */
+/**
+ * Property palette for the editable values of the selected castle.
+ */
 final class PropertyPalettePanel extends HGBasePanel {
     private final JLabel titleLabel = new JLabel();
     private final JLabel moneyLabel = new JLabel();
@@ -27,7 +24,7 @@ final class PropertyPalettePanel extends HGBasePanel {
     private final JSpinner powderSpinner = createSpinner();
     private final JSpinner ballsSpinner = createSpinner();
     private final JSpinner peopleSpinner = createSpinner();
-    private Consumer<Resources> resourcesListener;
+    private transient Consumer<Resources> resourcesListener;
     private boolean updating;
 
     PropertyPalettePanel() {

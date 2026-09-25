@@ -2,18 +2,16 @@ package at.josefjordan.ballerburg.editor.ui.editor;
 
 import at.josefjordan.ballerburg.editor.model.CastleFileFormat;
 
-import java.awt.Color;
-import java.awt.Graphics2D;
-import java.awt.Paint;
-import java.awt.RenderingHints;
-import java.awt.TexturePaint;
+import java.awt.*;
 import java.awt.geom.Path2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
-/** Vector sprites transcribed from the original {@code BALLER2.C} source. */
+/**
+ * Vector sprites transcribed from the original {@code BALLER2.C} source.
+ */
 final class Sprites {
     private static final Color INK = new Color(35, 35, 35);
     private static final Map<int[], BufferedImage> RASTER_IMAGES = new IdentityHashMap<>();
@@ -165,6 +163,7 @@ final class Sprites {
         return new int[]{maximumX + 1, maximumY + 1};
     }
 
+    @SuppressWarnings("java:S1192") // Repeated rows encode the ball's raster shape.
     private static BufferedImage rasterizeBall() {
         BufferedImage image = new BufferedImage(7, 7, BufferedImage.TYPE_INT_ARGB);
         String[] rows = {

@@ -1,14 +1,10 @@
 package at.josefjordan.ballerburg.editor.ui;
 
 import hgb.gui.HGBaseStatusBar;
+import hgb.lib.HGBaseText;
 
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JSlider;
-import javax.swing.SwingConstants;
-import java.awt.BorderLayout;
-import java.awt.Cursor;
-import java.awt.FlowLayout;
+import javax.swing.*;
+import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.function.IntConsumer;
@@ -25,10 +21,10 @@ public class StatusBar extends HGBaseStatusBar {
             MIN_ZOOM_PERCENT, MAX_ZOOM_PERCENT, 100);
     private final JLabel zoomLabel = new JLabel("100%");
     private final JLabel zoomResetLabel = new JLabel("1:1");
-    private IntConsumer zoomListener;
+    private transient IntConsumer zoomListener;
 
     StatusBar() {
-        super(new int[] { 0, ZOOM_LEVEL_WIDTH, PROGRESS_PANEL_WIDTH });
+        super(new int[]{0, ZOOM_LEVEL_WIDTH, PROGRESS_PANEL_WIDTH});
         getPanel(ZOOM_PANEL_INDEX).remove(getLabel(ZOOM_PANEL_INDEX));
         zoomSlider.setFocusable(false);
         zoomSlider.setToolTipText("Zoom");
@@ -41,7 +37,7 @@ public class StatusBar extends HGBaseStatusBar {
         });
         zoomLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         zoomResetLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        zoomResetLabel.setToolTipText("Zoom auf 100% zurücksetzen");
+        actualizeText();
         zoomResetLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         zoomResetLabel.addMouseListener(new MouseAdapter() {
             @Override
@@ -59,8 +55,13 @@ public class StatusBar extends HGBaseStatusBar {
         setProgressPanel(PROGRESS_PANEL_INDEX);
     }
 
+    @Override
+    public void actualizeText() {
+        zoomResetLabel.setToolTipText(HGBaseText.getText("zoom.reset_tooltip"));
+    }
+
     void setZoomLevel(int zoomPercent) {
-        int boundedZoomPercent = Math.max(MIN_ZOOM_PERCENT, Math.min(MAX_ZOOM_PERCENT, zoomPercent));
+        int boundedZoomPercent = Math.clamp(zoomPercent, MIN_ZOOM_PERCENT, MAX_ZOOM_PERCENT);
         zoomSlider.setValue(boundedZoomPercent);
         zoomLabel.setText(boundedZoomPercent + "%");
     }
