@@ -69,6 +69,14 @@ public class EditorPanel extends HGBasePanel {
         return document;
     }
 
+    public void setGridVisible(boolean visible) {
+        castleView.setGridVisible(visible);
+    }
+
+    public boolean isGridVisible() {
+        return castleView.isGridVisible();
+    }
+
     public void setDocument(CastleDocument document) {
         this.document = document;
         castleIndex = document == null || document.castles().isEmpty() ? -1 : 0;

@@ -27,6 +27,9 @@
         <item id="edit.add_roof" type="action"/>
         <item id="edit.remove" type="action" shortcut="del"/>
     </menu>
+    <menu id="view">
+        <item id="view.grid" type="checkbox" option="grid"/>
+    </menu>
     <menu id="settings">
         <menu id="settings.lan">
             <item id="lan.de;lan.en" option="language" type="radio"/>

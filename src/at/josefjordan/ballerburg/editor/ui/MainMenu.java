@@ -4,6 +4,7 @@ import at.josefjordan.ballerburg.editor.model.CastleFileFormat;
 import at.josefjordan.ballerburg.editor.ui.menu.*;
 import hgb.gui.HGBaseGuiTools;
 import hgb.gui.menu.HGBaseMenu;
+import hgb.gui.menu.HGBaseMenuTools;
 
 import java.io.File;
 
@@ -21,6 +22,7 @@ public class MainMenu extends HGBaseMenu {
     private static final String REMOVE = "edit.remove";
     private static final String UNDO = "edit.undo";
     private static final String REDO = "edit.redo";
+    private static final String GRID = "view.grid";
 
     public MainMenu(MainFrame frame) {
         super(frame);
@@ -37,7 +39,12 @@ public class MainMenu extends HGBaseMenu {
         registerAction(REMOVE, new RemoveAction(frame));
         registerAction(UNDO, new UndoAction(frame));
         registerAction(REDO, new RedoAction(frame));
+        registerAction(GRID, new ToggleGridAction(frame));
         setFileMenuStates();
+    }
+
+    void setGridSelected(boolean selected) {
+        HGBaseMenuTools.setMenuItemSelected((MainFrame) getMainFrame(), GRID, selected);
     }
 
     @Override

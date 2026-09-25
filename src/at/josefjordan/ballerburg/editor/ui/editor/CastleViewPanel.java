@@ -35,6 +35,8 @@ final class CastleViewPanel extends HGBasePanel {
     private static final boolean ZOOM_DEBUG_LOGGING = true;
     private static final double BASE_SCALE = 4.0; // Base scale multiplier for 100% zoom
     private static final double MARGIN = 24.0;
+    private static final int GRID_SPACING = 1;
+    private static final Color COLOR_GRID = new Color(210, 210, 210);
     private static final Color COLOR_SELECTED = new Color(255, 255, 0);
     private static final Color COLOR_HIGHLIGHTED = new Color(255, 100, 100);
     private static final Color COLOR_OUTLINE = new Color(45, 45, 45);
@@ -47,6 +49,7 @@ final class CastleViewPanel extends HGBasePanel {
     private int selectedCannonIndex = -1;
     private boolean selectedThrone = false;
     private boolean selectedWindVane = false;
+    private boolean gridVisible;
     private String selectedResourceArea = null; // "money", "powder", or "balls"
     private int draggingResourceCorner = -1; // 0-3 for corners, -1 if not dragging
     private EditorPanel editorPanel;
@@ -72,6 +75,17 @@ final class CastleViewPanel extends HGBasePanel {
 
     void setEditorPanel(EditorPanel editorPanel) {
         this.editorPanel = editorPanel;
+    }
+
+    void setGridVisible(boolean visible) {
+        if (gridVisible != visible) {
+            gridVisible = visible;
+            repaint();
+        }
+    }
+
+    boolean isGridVisible() {
+        return gridVisible;
     }
 
     void setZoomListener(Runnable zoomListener) {
@@ -581,6 +595,9 @@ final class CastleViewPanel extends HGBasePanel {
         try {
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             if (castle != null) {
+                if (gridVisible) {
+                    drawGrid(g);
+                }
                 drawCastle(g);
             }
             if (polygonCreationMode) {
@@ -588,6 +605,30 @@ final class CastleViewPanel extends HGBasePanel {
             }
         } finally {
             g.dispose();
+        }
+    }
+
+    private void drawGrid(Graphics2D g) {
+        int[] bounds = calculateBounds();
+        double scale = BASE_SCALE * zoomFactor;
+        double[] origin = calculateRenderingOrigin(bounds[0], calculateMaximumY(), scale,
+                renderingOffsetX == 0 && renderingOffsetY == 0);
+        double left = origin[0];
+        double bottom = origin[1];
+
+        g.setColor(COLOR_GRID);
+        g.setStroke(new BasicStroke(1.0f));
+        int firstX = (int) Math.floor(-left / scale / GRID_SPACING) * GRID_SPACING;
+        int lastX = (int) Math.ceil((getWidth() - left) / scale / GRID_SPACING) * GRID_SPACING;
+        int firstY = (int) Math.floor((bottom - getHeight()) / scale / GRID_SPACING) * GRID_SPACING;
+        int lastY = (int) Math.ceil(bottom / scale / GRID_SPACING) * GRID_SPACING;
+        for (int x = firstX; x <= lastX; x += GRID_SPACING) {
+            double screenX = left + x * scale;
+            g.draw(new Line2D.Double(screenX, 0, screenX, getHeight()));
+        }
+        for (int y = firstY; y <= lastY; y += GRID_SPACING) {
+            double screenY = bottom - y * scale;
+            g.draw(new Line2D.Double(0, screenY, getWidth(), screenY));
         }
     }
 

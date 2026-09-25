@@ -6,6 +6,7 @@ import at.josefjordan.ballerburg.editor.model.CastleDocument;
 import at.josefjordan.ballerburg.editor.ui.editor.EditorPanel;
 import hgb.gui.HGBaseDialog;
 import hgb.gui.HGBaseFrame;
+import hgb.lib.HGBaseConfig;
 import hgb.lib.HGBaseTools;
 import hgb.lib.HGBaseText;
 
@@ -72,6 +73,7 @@ public class MainFrame extends HGBaseFrame {
                 statusBar.setHint(hint);
             }
         });
+        setGridVisible(HGBaseConfig.getBoolean("grid"));
         addCastleNavigationToToolbar();
         setPanel(editorPanel);
         updateCastleNavigation();
@@ -254,6 +256,17 @@ public class MainFrame extends HGBaseFrame {
 
     public void removeResourceArea() {
         editorPanel.removeResourceArea();
+    }
+
+    public void setGridVisible(boolean visible) {
+        editorPanel.setGridVisible(visible);
+        if (getMenu() instanceof MainMenu mainMenu) {
+            mainMenu.setGridSelected(visible);
+        }
+    }
+
+    public boolean isGridVisible() {
+        return editorPanel.isGridVisible();
     }
 
     public boolean canUndo() {

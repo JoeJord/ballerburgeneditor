@@ -74,6 +74,8 @@
         <msg code="edit.remove">Entfernen</msg>
         <msg code="edit.undo">R&#252;ckg&#228;ngig</msg>
         <msg code="edit.redo">Wiederholen</msg>
+        <msg code="view.grid">Raster anzeigen</msg>
+        <msg code="view">Ansicht</msg>
         <msg code="polygon.hint">Klicken Sie, um Punkte hinzuzuf&#252;gen. Rechtsklick oder Enter zum Abschlie&#223;en. Esc zum Abbrechen.</msg>
         <msg code="polygon.selected_hint">Klicken Sie auf eine Kante, um einen Punkt hinzuzuf&#252;gen. Ziehen Sie Punkte, um sie zu verschieben. Klicken und ziehen Sie im Polygon, um es zu verschieben.</msg>
 
@@ -151,6 +153,8 @@
         <msg code="edit.remove">Remove</msg>
         <msg code="edit.undo">Undo</msg>
         <msg code="edit.redo">Redo</msg>
+        <msg code="view.grid">Show grid</msg>
+        <msg code="view">View</msg>
         <msg code="polygon.hint">Click to add points. Right-click or Enter to finish. Esc to cancel.</msg>
         <msg code="polygon.selected_hint">Click on an edge to add a point. Drag points to move them. Click and drag inside the polygon to move it.</msg>
 
