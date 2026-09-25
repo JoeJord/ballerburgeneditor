@@ -61,7 +61,7 @@ public class MainMenu extends HGBaseMenu {
         boolean canAddMoney = hasCastle && !frame.hasMoney();
         boolean canAddPowder = hasCastle && !frame.hasPowder();
         boolean canAddCannonballs = hasCastle && !frame.hasBalls();
-        boolean canAddWall = hasCastle && !frame.hasWall();
+        boolean canAddWall = hasCastle;
         boolean canAddRoof = hasCastle;
         HGBaseGuiTools.setEnabledNullSafe(getMenuItem(UNDO), canUndo);
         HGBaseGuiTools.setEnabledNullSafe(getToolbarItem(UNDO), canUndo);

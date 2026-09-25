@@ -335,9 +335,6 @@ public class EditorPanel extends HGBasePanel {
         if (document == null || castleIndex < 0 || castleIndex >= getCastleCount()) {
             return;
         }
-        if (hasWall()) {
-            return;
-        }
         castleView.startPolygonCreation("wall");
         setPolygonCreationHint();
     }
