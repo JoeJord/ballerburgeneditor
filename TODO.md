@@ -1,8 +1,5 @@
 # TODO
 
-## Editor
- - Show coordinates in status bar
-
 ## Refactoring
  - Replace magic numbers with constants:
    - UI margins: 24.0 (view margin)
