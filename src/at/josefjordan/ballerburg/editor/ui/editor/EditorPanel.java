@@ -1070,7 +1070,6 @@ public class EditorPanel extends HGBasePanel {
                     castle.powder(), castle.powderRoom(), "problems.overlap_balls_powder");
             addCannonOverlapProblems(problems, castle);
             addWindVaneOverlapProblems(problems, castle);
-            addPolygonOverlapProblems(problems, castle);
             addZeroWarning(problems, hasMoney(castle), castle.resources().money(), "problems.zero_money");
             addZeroWarning(problems, hasPowder(castle), castle.resources().powder(), "problems.zero_powder");
             addZeroWarning(problems, hasBalls(castle), castle.resources().balls(), "problems.zero_balls");
@@ -1217,46 +1216,6 @@ public class EditorPanel extends HGBasePanel {
                 "problems.overlap_windvane_wall", "problems.overlap_windvane_roof");
     }
 
-    private void addPolygonOverlapProblems(List<ProblemsPanel.Problem> problems, Castle castle) {
-        List<PolygonInfo> polygons = polygonInfos(castle);
-        for (int firstIndex = 0; firstIndex < polygons.size(); firstIndex++) {
-            for (int secondIndex = firstIndex + 1; secondIndex < polygons.size(); secondIndex++) {
-                if (polygonsOverlap(polygons.get(firstIndex), polygons.get(secondIndex))) {
-                    problems.add(new ProblemsPanel.Problem(ProblemsPanel.ProblemSeverity.ERROR,
-                            HGBaseText.getText(polygonOverlapTextKey(
-                                    polygons.get(firstIndex), polygons.get(secondIndex)))));
-                }
-            }
-        }
-    }
-
-    private List<PolygonInfo> polygonInfos(Castle castle) {
-        List<PolygonInfo> polygons = new ArrayList<>();
-        int fillStyle = CastleFileFormat.FILL_STYLE_PATTERN;
-        int fillIndex = CastleFileFormat.FILL_INDEX_MASONRY;
-        for (CastleDocument.DrawingCommand command : castle.drawing()) {
-            if (command instanceof CastleDocument.FillStyle(int style, int index)) {
-                fillStyle = style;
-                fillIndex = index;
-            } else if (command instanceof CastleDocument.Polygon polygon) {
-                boolean wall = fillStyle == CastleFileFormat.FILL_STYLE_PATTERN
-                        && fillIndex == CastleFileFormat.FILL_INDEX_MASONRY;
-                polygons.add(new PolygonInfo(polygon, wall));
-            }
-        }
-        return polygons;
-    }
-
-    private String polygonOverlapTextKey(PolygonInfo first, PolygonInfo second) {
-        if (first.wall() && second.wall()) {
-            return "problems.overlap_wall_wall";
-        }
-        if (!first.wall() && !second.wall()) {
-            return "problems.overlap_roof_roof";
-        }
-        return "problems.overlap_wall_roof";
-    }
-
     private void addPolygonOverlapProblems(List<ProblemsPanel.Problem> problems, Point position, Size size,
                                            Castle castle, String wallTextKey, String roofTextKey) {
         if (!hasPoint(position)) {
@@ -1331,27 +1290,6 @@ public class EditorPanel extends HGBasePanel {
         }
         path.closePath();
         return path.intersects(rectangle);
-    }
-
-    private boolean polygonsOverlap(PolygonInfo first, PolygonInfo second) {
-        Area intersection = polygonArea(first.polygon());
-        intersection.intersect(polygonArea(second.polygon()));
-        return !intersection.isEmpty();
-    }
-
-    private Area polygonArea(CastleDocument.Polygon polygon) {
-        Path2D path = new Path2D.Double();
-        Point first = polygon.points().get(0);
-        path.moveTo(first.x(), first.y());
-        for (int index = 1; index < polygon.points().size(); index++) {
-            Point point = polygon.points().get(index);
-            path.lineTo(point.x(), point.y());
-        }
-        path.closePath();
-        return new Area(path);
-    }
-
-    private record PolygonInfo(CastleDocument.Polygon polygon, boolean wall) {
     }
 
     private void updateResources(Resources resources) {
