@@ -45,7 +45,11 @@ public class EditorPanel extends HGBasePanel {
     /**
      * Validates castle structure and placement.
      */
-    private final CastleValidator castleValidator = new CastleValidator();
+    private final transient CastleValidator castleValidator = new CastleValidator();
+    /**
+     * Creates immutable castle snapshots with edited resource-storage data.
+     */
+    private final ResourceAreaEditor resourceAreaEditor = new ResourceAreaEditor();
     /**
      * The current castle document.
      */
@@ -366,87 +370,48 @@ public class EditorPanel extends HGBasePanel {
      * Adds money storage at the origin with one money-slot of initial capacity.
      */
     public void addMoney() {
-        if (document == null || castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return;
-        }
-        Castle oldCastle = document.castles().get(castleIndex);
-        if (hasMoney()) {
-            return;
-        }
-
-        Point moneyPosition = new Point(0, 0);
-        Size moneyRoomSize = new Size(CastleFileFormat.MONEY_WIDTH, CastleFileFormat.MONEY_HEIGHT);
-
-        Castle updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
-                oldCastle.windVane(), moneyPosition, oldCastle.powder(), oldCastle.balls(),
-                moneyRoomSize, oldCastle.powderRoom(), oldCastle.ballRoom(), oldCastle.resources(),
-                oldCastle.reserved(), oldCastle.drawing());
-        List<Castle> castles = new ArrayList<>(document.castles());
-        castles.set(castleIndex, updatedCastle);
-        document = new CastleDocument(castles);
-        castleView.updateCastle(updatedCastle);
-        documentChanged();
+        addResourceArea(ResourceArea.MONEY);
     }
 
     /**
      * Adds powder storage at the origin with one powder-slot of initial capacity.
      */
     public void addPowder() {
-        if (document == null || castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return;
-        }
-        Castle oldCastle = document.castles().get(castleIndex);
-        if (hasPowder()) {
-            return;
-        }
-
-        Point powderPosition = new Point(0, 0);
-        Size powderRoomSize = new Size(CastleFileFormat.POWDER_WIDTH, CastleFileFormat.POWDER_HEIGHT);
-
-        Castle updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
-                oldCastle.windVane(), oldCastle.money(), powderPosition, oldCastle.balls(),
-                oldCastle.moneyRoom(), powderRoomSize, oldCastle.ballRoom(), oldCastle.resources(),
-                oldCastle.reserved(), oldCastle.drawing());
-        List<Castle> castles = new ArrayList<>(document.castles());
-        castles.set(castleIndex, updatedCastle);
-        document = new CastleDocument(castles);
-        castleView.updateCastle(updatedCastle);
-        documentChanged();
+        addResourceArea(ResourceArea.POWDER);
     }
 
     /**
      * Adds cannonball storage at the origin with one cannonball-slot of initial capacity.
      */
     public void addCannonballs() {
+        addResourceArea(ResourceArea.BALLS);
+    }
+
+    /**
+     * Adds the selected resource area when it is not already positioned.
+     *
+     * @param area resource area to add
+     */
+    private void addResourceArea(ResourceArea area) {
         if (document == null || castleIndex < 0 || castleIndex >= getCastleCount()) {
             return;
         }
         Castle oldCastle = document.castles().get(castleIndex);
-        if (hasBalls()) {
+        boolean alreadyPositioned = switch (area) {
+            case MONEY -> hasMoney();
+            case POWDER -> hasPowder();
+            case BALLS -> hasBalls();
+        };
+        if (alreadyPositioned) {
             return;
         }
 
-        Castle updatedCastle = addCannonballsToCastle(oldCastle);
+        Castle updatedCastle = resourceAreaEditor.add(oldCastle, area);
         List<Castle> castles = new ArrayList<>(document.castles());
         castles.set(castleIndex, updatedCastle);
         document = new CastleDocument(castles);
         castleView.updateCastle(updatedCastle);
         documentChanged();
-    }
-
-    /**
-     * Returns a copy of the castle with cannonball storage initialized.
-     *
-     * @param castle castle to copy and initialize
-     * @return a copy of the castle with cannonball storage initialized
-     */
-    private Castle addCannonballsToCastle(Castle castle) {
-        Point ballsPosition = new Point(0, 0);
-        Size ballRoomSize = new Size(CastleFileFormat.CANNONBALL_WIDTH, CastleFileFormat.CANNONBALL_HEIGHT);
-        return new Castle(castle.width(), castle.cannons(), castle.throne(),
-                castle.windVane(), castle.money(), castle.powder(), ballsPosition,
-                castle.moneyRoom(), castle.powderRoom(), ballRoomSize, castle.resources(),
-                castle.reserved(), castle.drawing());
     }
 
     /**
@@ -827,29 +792,7 @@ public class EditorPanel extends HGBasePanel {
         }
         Castle oldCastle = document.castles().get(castleIndex);
 
-        Castle updatedCastle;
-        switch (resourceArea) {
-            case MONEY:
-                updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
-                        oldCastle.windVane(), newPosition, oldCastle.powder(), oldCastle.balls(),
-                        newSize, oldCastle.powderRoom(), oldCastle.ballRoom(), oldCastle.resources(),
-                        oldCastle.reserved(), oldCastle.drawing());
-                break;
-            case POWDER:
-                updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
-                        oldCastle.windVane(), oldCastle.money(), newPosition, oldCastle.balls(),
-                        oldCastle.moneyRoom(), newSize, oldCastle.ballRoom(), oldCastle.resources(),
-                        oldCastle.reserved(), oldCastle.drawing());
-                break;
-            case BALLS:
-                updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
-                        oldCastle.windVane(), oldCastle.money(), oldCastle.powder(), newPosition,
-                        oldCastle.moneyRoom(), oldCastle.powderRoom(), newSize, oldCastle.resources(),
-                        oldCastle.reserved(), oldCastle.drawing());
-                break;
-            default:
-                return;
-        }
+        Castle updatedCastle = resourceAreaEditor.resize(oldCastle, resourceArea, newPosition, newSize);
 
         List<Castle> castles = new ArrayList<>(document.castles());
         castles.set(castleIndex, updatedCastle);
@@ -874,29 +817,7 @@ public class EditorPanel extends HGBasePanel {
         }
         Castle oldCastle = document.castles().get(castleIndex);
 
-        Castle updatedCastle;
-        switch (resourceArea) {
-            case MONEY:
-                updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
-                        oldCastle.windVane(), newPosition, oldCastle.powder(), oldCastle.balls(),
-                        oldCastle.moneyRoom(), oldCastle.powderRoom(), oldCastle.ballRoom(), oldCastle.resources(),
-                        oldCastle.reserved(), oldCastle.drawing());
-                break;
-            case POWDER:
-                updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
-                        oldCastle.windVane(), oldCastle.money(), newPosition, oldCastle.balls(),
-                        oldCastle.moneyRoom(), oldCastle.powderRoom(), oldCastle.ballRoom(), oldCastle.resources(),
-                        oldCastle.reserved(), oldCastle.drawing());
-                break;
-            case BALLS:
-                updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
-                        oldCastle.windVane(), oldCastle.money(), oldCastle.powder(), newPosition,
-                        oldCastle.moneyRoom(), oldCastle.powderRoom(), oldCastle.ballRoom(), oldCastle.resources(),
-                        oldCastle.reserved(), oldCastle.drawing());
-                break;
-            default:
-                return;
-        }
+        Castle updatedCastle = resourceAreaEditor.move(oldCastle, resourceArea, newPosition);
 
         List<Castle> castles = new ArrayList<>(document.castles());
         castles.set(castleIndex, updatedCastle);
@@ -1230,32 +1151,7 @@ public class EditorPanel extends HGBasePanel {
         }
 
         Castle oldCastle = document.castles().get(castleIndex);
-        Point unusedPosition = new Point(Integer.MIN_VALUE, Integer.MIN_VALUE);
-        Size emptySize = new Size(0, 0);
-        Resources oldResources = oldCastle.resources();
-
-        Castle updatedCastle;
-        if (selectedResourceArea == ResourceArea.MONEY) {
-            Resources newResources = new Resources(0, oldResources.powder(), oldResources.balls(), oldResources.people());
-            updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
-                    oldCastle.windVane(), unusedPosition, oldCastle.powder(), oldCastle.balls(),
-                    emptySize, oldCastle.powderRoom(), oldCastle.ballRoom(), newResources,
-                    oldCastle.reserved(), oldCastle.drawing());
-        } else if (selectedResourceArea == ResourceArea.POWDER) {
-            Resources newResources = new Resources(oldResources.money(), 0, oldResources.balls(), oldResources.people());
-            updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
-                    oldCastle.windVane(), oldCastle.money(), unusedPosition, oldCastle.balls(),
-                    oldCastle.moneyRoom(), emptySize, oldCastle.ballRoom(), newResources,
-                    oldCastle.reserved(), oldCastle.drawing());
-        } else if (selectedResourceArea == ResourceArea.BALLS) {
-            Resources newResources = new Resources(oldResources.money(), oldResources.powder(), 0, oldResources.people());
-            updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
-                    oldCastle.windVane(), oldCastle.money(), oldCastle.powder(), unusedPosition,
-                    oldCastle.moneyRoom(), oldCastle.powderRoom(), emptySize, newResources,
-                    oldCastle.reserved(), oldCastle.drawing());
-        } else {
-            return;
-        }
+        Castle updatedCastle = resourceAreaEditor.remove(oldCastle, selectedResourceArea);
 
         List<Castle> castles = new ArrayList<>(document.castles());
         castles.set(castleIndex, updatedCastle);

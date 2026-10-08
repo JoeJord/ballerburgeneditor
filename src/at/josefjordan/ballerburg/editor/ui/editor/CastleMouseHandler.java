@@ -93,17 +93,9 @@ final class CastleMouseHandler extends MouseAdapter {
      */
     private Point2D polygonDragOffset;
     /**
-     * Timer that continues scrolling while a drag pointer remains near a viewport edge.
+     * Scrolls the castle view while a drag pointer remains near a viewport edge.
      */
-    private final Timer edgeScrollTimer;
-    /**
-     * Most recent drag pointer position in panel coordinates.
-     */
-    private Point2D lastDragPoint;
-    /**
-     * Total screen-space displacement applied by edge scrolling during the active drag.
-     */
-    private Point2D accumulatedScrollDelta;
+    private final CastleDragAutoScroller autoScroller;
 
     /**
      * Installs mouse, motion, and keyboard listeners on the castle view.
@@ -112,13 +104,7 @@ final class CastleMouseHandler extends MouseAdapter {
      */
     CastleMouseHandler(CastleViewPanel panel) {
         this.panel = panel;
-
-        // Initialize edge scroll timer for continuous dragging at screen edge
-        edgeScrollTimer = new Timer(50, event -> {
-            if (event.getSource() instanceof Timer timer && timer.isRunning() && lastDragPoint != null) {
-                handleEdgeScrolling();
-            }
-        });
+        autoScroller = new CastleDragAutoScroller(panel, this::applyEdgeScrollDelta);
 
         panel.addMouseMotionListener(createMouseMotionListener());
         panel.addKeyListener(createKeyListener());
@@ -599,9 +585,7 @@ final class CastleMouseHandler extends MouseAdapter {
         dragStartPoint = null;
         polygonDragOffset = null;
         panel.setDraggingResourceCorner(-1);
-        lastDragPoint = null;
-        accumulatedScrollDelta = null;
-        edgeScrollTimer.stop();
+        autoScroller.stop();
     }
 
     /**
@@ -623,8 +607,7 @@ final class CastleMouseHandler extends MouseAdapter {
         double left = params[0];
         double bottom = params[1];
         double scale = params[2];
-        lastDragPoint = e.getPoint();
-        accumulatedScrollDelta = null;
+        autoScroller.setDragPoint(e.getPoint());
 
         if (draggingResourceArea != null) {
             handleResourceAreaDrag(e.getPoint(), castle, left, bottom, scale);
@@ -649,7 +632,7 @@ final class CastleMouseHandler extends MouseAdapter {
         if (draggingEntirePolygon) {
             Point2D dragPoint = e.getPoint();
             updateDraggedPolygonPosition(dragPoint, left, bottom, scale);
-            autoScrollToKeepVisible(dragPoint);
+            autoScroller.keepPointerVisible(dragPoint);
         } else if (draggingPointIndex >= 0) {
             handlePolygonPointDrag(e.getPoint(), left, bottom, scale);
         }
@@ -682,7 +665,7 @@ final class CastleMouseHandler extends MouseAdapter {
         } else {
             resizeResourceArea(dragPoint, castle, scale);
         }
-        autoScrollToKeepVisible(dragPoint);
+        autoScroller.keepPointerVisible(dragPoint);
     }
 
     /**
@@ -712,7 +695,7 @@ final class CastleMouseHandler extends MouseAdapter {
     private void handleThroneDrag(Point2D dragPoint, double left, double bottom, double scale) {
         Point newPoint = toCastlePoint(dragPoint, throneDragOffset, left, bottom, scale);
         panel.getEditorPanel().updateThronePosition(newPoint);
-        autoScrollToKeepVisible(dragPoint);
+        autoScroller.keepPointerVisible(dragPoint);
     }
 
     /**
@@ -726,7 +709,7 @@ final class CastleMouseHandler extends MouseAdapter {
     private void handleWindVaneDrag(Point2D dragPoint, double left, double bottom, double scale) {
         Point newPoint = toCastlePoint(dragPoint, windVaneDragOffset, left, bottom, scale);
         panel.getEditorPanel().updateWindVanePosition(newPoint);
-        autoScrollToKeepVisible(dragPoint);
+        autoScroller.keepPointerVisible(dragPoint);
     }
 
     /**
@@ -740,7 +723,7 @@ final class CastleMouseHandler extends MouseAdapter {
     private void handleCannonDrag(Point2D dragPoint, double left, double bottom, double scale) {
         Point newPoint = toCastlePoint(dragPoint, cannonDragOffset, left, bottom, scale);
         panel.getEditorPanel().updateCannonPosition(draggingCannonIndex, newPoint);
-        autoScrollToKeepVisible(dragPoint);
+        autoScroller.keepPointerVisible(dragPoint);
     }
 
     /**
@@ -770,7 +753,7 @@ final class CastleMouseHandler extends MouseAdapter {
     private void handlePolygonPointDrag(Point2D dragPoint, double left, double bottom, double scale) {
         Point newPoint = toCastlePoint(dragPoint, left, bottom, scale);
         panel.getEditorPanel().updatePolygonPoint(draggingPolygonIndex, draggingPointIndex, newPoint);
-        autoScrollToKeepVisible(dragPoint);
+        autoScroller.keepPointerVisible(dragPoint);
 
         Castle updatedCastle = panel.getCastle();
         int currentPolygonIndex = 0;
@@ -785,195 +768,13 @@ final class CastleMouseHandler extends MouseAdapter {
         }
     }
 
-    /**
-     * Scrolls the viewport when the drag pointer approaches its edges.
-     *
-     * @param dragPoint the current drag position
-     */
-    private void autoScrollToKeepVisible(Point2D dragPoint) {
-        // Get the scroll pane from the panel's viewport
-        if (panel.getParent() instanceof javax.swing.JViewport viewport) {
-            javax.swing.JScrollPane scrollPane = (javax.swing.JScrollPane) viewport.getParent();
-            if (scrollPane == null) {
-                return;
-            }
-
-            java.awt.Rectangle viewRect = viewport.getViewRect();
-            int margin = 50; // Margin from edge before scrolling starts
-
-            // The drag point from e.getPoint() is in panel coordinates
-            int mouseX = (int) dragPoint.getX();
-            int mouseY = (int) dragPoint.getY();
-
-            // Calculate viewport-relative position
-            int viewportX = mouseX - viewRect.x;
-            int viewportY = mouseY - viewRect.y;
-
-            // Calculate the desired scroll position to keep the point visible
-            int scrollX = viewRect.x;
-            int scrollY = viewRect.y;
-            boolean needsScroll = false;
-
-            // Check if mouse is near left edge of viewport
-            if (viewportX < margin) {
-                scrollX = Math.max(0, mouseX - margin);
-                needsScroll = true;
-            }
-            // Check if mouse is near right edge of viewport
-            else if (viewportX > viewRect.width - margin) {
-                int maxScrollX = Math.max(0, panel.getPreferredSize().width - viewRect.width);
-                scrollX = Math.clamp((long) mouseX - viewRect.width + margin, 0, maxScrollX);
-                needsScroll = true;
-            }
-
-            // Check if mouse is near top edge of viewport
-            if (viewportY < margin) {
-                scrollY = Math.max(0, mouseY - margin);
-                needsScroll = true;
-            }
-            // Check if mouse is near bottom edge of viewport
-            else if (viewportY > viewRect.height - margin) {
-                int maxScrollY = Math.max(0, panel.getPreferredSize().height - viewRect.height);
-                scrollY = Math.clamp((long) mouseY - viewRect.height + margin, 0, maxScrollY);
-                needsScroll = true;
-            }
-
-            if (needsScroll) {
-                viewport.setViewPosition(new java.awt.Point(scrollX, scrollY));
-                // Start edge scroll timer for continuous scrolling
-                if (!edgeScrollTimer.isRunning()) {
-                    edgeScrollTimer.start();
-                }
-            } else {
-                // Stop timer if not near edge
-                edgeScrollTimer.stop();
-            }
-        }
-    }
-
-    /**
-     * Advances scrolling while the last drag pointer remains near a viewport edge.
-     */
-    private void handleEdgeScrolling() {
-        if (lastDragPoint == null) {
-            return;
-        }
-
-        javax.swing.JViewport viewport = getScrollViewport();
-        if (viewport == null) {
-            return;
-        }
-        java.awt.Rectangle viewRect = viewport.getViewRect();
-        int mouseX = (int) lastDragPoint.getX();
-        int mouseY = (int) lastDragPoint.getY();
-        int viewportX = mouseX - viewRect.x;
-        int viewportY = mouseY - viewRect.y;
-        boolean nearLeft = viewportX < 50;
-        boolean nearRight = viewportX > viewRect.width - 50;
-        boolean nearTop = viewportY < 50;
-        boolean nearBottom = viewportY > viewRect.height - 50;
-        if (!(nearLeft || nearRight || nearTop || nearBottom)) {
-            edgeScrollTimer.stop();
-            return;
-        }
-
-        int scrollX = calculateEdgeScroll(viewRect.x, panel.getPreferredSize().width - viewRect.width, nearLeft, nearRight);
-        int scrollY = calculateEdgeScroll(viewRect.y, panel.getPreferredSize().height - viewRect.height, nearTop, nearBottom);
-        viewport.setViewPosition(new java.awt.Point(scrollX, scrollY));
-        updateDraggedObjectForEdgeScroll(viewRect, scrollX, scrollY, nearLeft, nearRight, nearTop, nearBottom);
-    }
-
-    /**
-     * Returns the scroll viewport.
-     *
-     * @return the containing scroll viewport, or null when unavailable
-     */
-    private javax.swing.JViewport getScrollViewport() {
-        if (panel.getParent() instanceof javax.swing.JViewport viewport
-                && viewport.getParent() instanceof javax.swing.JScrollPane) {
-            return viewport;
-        }
-        return null;
-    }
-
-    /**
-     * Calculates a bounded 10-pixel scroll step toward the nearby edge.
-     *
-     * @param currentPosition current viewport position along one axis
-     * @param contentOverflow maximum scroll position along that axis
-     * @param nearStart       whether the pointer is near the left or top edge
-     * @param nearEnd         whether the pointer is near the right or bottom edge
-     * @return next viewport position along the axis
-     */
-    private int calculateEdgeScroll(int currentPosition, int contentOverflow, boolean nearStart, boolean nearEnd) {
-        if (nearStart) {
-            return Math.max(0, currentPosition - 10);
-        }
-        if (nearEnd) {
-            int maxScroll = Math.max(0, contentOverflow);
-            return Math.clamp((long) currentPosition + 10, 0, maxScroll);
-        }
-        return currentPosition;
-    }
-
-    /**
-     * Reapplies the drag after scrolling, including fallback displacement at a scroll limit.
-     *
-     * @param viewRect   viewport bounds before the scroll
-     * @param scrollX    new horizontal viewport position
-     * @param scrollY    new vertical viewport position
-     * @param nearLeft   whether the pointer is near the viewport's left edge
-     * @param nearRight  whether the pointer is near the viewport's right edge
-     * @param nearTop    whether the pointer is near the viewport's top edge
-     * @param nearBottom whether the pointer is near the viewport's bottom edge
-     */
-    private void updateDraggedObjectForEdgeScroll(java.awt.Rectangle viewRect, int scrollX, int scrollY,
-                                                  boolean nearLeft, boolean nearRight,
-                                                  boolean nearTop, boolean nearBottom) {
+    private void applyEdgeScrollDelta(Point2D dragPoint, int deltaX, int deltaY) {
         Castle castle = panel.getCastle();
         if (castle == null) {
             return;
         }
         double[] params = panel.getRenderingParameters();
-        int deltaX = effectiveScrollDelta(scrollX - viewRect.x, nearLeft, nearRight);
-        int deltaY = effectiveScrollDelta(scrollY - viewRect.y, nearTop, nearBottom);
-        accumulateScrollDelta(deltaX, deltaY);
-        applyScrollDeltaToObject(deltaX, deltaY, params[0], params[1], params[2]);
-    }
-
-    /**
-     * Returns the scroll delta, using a 10-pixel fallback when movement is constrained.
-     *
-     * @param actualDelta actual viewport displacement in pixels
-     * @param nearStart   whether the pointer is near the left or top edge
-     * @param nearEnd     whether the pointer is near the right or bottom edge
-     * @return the actual or fallback scroll displacement in pixels
-     */
-    private int effectiveScrollDelta(int actualDelta, boolean nearStart, boolean nearEnd) {
-        if (actualDelta != 0) {
-            return actualDelta;
-        }
-        if (nearStart) {
-            return -10;
-        }
-        return nearEnd ? 10 : 0;
-    }
-
-    /**
-     * Adds the latest edge-scroll movement to the accumulated delta.
-     *
-     * @param deltaX horizontal scroll displacement in pixels
-     * @param deltaY vertical scroll displacement in pixels
-     */
-    private void accumulateScrollDelta(int deltaX, int deltaY) {
-        if (accumulatedScrollDelta == null) {
-            accumulatedScrollDelta = new Point2D.Double(deltaX, deltaY);
-        } else {
-            accumulatedScrollDelta.setLocation(
-                    accumulatedScrollDelta.getX() + deltaX,
-                    accumulatedScrollDelta.getY() + deltaY
-            );
-        }
+        applyScrollDeltaToObject(dragPoint, deltaX, deltaY, params[0], params[1], params[2]);
     }
 
     /**
@@ -985,15 +786,16 @@ final class CastleMouseHandler extends MouseAdapter {
      * @param currentBottom castle baseline's current screen y-coordinate
      * @param currentScale  current screen-pixel scale per castle coordinate
      */
-    private void applyScrollDeltaToObject(int deltaX, int deltaY, double currentLeft, double currentBottom, double currentScale) {
+    private void applyScrollDeltaToObject(Point2D dragPoint, int deltaX, int deltaY,
+                                          double currentLeft, double currentBottom, double currentScale) {
         if (draggingEntirePolygon) {
             adjustPolygonDragOffset(deltaX, deltaY);
-            updateDraggedObjectPosition(lastDragPoint, currentLeft, currentBottom, currentScale);
+            updateDraggedObjectPosition(dragPoint, currentLeft, currentBottom, currentScale);
         } else if (draggingPointIndex >= 0) {
             shiftDraggedPolygonPoint(deltaX, deltaY, currentScale);
         } else {
             adjustObjectDragOffsets(deltaX, deltaY);
-            updateDraggedObjectPosition(lastDragPoint, currentLeft, currentBottom, currentScale);
+            updateDraggedObjectPosition(dragPoint, currentLeft, currentBottom, currentScale);
         }
     }
 
