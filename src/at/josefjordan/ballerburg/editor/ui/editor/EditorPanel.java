@@ -11,8 +11,6 @@ import hgb.lib.HGBaseText;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.geom.Path2D;
-import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,10 +18,6 @@ import java.util.List;
  * Editor containing the castle view, property palette, and problems panel.
  */
 public class EditorPanel extends HGBasePanel {
-    /**
-     * Largest permitted horizontal span of positioned castle elements, in castle coordinates.
-     */
-    private static final int MAX_CASTLE_ELEMENT_WIDTH = 200;
     /**
      * Minimum width reserved for the property palette in pixels.
      */
@@ -48,6 +42,10 @@ public class EditorPanel extends HGBasePanel {
      * Table showing validation findings for the selected castle.
      */
     private final ProblemsPanel problemsPanel = new ProblemsPanel();
+    /**
+     * Validates castle structure and placement.
+     */
+    private final CastleValidator castleValidator = new CastleValidator();
     /**
      * The current castle document.
      */
@@ -175,7 +173,7 @@ public class EditorPanel extends HGBasePanel {
      */
     public boolean hasProblems() {
         return document != null && document.castles().stream()
-                .anyMatch(castle -> !createProblems(castle).isEmpty());
+                .anyMatch(castle -> !castleValidator.validate(castle).isEmpty());
     }
 
     /**
@@ -258,28 +256,6 @@ public class EditorPanel extends HGBasePanel {
         Castle castle = document.castles().get(castleIndex);
         Point balls = castle.balls();
         return balls.x() != Integer.MIN_VALUE && balls.y() != Integer.MIN_VALUE;
-    }
-
-    /**
-     * Returns whether the drawing contains at least one polygon under the masonry fill style.
-     *
-     * @param castle castle whose drawing commands are examined
-     * @return {@code true} if a polygon is drawn with the masonry fill style
-     */
-    private boolean hasWall(Castle castle) {
-        // Start fill style is 2,9 (masonry) according to BALLER.DAT
-        int fillStyle = CastleFileFormat.FILL_STYLE_PATTERN;
-        int fillIndex = CastleFileFormat.FILL_INDEX_MASONRY;
-        for (CastleDocument.DrawingCommand command : castle.drawing()) {
-            if (command instanceof CastleDocument.FillStyle(int style, int index)) {
-                fillStyle = style;
-                fillIndex = index;
-            } else if (command instanceof CastleDocument.Polygon && fillStyle == CastleFileFormat.FILL_STYLE_PATTERN && fillIndex == CastleFileFormat.FILL_INDEX_MASONRY) {
-                return true;
-            }
-
-        }
-        return false;
     }
 
     /**
@@ -1372,399 +1348,7 @@ public class EditorPanel extends HGBasePanel {
      * @param castle castle whose findings should be displayed
      */
     private void updateProblems(Castle castle) {
-        problemsPanel.setProblems(createProblems(castle));
-    }
-
-    /**
-     * Builds the validation problems for the supplied castle.
-     *
-     * @param castle castle to check for missing elements, overlaps, and other validation findings
-     * @return the validation problems found in the supplied castle
-     */
-    private List<ProblemsPanel.Problem> createProblems(Castle castle) {
-        List<ProblemsPanel.Problem> problems = new ArrayList<>();
-        if (castle != null) {
-            boolean wallPresent = hasWall(castle);
-            addMissingProblem(problems, hasThrone(castle), "problems.missing_throne");
-            addMissingProblem(problems, hasMoney(castle), "problems.missing_money");
-            addMissingProblem(problems, hasBalls(castle), "problems.missing_balls");
-            addMissingProblem(problems, hasPowder(castle), "problems.missing_powder");
-            addMissingProblem(problems, hasWindVane(castle), "problems.missing_windvane");
-            addMissingProblem(problems, wallPresent, "problems.missing_wall");
-            addMissingProblem(problems, hasElementWidth(castle), "problems.elements_too_wide");
-            if (wallPresent) {
-                addMissingProblem(problems, isInsideWall(castle, castle.throne(),
-                                new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT)),
-                        "problems.throne_outside_wall");
-                addMissingProblem(problems, isInsideWall(castle, castle.money(), castle.moneyRoom()),
-                        "problems.money_outside_wall");
-                addMissingProblem(problems, isInsideWall(castle, castle.balls(), castle.ballRoom()),
-                        "problems.balls_outside_wall");
-                addMissingProblem(problems, isInsideWall(castle, castle.powder(), castle.powderRoom()),
-                        "problems.powder_outside_wall");
-            }
-            addOverlapProblem(problems, castle.throne(),
-                    new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT),
-                    castle.money(), castle.moneyRoom(), "problems.overlap_throne_money");
-            addOverlapProblem(problems, castle.throne(),
-                    new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT),
-                    castle.balls(), castle.ballRoom(), "problems.overlap_throne_balls");
-            addOverlapProblem(problems, castle.throne(),
-                    new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT),
-                    castle.powder(), castle.powderRoom(), "problems.overlap_throne_powder");
-            addOverlapProblem(problems, castle.money(), castle.moneyRoom(),
-                    castle.balls(), castle.ballRoom(), "problems.overlap_money_balls");
-            addOverlapProblem(problems, castle.money(), castle.moneyRoom(),
-                    castle.powder(), castle.powderRoom(), "problems.overlap_money_powder");
-            addOverlapProblem(problems, castle.balls(), castle.ballRoom(),
-                    castle.powder(), castle.powderRoom(), "problems.overlap_balls_powder");
-            addCannonOverlapProblems(problems, castle);
-            addWindVaneOverlapProblems(problems, castle);
-            addZeroWarning(problems, hasMoney(castle), castle.resources().money(), "problems.zero_money");
-            addZeroWarning(problems, hasPowder(castle), castle.resources().powder(), "problems.zero_powder");
-            addZeroWarning(problems, hasBalls(castle), castle.resources().balls(), "problems.zero_balls");
-            addZeroWarning(problems, hasPeople(castle), castle.resources().people(), "problems.zero_people");
-            if (castle.cannons().isEmpty()) {
-                problems.add(new ProblemsPanel.Problem(ProblemsPanel.ProblemSeverity.WARNING,
-                        HGBaseText.getText("problems.no_cannons")));
-            }
-        }
-        return problems;
-    }
-
-    /**
-     * Adds a validation problem when the required item is missing.
-     *
-     * @param problems the problems to display
-     * @param present  whether the required castle item is present
-     * @param textKey  localization key for the missing-item message
-     */
-    private void addMissingProblem(List<ProblemsPanel.Problem> problems, boolean present, String textKey) {
-        if (!present) {
-            problems.add(new ProblemsPanel.Problem(ProblemsPanel.ProblemSeverity.ERROR,
-                    HGBaseText.getText(textKey)));
-        }
-    }
-
-    /**
-     * Adds a warning when an available resource has a zero starting value.
-     *
-     * @param problems    the problems to display
-     * @param areaPresent whether the resource-storage area exists
-     * @param value       the resource's starting quantity
-     * @param textKey     localization key for the zero-value warning
-     */
-    private void addZeroWarning(List<ProblemsPanel.Problem> problems, boolean areaPresent, int value,
-                                String textKey) {
-        if (areaPresent && value == 0) {
-            problems.add(new ProblemsPanel.Problem(ProblemsPanel.ProblemSeverity.WARNING,
-                    HGBaseText.getText(textKey)));
-        }
-    }
-
-    /**
-     * Returns whether the castle has a positioned throne.
-     *
-     * @param castle castle whose throne position is checked
-     * @return {@code true} if the castle contains a throne position
-     */
-    private boolean hasThrone(Castle castle) {
-        return hasPoint(castle.throne());
-    }
-
-    /**
-     * Returns whether the castle has a positioned wind vane.
-     *
-     * @param castle castle whose wind-vane position is checked
-     * @return {@code true} if the castle contains a wind-vane position
-     */
-    private boolean hasWindVane(Castle castle) {
-        return hasPoint(castle.windVane());
-    }
-
-    /**
-     * Returns whether the castle has a positioned money-storage area.
-     *
-     * @param castle castle whose money-storage position is checked
-     * @return {@code true} if the castle contains a money-storage position
-     */
-    private boolean hasMoney(Castle castle) {
-        return hasPoint(castle.money());
-    }
-
-    /**
-     * Returns whether the castle has a positioned powder-storage area.
-     *
-     * @param castle castle whose powder-storage position is checked
-     * @return {@code true} if the castle contains a powder-storage position
-     */
-    private boolean hasPowder(Castle castle) {
-        return hasPoint(castle.powder());
-    }
-
-    /**
-     * Returns whether the castle has a positioned cannonball-storage area.
-     *
-     * @param castle castle whose cannonball-storage position is checked
-     * @return {@code true} if the castle contains a cannonball-storage position
-     */
-    private boolean hasBalls(Castle castle) {
-        return hasPoint(castle.balls());
-    }
-
-    /**
-     * Returns whether the castle's starting people value is nonnegative.
-     *
-     * @param castle castle whose starting people quantity is checked
-     * @return {@code true} if the starting people value is zero or greater
-     */
-    private boolean hasPeople(Castle castle) {
-        return castle.resources().people() >= 0;
-    }
-
-    /**
-     * Returns whether both coordinates identify a set castle point.
-     *
-     * @param point castle coordinate pair to test for the unset-point sentinel
-     * @return true if both coordinates are set; false otherwise
-     */
-    private boolean hasPoint(Point point) {
-        return point.x() != Integer.MIN_VALUE && point.y() != Integer.MIN_VALUE;
-    }
-
-    /**
-     * Returns whether every castle element fits within the allowed width.
-     *
-     * @param castle castle whose elements' horizontal extent is measured
-     * @return {@code true} if the castle has no positioned elements or their horizontal span is within the limit
-     */
-    private boolean hasElementWidth(Castle castle) {
-        int minimumX = Integer.MAX_VALUE;
-        int maximumX = Integer.MIN_VALUE;
-        for (CastleDocument.DrawingCommand command : castle.drawing()) {
-            if (command instanceof CastleDocument.Polygon(List<Point> points)) {
-                for (Point point : points) {
-                    minimumX = Math.min(minimumX, point.x());
-                    maximumX = Math.max(maximumX, point.x());
-                }
-            }
-        }
-        if (hasPoint(castle.throne())) {
-            minimumX = Math.min(minimumX, castle.throne().x());
-            maximumX = Math.max(maximumX, castle.throne().x() + CastleFileFormat.THRONE_WIDTH);
-        }
-        if (hasPoint(castle.money())) {
-            minimumX = Math.min(minimumX, castle.money().x());
-            maximumX = Math.max(maximumX, castle.money().x() + castle.moneyRoom().width());
-        }
-        if (hasPoint(castle.powder())) {
-            minimumX = Math.min(minimumX, castle.powder().x());
-            maximumX = Math.max(maximumX, castle.powder().x() + castle.powderRoom().width());
-        }
-        if (hasPoint(castle.balls())) {
-            minimumX = Math.min(minimumX, castle.balls().x());
-            maximumX = Math.max(maximumX, castle.balls().x() + castle.ballRoom().width());
-        }
-        if (hasPoint(castle.windVane())) {
-            minimumX = Math.min(minimumX, castle.windVane().x());
-            maximumX = Math.max(maximumX, castle.windVane().x() + CastleFileFormat.WIND_VANE_WIDTH);
-        }
-        for (Point cannon : castle.cannons()) {
-            minimumX = Math.min(minimumX, cannon.x());
-            maximumX = Math.max(maximumX, cannon.x() + CastleFileFormat.CANNON_WIDTH);
-        }
-        return minimumX == Integer.MAX_VALUE
-                || maximumX - minimumX <= MAX_CASTLE_ELEMENT_WIDTH;
-    }
-
-    /**
-     * Adds a problem when two positioned areas overlap.
-     *
-     * @param problems       the problems to display
-     * @param firstPosition  lower-left position of the first area
-     * @param firstSize      dimensions of the first area
-     * @param secondPosition lower-left position of the second area
-     * @param secondSize     dimensions of the second area
-     * @param textKey        localization key for the overlap message
-     */
-    private void addOverlapProblem(List<ProblemsPanel.Problem> problems, Point firstPosition, Size firstSize,
-                                   Point secondPosition, Size secondSize, String textKey) {
-        if (hasPoint(firstPosition) && hasPoint(secondPosition)
-                && rectanglesOverlap(firstPosition, firstSize, secondPosition, secondSize)) {
-            problems.add(new ProblemsPanel.Problem(ProblemsPanel.ProblemSeverity.ERROR,
-                    HGBaseText.getText(textKey)));
-        }
-    }
-
-    /**
-     * Checks the selected castle objects for overlaps with each cannon.
-     *
-     * @param problems validation findings to append to
-     * @param castle   castle whose cannons are checked against other elements
-     */
-    private void addCannonOverlapProblems(List<ProblemsPanel.Problem> problems, Castle castle) {
-        Size cannonSize = new Size(CastleFileFormat.CANNON_WIDTH, CastleFileFormat.CANNON_HEIGHT);
-        for (int index = 0; index < castle.cannons().size(); index++) {
-            Point cannon = castle.cannons().get(index);
-            addOverlapProblem(problems, cannon, cannonSize, castle.throne(),
-                    new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT),
-                    "problems.overlap_cannon_throne");
-            addOverlapProblem(problems, cannon, cannonSize, castle.money(), castle.moneyRoom(),
-                    "problems.overlap_cannon_money");
-            addOverlapProblem(problems, cannon, cannonSize, castle.balls(), castle.ballRoom(),
-                    "problems.overlap_cannon_balls");
-            addOverlapProblem(problems, cannon, cannonSize, castle.powder(), castle.powderRoom(),
-                    "problems.overlap_cannon_powder");
-            addPolygonOverlapProblems(problems, cannon, cannonSize, castle,
-                    "problems.overlap_cannon_wall", "problems.overlap_cannon_roof");
-            for (int otherIndex = index + 1; otherIndex < castle.cannons().size(); otherIndex++) {
-                addOverlapProblem(problems, cannon, cannonSize, castle.cannons().get(otherIndex), cannonSize,
-                        "problems.overlap_cannon_cannon");
-            }
-        }
-    }
-
-    /**
-     * Checks the selected castle objects for overlaps with the wind vane.
-     *
-     * @param problems validation findings to append to
-     * @param castle   castle whose wind vane is checked against other elements
-     */
-    private void addWindVaneOverlapProblems(List<ProblemsPanel.Problem> problems, Castle castle) {
-        Point windVane = castle.windVane();
-        Size windVaneSize = new Size(CastleFileFormat.WIND_VANE_WIDTH, CastleFileFormat.WIND_VANE_HEIGHT);
-        addOverlapProblem(problems, windVane, windVaneSize, castle.throne(),
-                new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT),
-                "problems.overlap_windvane_throne");
-        addOverlapProblem(problems, windVane, windVaneSize, castle.money(), castle.moneyRoom(),
-                "problems.overlap_windvane_money");
-        addOverlapProblem(problems, windVane, windVaneSize, castle.balls(), castle.ballRoom(),
-                "problems.overlap_windvane_balls");
-        addOverlapProblem(problems, windVane, windVaneSize, castle.powder(), castle.powderRoom(),
-                "problems.overlap_windvane_powder");
-        for (Point cannon : castle.cannons()) {
-            addOverlapProblem(problems, windVane, windVaneSize, cannon,
-                    new Size(CastleFileFormat.CANNON_WIDTH, CastleFileFormat.CANNON_HEIGHT),
-                    "problems.overlap_windvane_cannon");
-        }
-        addPolygonOverlapProblems(problems, windVane, windVaneSize, castle,
-                "problems.overlap_windvane_wall", "problems.overlap_windvane_roof");
-    }
-
-    /**
-     * Adds overlap problems for a rectangle intersecting castle polygons.
-     *
-     * @param problems    the problems to display
-     * @param position    lower-left position of the object rectangle
-     * @param size        width and height of the object rectangle
-     * @param castle      castle drawing whose polygons are checked for intersection
-     * @param wallTextKey localization key for overlap with masonry
-     * @param roofTextKey localization key for overlap with a non-masonry polygon
-     */
-    private void addPolygonOverlapProblems(List<ProblemsPanel.Problem> problems, Point position, Size size,
-                                           Castle castle, String wallTextKey, String roofTextKey) {
-        if (!hasPoint(position)) {
-            return;
-        }
-        Rectangle2D rectangle = new Rectangle2D.Double(position.x(), position.y(), size.width(), size.height());
-        int fillStyle = CastleFileFormat.FILL_STYLE_PATTERN;
-        int fillIndex = CastleFileFormat.FILL_INDEX_MASONRY;
-        for (CastleDocument.DrawingCommand command : castle.drawing()) {
-            if (command instanceof CastleDocument.FillStyle(int style, int index)) {
-                fillStyle = style;
-                fillIndex = index;
-            } else if (command instanceof CastleDocument.Polygon polygon
-                    && polygonIntersects(polygon, rectangle)) {
-                String textKey = fillStyle == CastleFileFormat.FILL_STYLE_PATTERN
-                        && fillIndex == CastleFileFormat.FILL_INDEX_MASONRY
-                        ? wallTextKey : roofTextKey;
-                problems.add(new ProblemsPanel.Problem(ProblemsPanel.ProblemSeverity.ERROR,
-                        HGBaseText.getText(textKey)));
-            }
-        }
-    }
-
-    /**
-     * Returns whether the two rectangles overlap.
-     *
-     * @param firstPosition  lower-left position of the first rectangle
-     * @param firstSize      width and height of the first rectangle
-     * @param secondPosition lower-left position of the second rectangle
-     * @param secondSize     width and height of the second rectangle
-     * @return {@code true} if the rectangles have a nonempty intersection
-     */
-    private boolean rectanglesOverlap(Point firstPosition, Size firstSize,
-                                      Point secondPosition, Size secondSize) {
-        return new Rectangle2D.Double(firstPosition.x(), firstPosition.y(),
-                firstSize.width(), firstSize.height()).intersects(
-                secondPosition.x(), secondPosition.y(), secondSize.width(), secondSize.height());
-    }
-
-    /**
-     * Returns whether the complete area lies within the wall polygon.
-     *
-     * @param castle   castle whose masonry polygons are checked
-     * @param position lower-left position of the area
-     * @param size     width and height of the area
-     * @return {@code true} if the area is unset or lies entirely inside a masonry polygon
-     */
-    private boolean isInsideWall(Castle castle, Point position, Size size) {
-        if (!hasPoint(position)) {
-            return true;
-        }
-        Rectangle2D area = new Rectangle2D.Double(position.x(), position.y(), size.width(), size.height());
-        int fillStyle = CastleFileFormat.FILL_STYLE_PATTERN;
-        int fillIndex = CastleFileFormat.FILL_INDEX_MASONRY;
-        for (CastleDocument.DrawingCommand command : castle.drawing()) {
-            if (command instanceof CastleDocument.FillStyle(int style, int index)) {
-                fillStyle = style;
-                fillIndex = index;
-            } else if (command instanceof CastleDocument.Polygon polygon && fillStyle == CastleFileFormat.FILL_STYLE_PATTERN
-                    && fillIndex == CastleFileFormat.FILL_INDEX_MASONRY
-                    && polygonContains(polygon, area)) {
-                return true;
-            }
-
-        }
-        return false;
-    }
-
-    /**
-     * Returns whether the polygon contains the supplied rectangle.
-     *
-     * @param polygon polygon to test
-     * @param area    rectangle that must be contained by the polygon
-     * @return {@code true} if the polygon contains the entire rectangle
-     */
-    private boolean polygonContains(CastleDocument.Polygon polygon, Rectangle2D area) {
-        Path2D path = new Path2D.Double();
-        Point first = polygon.points().getFirst();
-        path.moveTo(first.x(), first.y());
-        for (int index = 1; index < polygon.points().size(); index++) {
-            Point point = polygon.points().get(index);
-            path.lineTo(point.x(), point.y());
-        }
-        path.closePath();
-        return path.contains(area);
-    }
-
-    /**
-     * Returns whether the polygon intersects the supplied rectangle.
-     *
-     * @param polygon   polygon to test
-     * @param rectangle rectangle to test for intersection
-     * @return {@code true} if the polygon intersects the rectangle
-     */
-    private boolean polygonIntersects(CastleDocument.Polygon polygon, Rectangle2D rectangle) {
-        Path2D path = new Path2D.Double();
-        Point first = polygon.points().getFirst();
-        path.moveTo(first.x(), first.y());
-        for (int index = 1; index < polygon.points().size(); index++) {
-            Point point = polygon.points().get(index);
-            path.lineTo(point.x(), point.y());
-        }
-        path.closePath();
-        return path.intersects(rectangle);
+        problemsPanel.setProblems(castleValidator.validate(castle));
     }
 
     /**
