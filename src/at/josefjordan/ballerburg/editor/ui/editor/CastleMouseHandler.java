@@ -1,13 +1,10 @@
 package at.josefjordan.ballerburg.editor.ui.editor;
 
 import at.josefjordan.ballerburg.editor.model.CastleDocument.*;
-import at.josefjordan.ballerburg.editor.model.CastleFileFormat;
 
 import javax.swing.*;
 import java.awt.event.*;
-import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
-import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,6 +16,14 @@ final class CastleMouseHandler extends MouseAdapter {
      * Castle view receiving input and providing the current drawing transform.
      */
     private final CastleViewPanel panel;
+    /**
+     * Performs geometric hit tests independently of gesture state.
+     */
+    private final CastleHitTester hitTester = new CastleHitTester();
+    /**
+     * Calculates slot-aware storage geometry during resize gestures.
+     */
+    private final ResourceAreaResizer resourceAreaResizer = new ResourceAreaResizer();
     /**
      * Index of the polygon being dragged, or {@code -1} when none is active.
      */
@@ -109,8 +114,8 @@ final class CastleMouseHandler extends MouseAdapter {
         this.panel = panel;
 
         // Initialize edge scroll timer for continuous dragging at screen edge
-        edgeScrollTimer = new Timer(50, e -> {
-            if (lastDragPoint != null) {
+        edgeScrollTimer = new Timer(50, event -> {
+            if (event.getSource() instanceof Timer timer && timer.isRunning() && lastDragPoint != null) {
                 handleEdgeScrolling();
             }
         });
@@ -301,15 +306,16 @@ final class CastleMouseHandler extends MouseAdapter {
         if (selectedResourceArea == null) {
             return false;
         }
-        int clickedCorner = findClickedResourceCorner(castle, selectedResourceArea, left, bottom, scale, clickPoint);
+        int clickedCorner = hitTester.findClickedResourceCorner(
+                castle, selectedResourceArea, left, bottom, scale, clickPoint);
         if (clickedCorner < 0) {
             return false;
         }
         draggingResourceArea = selectedResourceArea;
         draggingCornerIndex = clickedCorner;
         dragStartPoint = clickPoint;
-        originalResourceSize = getResourceSize(castle, selectedResourceArea);
-        originalResourcePosition = getResourcePosition(castle, selectedResourceArea);
+        originalResourceSize = hitTester.resourceSize(castle, selectedResourceArea);
+        originalResourcePosition = hitTester.resourcePosition(castle, selectedResourceArea);
         panel.setDraggingResourceCorner(clickedCorner);
         return true;
     }
@@ -326,7 +332,8 @@ final class CastleMouseHandler extends MouseAdapter {
      */
     private boolean tryStartResourceAreaDrag(Castle castle, double left, double bottom, double scale,
                                              Point2D clickPoint) {
-        ResourceArea clickedResourceArea = findClickedResourceArea(castle, left, bottom, scale, clickPoint);
+        ResourceArea clickedResourceArea =
+                hitTester.findClickedResourceArea(castle, left, bottom, scale, clickPoint);
         if (clickedResourceArea == null) {
             return false;
         }
@@ -339,7 +346,7 @@ final class CastleMouseHandler extends MouseAdapter {
         panel.getEditorPanel().onCannonSelectionChanged();
         draggingResourceArea = clickedResourceArea;
         draggingResourceAreaMove = true;
-        Point resourcePosition = getResourcePosition(castle, clickedResourceArea);
+        Point resourcePosition = hitTester.resourcePosition(castle, clickedResourceArea);
         double resourceScreenX = left + resourcePosition.x() * scale;
         double resourceScreenY = bottom - resourcePosition.y() * scale;
         resourceAreaDragOffset = new Point2D.Double(clickPoint.getX() - resourceScreenX,
@@ -359,7 +366,7 @@ final class CastleMouseHandler extends MouseAdapter {
      */
     private boolean tryStartWindVaneDrag(Castle castle, double left, double bottom, double scale,
                                          Point2D clickPoint) {
-        if (!isWindVaneClicked(castle, left, bottom, scale, clickPoint)) {
+        if (!hitTester.isWindVaneClicked(castle, left, bottom, scale, clickPoint)) {
             return false;
         }
         panel.setSelectedWindVane(true);
@@ -390,7 +397,7 @@ final class CastleMouseHandler extends MouseAdapter {
      * @return true if a throne drag begins; false otherwise
      */
     private boolean tryStartThroneDrag(Castle castle, double left, double bottom, double scale, Point2D clickPoint) {
-        if (!isThroneClicked(castle, left, bottom, scale, clickPoint)) {
+        if (!hitTester.isThroneClicked(castle, left, bottom, scale, clickPoint)) {
             return false;
         }
         panel.setSelectedThrone(true);
@@ -420,7 +427,7 @@ final class CastleMouseHandler extends MouseAdapter {
      * @return true if a cannon drag begins; false otherwise
      */
     private boolean tryStartCannonDrag(Castle castle, double left, double bottom, double scale, Point2D clickPoint) {
-        int clickedCannonIndex = findClickedCannonIndex(castle, left, bottom, scale, clickPoint);
+        int clickedCannonIndex = hitTester.findClickedCannonIndex(castle, left, bottom, scale, clickPoint);
         if (clickedCannonIndex < 0) {
             return false;
         }
@@ -456,16 +463,16 @@ final class CastleMouseHandler extends MouseAdapter {
         if (selectedPolygon == null) {
             return false;
         }
-        int polygonIndex = findPolygonIndex(castle, selectedPolygon);
+        int polygonIndex = hitTester.polygonIndexOf(castle, selectedPolygon);
         if (polygonIndex < 0) {
             return false;
         }
-        int pointIndex = findClickedPointIndex(selectedPolygon, left, bottom, scale, clickPoint);
+        int pointIndex = hitTester.findClickedPointIndex(selectedPolygon, left, bottom, scale, clickPoint);
         if (pointIndex >= 0) {
             startPolygonPointDrag(polygonIndex, pointIndex);
             return true;
         }
-        if (!createPolygonPath(selectedPolygon, left, bottom, scale).contains(clickPoint)) {
+        if (!hitTester.polygonPath(selectedPolygon, left, bottom, scale).contains(clickPoint)) {
             return false;
         }
         startPolygonMove(polygonIndex, selectedPolygon, left, bottom, scale, clickPoint);
@@ -528,10 +535,10 @@ final class CastleMouseHandler extends MouseAdapter {
      * @param clickPoint mouse click position in panel coordinates
      */
     private void selectClickedPolygon(Castle castle, double left, double bottom, double scale, Point2D clickPoint) {
-        Polygon clickedPolygon = findClickedPolygon(castle, left, bottom, scale, clickPoint);
+        Polygon clickedPolygon = hitTester.findClickedPolygon(castle, left, bottom, scale, clickPoint);
         if (clickedPolygon != null) {
             selectPolygon(clickedPolygon);
-            int polygonIndex = findPolygonIndex(castle, clickedPolygon);
+            int polygonIndex = hitTester.polygonIndexOf(castle, clickedPolygon);
             if (polygonIndex >= 0) {
                 startPolygonMove(polygonIndex, clickedPolygon, left, bottom, scale, clickPoint);
             }
@@ -688,71 +695,10 @@ final class CastleMouseHandler extends MouseAdapter {
     private void resizeResourceArea(Point2D dragPoint, Castle castle, double scale) {
         double deltaX = (dragPoint.getX() - dragStartPoint.getX()) / scale;
         double deltaY = (dragPoint.getY() - dragStartPoint.getY()) / scale;
-        int stepX = getResourceStepX(draggingResourceArea);
-        int stepY = getResourceStepY(draggingResourceArea);
-        int resourceCount = getResourceCount(castle, draggingResourceArea);
-        Size minSize = calculateMinimumSize(resourceCount, stepX, stepY);
-        int deltaXRounded = (int) Math.round(deltaX / stepX) * stepX;
-        int deltaYRounded = (int) Math.round(deltaY / stepY) * stepY;
-        Size newSize = calculateNewResourceSize(deltaXRounded, deltaYRounded, minSize, resourceCount, stepX, stepY);
-
-        Point newPosition = calculateNewResourcePosition(newSize);
-        panel.getEditorPanel().updateResourceAreaSize(draggingResourceArea, newPosition, newSize);
-    }
-
-    /**
-     * Keeps the opposite corner fixed while resizing the selected corner.
-     *
-     * @param newSize resized storage-area dimensions
-     * @return the calculated new resource position
-     */
-    private Point calculateNewResourcePosition(Size newSize) {
-        int newWidth = newSize.width();
-        int newHeight = newSize.height();
-        return switch (draggingCornerIndex) {
-            case 0 -> new Point(originalResourcePosition.x() + originalResourceSize.width() - newWidth,
-                    originalResourcePosition.y() + originalResourceSize.height() - newHeight);
-            case 1 -> new Point(originalResourcePosition.x(),
-                    originalResourcePosition.y() + originalResourceSize.height() - newHeight);
-            case 2 -> new Point(originalResourcePosition.x() + originalResourceSize.width() - newWidth,
-                    originalResourcePosition.y());
-            default -> originalResourcePosition;
-        };
-    }
-
-    /**
-     * Calculates a slot-aligned resource-area size that fits its resource count.
-     *
-     * @param deltaXRounded horizontal resize change rounded to a storage-slot increment
-     * @param deltaYRounded vertical resize change rounded to a storage-slot increment
-     * @param minSize       minimum dimensions needed to hold the current contents
-     * @param resourceCount number of resource items that must fit
-     * @param stepX         horizontal distance between storage slots
-     * @param stepY         vertical distance between storage slots
-     * @return the calculated new resource size
-     */
-    private Size calculateNewResourceSize(int deltaXRounded, int deltaYRounded, Size minSize,
-                                          int resourceCount, int stepX, int stepY) {
-        Size resizedSize = switch (draggingCornerIndex) {
-            case 0 -> new Size(originalResourceSize.width() - deltaXRounded,
-                    originalResourceSize.height() + deltaYRounded);
-            case 1 -> new Size(originalResourceSize.width() + deltaXRounded,
-                    originalResourceSize.height() + deltaYRounded);
-            case 2 -> new Size(originalResourceSize.width() - deltaXRounded,
-                    originalResourceSize.height() - deltaYRounded);
-            case 3 -> new Size(originalResourceSize.width() + deltaXRounded,
-                    originalResourceSize.height() - deltaYRounded);
-            default -> originalResourceSize;
-        };
-
-        int width = Math.max(minSize.width(), (resizedSize.width() / stepX) * stepX);
-        int height = Math.max(minSize.height(), (resizedSize.height() / stepY) * stepY);
-        if (!canFitResources(resourceCount, width, height, stepX, stepY)) {
-            Size validSize = findNearestValidSize(resourceCount, width, height, stepX, stepY);
-            width = validSize.width();
-            height = validSize.height();
-        }
-        return new Size(width, height);
+        ResourceAreaResizer.ResizeResult result = resourceAreaResizer.resize(
+                castle, draggingResourceArea, originalResourcePosition, originalResourceSize,
+                draggingCornerIndex, deltaX, deltaY);
+        panel.getEditorPanel().updateResourceAreaSize(draggingResourceArea, result.position(), result.size());
     }
 
     /**
@@ -1075,7 +1021,7 @@ final class CastleMouseHandler extends MouseAdapter {
     private void shiftDraggedPolygonPoint(int deltaX, int deltaY, double currentScale) {
         double castleDeltaX = deltaX / currentScale;
         double castleDeltaY = -deltaY / currentScale;
-        Point currentPoint = getCurrentPolygonPoint(draggingPolygonIndex, draggingPointIndex);
+        Point currentPoint = hitTester.polygonPointAt(panel.getCastle(), draggingPolygonIndex, draggingPointIndex);
         if (currentPoint != null) {
             int newX = (int) Math.round(currentPoint.x() + castleDeltaX);
             int newY = (int) Math.round(currentPoint.y() + castleDeltaY);
@@ -1178,7 +1124,7 @@ final class CastleMouseHandler extends MouseAdapter {
      */
     private void updateDraggedPolygonPosition(Point2D dragPoint, double currentLeft,
                                               double currentBottom, double currentScale) {
-        Polygon polygon = getPolygon(draggingPolygonIndex);
+        Polygon polygon = hitTester.polygonAt(panel.getCastle(), draggingPolygonIndex);
         if (polygon == null || polygonDragOffset == null) {
             return;
         }
@@ -1197,7 +1143,7 @@ final class CastleMouseHandler extends MouseAdapter {
         }
         panel.getEditorPanel().updatePolygonPoints(draggingPolygonIndex, newPoints);
 
-        Polygon updatedPolygon = getPolygon(draggingPolygonIndex);
+        Polygon updatedPolygon = hitTester.polygonAt(panel.getCastle(), draggingPolygonIndex);
         if (updatedPolygon != null) {
             panel.setSelectedPolygon(updatedPolygon);
         }
@@ -1222,467 +1168,4 @@ final class CastleMouseHandler extends MouseAdapter {
                 clickPoint.getY() - anchorScreenY);
     }
 
-    /**
-     * Returns the castle polygon at the specified polygon-only index.
-     *
-     * @param polygonIndex zero-based index among polygon drawing commands
-     * @return the polygon, or {@code null} if the castle or index is unavailable
-     */
-    private Polygon getPolygon(int polygonIndex) {
-        Castle castle = panel.getCastle();
-        if (castle == null) {
-            return null;
-        }
-        int currentPolygonIndex = 0;
-        for (DrawingCommand command : castle.drawing()) {
-            if (command instanceof Polygon polygon) {
-                if (currentPolygonIndex == polygonIndex) {
-                    return polygon;
-                }
-                currentPolygonIndex++;
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Returns a vertex from the currently displayed castle.
-     *
-     * @param polygonIndex zero-based index among polygon drawing commands
-     * @param pointIndex   zero-based vertex index within that polygon
-     * @return the vertex, or {@code null} if the castle or either index is unavailable
-     */
-    private Point getCurrentPolygonPoint(int polygonIndex, int pointIndex) {
-        Castle castle = panel.getCastle();
-        if (castle == null) {
-            return null;
-        }
-        int currentPolygonIndex = 0;
-        for (DrawingCommand command : castle.drawing()) {
-            if (command instanceof Polygon(List<Point> points)) {
-                if (currentPolygonIndex == polygonIndex) {
-                    if (pointIndex >= 0 && pointIndex < points.size()) {
-                        return points.get(pointIndex);
-                    }
-                    break;
-                }
-                currentPolygonIndex++;
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Finds the first polygon whose rendered interior contains the click.
-     *
-     * @param castle     castle whose polygons are hit-tested
-     * @param left       the castle origin x-coordinate
-     * @param bottom     the castle baseline y-coordinate
-     * @param scale      the rendering scale
-     * @param clickPoint mouse click position in panel coordinates
-     * @return the hit polygon, or {@code null} when no polygon contains the click
-     */
-    private Polygon findClickedPolygon(Castle castle, double left, double bottom, double scale, Point2D clickPoint) {
-        for (DrawingCommand command : castle.drawing()) {
-            if (command instanceof Polygon polygon) {
-                Path2D path = createPolygonPath(polygon, left, bottom, scale);
-                if (path.contains(clickPoint)) {
-                    return polygon;
-                }
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Transforms a castle polygon into a closed screen-space path.
-     *
-     * @param polygon polygon to transform
-     * @param left    the castle origin x-coordinate
-     * @param bottom  the castle baseline y-coordinate
-     * @param scale   the rendering scale
-     * @return closed path in panel coordinates
-     */
-    private Path2D createPolygonPath(Polygon polygon, double left, double bottom, double scale) {
-        Path2D path = new Path2D.Double();
-        Point first = polygon.points().getFirst();
-        path.moveTo(left + first.x() * scale, bottom - first.y() * scale);
-        for (int i = 1; i < polygon.points().size(); i++) {
-            Point point = polygon.points().get(i);
-            path.lineTo(left + point.x() * scale, bottom - point.y() * scale);
-        }
-        path.closePath();
-        return path;
-    }
-
-    /**
-     * Finds a polygon's position among the castle's polygon drawing commands.
-     *
-     * @param castle        castle whose drawing commands are searched
-     * @param targetPolygon polygon instance to locate
-     * @return zero-based polygon index, or {@code -1} if the instance is absent
-     */
-    private int findPolygonIndex(Castle castle, Polygon targetPolygon) {
-        int index = 0;
-        for (DrawingCommand command : castle.drawing()) {
-            if (command instanceof Polygon polygon) {
-                if (polygon == targetPolygon) {
-                    return index;
-                }
-                index++;
-            }
-        }
-        return -1;
-    }
-
-    /**
-     * Finds a vertex within the click hit radius.
-     *
-     * @param polygon    polygon whose vertices are checked
-     * @param left       the castle origin x-coordinate
-     * @param bottom     the castle baseline y-coordinate
-     * @param scale      the rendering scale
-     * @param clickPoint mouse click position in panel coordinates
-     * @return zero-based vertex index, or {@code -1} when no vertex is close enough
-     */
-    private int findClickedPointIndex(Polygon polygon, double left, double bottom, double scale, Point2D clickPoint) {
-        final double hitRadius = 6.0;
-        for (int i = 0; i < polygon.points().size(); i++) {
-            Point point = polygon.points().get(i);
-            double screenX = left + point.x() * scale;
-            double screenY = bottom - point.y() * scale;
-            double distance = clickPoint.distance(screenX, screenY);
-            if (distance <= hitRadius) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    /**
-     * Finds the cannon whose rendered bounds contain the click.
-     *
-     * @param castle     castle whose cannon positions are checked
-     * @param left       the castle origin x-coordinate
-     * @param bottom     the castle baseline y-coordinate
-     * @param scale      the rendering scale
-     * @param clickPoint mouse click position in panel coordinates
-     * @return zero-based cannon index, or {@code -1} when no cannon is hit
-     */
-    private int findClickedCannonIndex(Castle castle, double left, double bottom, double scale, Point2D clickPoint) {
-        for (int i = 0; i < castle.cannons().size(); i++) {
-            Point cannon = castle.cannons().get(i);
-            Rectangle2D cannonRect = CastleViewPanel.calculateCannonRectangle(cannon, left, bottom, scale);
-            if (cannonRect.contains(clickPoint)) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    /**
-     * Returns whether the pointer is inside the wind-vane bounds.
-     *
-     * @param castle     castle currently shown in the view
-     * @param left       the castle origin x-coordinate
-     * @param bottom     the castle baseline y-coordinate
-     * @param scale      the rendering scale
-     * @param clickPoint mouse click position in panel coordinates
-     * @return {@code true} if the wind vane is positioned and its rendered bounds contain the pointer
-     */
-    private boolean isWindVaneClicked(Castle castle, double left, double bottom, double scale, Point2D clickPoint) {
-        Point windVane = castle.windVane();
-        if (windVane.x() == Integer.MIN_VALUE || windVane.y() == Integer.MIN_VALUE) {
-            return false;
-        }
-        Rectangle2D windVaneRect = CastleViewPanel.calculateWindVaneRectangle(windVane, left, bottom, scale);
-        return windVaneRect.contains(clickPoint);
-    }
-
-    /**
-     * Returns whether the pointer is inside the throne bounds.
-     *
-     * @param castle     castle currently shown in the view
-     * @param left       the castle origin x-coordinate
-     * @param bottom     the castle baseline y-coordinate
-     * @param scale      the rendering scale
-     * @param clickPoint mouse click position in panel coordinates
-     * @return {@code true} if the throne is positioned and its rendered bounds contain the pointer
-     */
-    private boolean isThroneClicked(Castle castle, double left, double bottom, double scale, Point2D clickPoint) {
-        Point throne = castle.throne();
-        if (throne.x() == Integer.MIN_VALUE || throne.y() == Integer.MIN_VALUE) {
-            return false;
-        }
-        Rectangle2D throneRect = new Rectangle2D.Double(left + throne.x() * scale,
-                bottom - (throne.y() + CastleFileFormat.THRONE_HEIGHT) * scale,
-                CastleFileFormat.THRONE_WIDTH * scale, CastleFileFormat.THRONE_HEIGHT * scale);
-        return throneRect.contains(clickPoint);
-    }
-
-    /**
-     * Finds the storage area whose rendered rectangle contains the click.
-     *
-     * @param castle     castle whose storage areas are checked
-     * @param left       the castle origin x-coordinate
-     * @param bottom     the castle baseline y-coordinate
-     * @param scale      the rendering scale
-     * @param clickPoint mouse click position in panel coordinates
-     * @return the hit storage area, or {@code null} when no area contains the click
-     */
-    private ResourceArea findClickedResourceArea(Castle castle, double left, double bottom, double scale, Point2D clickPoint) {
-        // Check money area
-        Rectangle2D moneyRect = new Rectangle2D.Double(left + castle.money().x() * scale,
-                bottom - (castle.money().y() + castle.moneyRoom().height()) * scale,
-                castle.moneyRoom().width() * scale, castle.moneyRoom().height() * scale);
-        if (moneyRect.contains(clickPoint)) {
-            return ResourceArea.MONEY;
-        }
-
-        // Check powder area
-        Rectangle2D powderRect = new Rectangle2D.Double(left + castle.powder().x() * scale,
-                bottom - (castle.powder().y() + castle.powderRoom().height()) * scale,
-                castle.powderRoom().width() * scale, castle.powderRoom().height() * scale);
-        if (powderRect.contains(clickPoint)) {
-            return ResourceArea.POWDER;
-        }
-
-        // Check balls area
-        Rectangle2D ballsRect = new Rectangle2D.Double(left + castle.balls().x() * scale,
-                bottom - (castle.balls().y() + castle.ballRoom().height()) * scale,
-                castle.ballRoom().width() * scale, castle.ballRoom().height() * scale);
-        if (ballsRect.contains(clickPoint)) {
-            return ResourceArea.BALLS;
-        }
-
-        return null;
-    }
-
-    /**
-     * Finds the resize handle within the pointer hit radius.
-     *
-     * @param castle       castle containing the selected storage area
-     * @param resourceArea storage area whose corners are checked
-     * @param left         the castle origin x-coordinate
-     * @param bottom       the castle baseline y-coordinate
-     * @param scale        the rendering scale
-     * @param clickPoint   mouse click position in panel coordinates
-     * @return corner index (bottom-left 0, bottom-right 1, top-left 2, top-right 3), or {@code -1}
-     */
-    private int findClickedResourceCorner(Castle castle, ResourceArea resourceArea, double left, double bottom, double scale, Point2D clickPoint) {
-        final double hitRadius = 6.0;
-        Point position = getResourcePosition(castle, resourceArea);
-        Size size = getResourceSize(castle, resourceArea);
-
-        double x = left + position.x() * scale;
-        double y = bottom - (position.y() + size.height()) * scale;
-        double width = size.width() * scale;
-        double height = size.height() * scale;
-
-        // Check bottom-left corner (index 0)
-        double blY = y + height;
-        if (clickPoint.distance(x, blY) <= hitRadius) {
-            return 0;
-        }
-
-        // Check bottom-right corner (index 1)
-        double brX = x + width;
-        double brY = y + height;
-        if (clickPoint.distance(brX, brY) <= hitRadius) {
-            return 1;
-        }
-
-        // Check top-left corner (index 2)
-        if (clickPoint.distance(x, y) <= hitRadius) {
-            return 2;
-        }
-
-        // Check top-right corner (index 3)
-        double trX = x + width;
-        if (clickPoint.distance(trX, y) <= hitRadius) {
-            return 3;
-        }
-
-        return -1;
-    }
-
-    /**
-     * Returns the lower-left coordinate of the selected storage area.
-     *
-     * @param castle       castle containing the storage area
-     * @param resourceArea storage area to query
-     * @return its lower-left castle coordinate
-     */
-    private Point getResourcePosition(Castle castle, ResourceArea resourceArea) {
-        return switch (resourceArea) {
-            case MONEY -> castle.money();
-            case POWDER -> castle.powder();
-            case BALLS -> castle.balls();
-        };
-    }
-
-    /**
-     * Returns the dimensions of the selected storage area.
-     *
-     * @param castle       castle containing the storage area
-     * @param resourceArea storage area to query
-     * @return its width and height in castle coordinates
-     */
-    private Size getResourceSize(Castle castle, ResourceArea resourceArea) {
-        return switch (resourceArea) {
-            case MONEY -> castle.moneyRoom();
-            case POWDER -> castle.powderRoom();
-            case BALLS -> castle.ballRoom();
-        };
-    }
-
-    /**
-     * Returns the horizontal resource-slot spacing.
-     *
-     * @param resourceArea storage area whose slot spacing is requested
-     * @return width of one resource slot in castle coordinates
-     */
-    private int getResourceStepX(ResourceArea resourceArea) {
-        return switch (resourceArea) {
-            case MONEY -> CastleFileFormat.MONEY_WIDTH;
-            case POWDER -> CastleFileFormat.POWDER_WIDTH;
-            case BALLS -> CastleFileFormat.CANNONBALL_WIDTH;
-        };
-    }
-
-    /**
-     * Returns the vertical resource-slot spacing.
-     *
-     * @param resourceArea storage area whose slot spacing is requested
-     * @return height of one resource slot in castle coordinates
-     */
-    private int getResourceStepY(ResourceArea resourceArea) {
-        return switch (resourceArea) {
-            case MONEY -> CastleFileFormat.MONEY_HEIGHT;
-            case POWDER -> CastleFileFormat.POWDER_HEIGHT;
-            case BALLS -> CastleFileFormat.CANNONBALL_HEIGHT;
-        };
-    }
-
-    /**
-     * Returns the number of occupied sprite slots required by the starting quantity.
-     *
-     * @param castle       castle containing the starting resource values
-     * @param resourceArea resource type whose count is requested
-     * @return occupied slot count for that resource type
-     */
-    private int getResourceCount(Castle castle, ResourceArea resourceArea) {
-        return switch (resourceArea) {
-            case MONEY -> divideRoundedUp(castle.resources().money(), CastleFileFormat.MONEY_PER_UNIT);
-            case POWDER -> divideRoundedUp(castle.resources().powder(), CastleFileFormat.POWDER_PER_UNIT);
-            case BALLS -> castle.resources().balls();
-        };
-    }
-
-    /**
-     * Returns zero for non-positive values; otherwise rounds the quotient up to the next integer.
-     *
-     * @param value   starting quantity to convert to slots
-     * @param divisor quantity represented by each slot
-     * @return zero for non-positive values, otherwise the quotient rounded upward
-     */
-    private int divideRoundedUp(int value, int divisor) {
-        return value <= 0 ? 0 : (value + divisor - 1) / divisor;
-    }
-
-    /**
-     * Finds the smallest width and height that can hold the requested number of slots.
-     *
-     * @param resourceCount number of items that must fit
-     * @param stepX         slot width in castle coordinates
-     * @param stepY         slot height in castle coordinates
-     * @return minimum slot-aligned storage dimensions
-     */
-    private Size calculateMinimumSize(int resourceCount, int stepX, int stepY) {
-        if (resourceCount <= 0) {
-            return new Size(stepX, stepY);
-        }
-        // Find the minimum dimensions that can fit the resources in any arrangement
-        // Try different column counts from 1 to resourceCount
-        int minWidth = Integer.MAX_VALUE;
-        int minHeight = Integer.MAX_VALUE;
-
-        for (int columns = 1; columns <= resourceCount; columns++) {
-            int rows = (int) Math.ceil((double) resourceCount / columns);
-            int width = columns * stepX;
-            int height = rows * stepY;
-
-            // Track the minimum for each dimension across all valid arrangements
-            minWidth = Math.min(minWidth, width);
-            minHeight = Math.min(minHeight, height);
-        }
-
-        return new Size(minWidth, minHeight);
-    }
-
-    /**
-     * Returns whether the storage dimensions can hold the requested resource slots.
-     *
-     * @param resourceCount number of items that must fit
-     * @param width         proposed storage width in castle coordinates
-     * @param height        proposed storage height in castle coordinates
-     * @param stepX         slot width in castle coordinates
-     * @param stepY         slot height in castle coordinates
-     * @return {@code true} if the complete slots in the area can hold every item
-     */
-    private boolean canFitResources(int resourceCount, int width, int height, int stepX, int stepY) {
-        if (resourceCount <= 0) {
-            return true;
-        }
-        int columns = width / stepX;
-        int rows = height / stepY;
-        if (columns <= 0 || rows <= 0) {
-            return false;
-        }
-        return columns * rows >= resourceCount;
-    }
-
-    /**
-     * Finds the nearest slot-aligned size that can contain all resources.
-     *
-     * @param resourceCount number of items that must fit
-     * @param targetWidth   preferred storage width in castle coordinates
-     * @param targetHeight  preferred storage height in castle coordinates
-     * @param stepX         slot width in castle coordinates
-     * @param stepY         slot height in castle coordinates
-     * @return the slot-aligned dimensions closest to the target that fit every item
-     */
-    private Size findNearestValidSize(int resourceCount, int targetWidth, int targetHeight, int stepX, int stepY) {
-        if (resourceCount <= 0) {
-            // For zero resources, just ensure minimum size of one unit
-            return new Size(Math.max(stepX, targetWidth), Math.max(stepY, targetHeight));
-        }
-
-        // Ensure target dimensions are at least one unit
-        targetWidth = Math.max(stepX, targetWidth);
-        targetHeight = Math.max(stepY, targetHeight);
-
-        // Try to find a valid size close to the target
-        // First try keeping the width and adjusting height to fit resources
-        int columns = Math.max(1, targetWidth / stepX);
-        int rows = (int) Math.ceil((double) resourceCount / columns);
-        int validHeight = rows * stepY;
-        Size sizeWithFixedWidth = new Size(columns * stepX, validHeight);
-
-        // Then try keeping the height and adjusting width to fit resources
-        rows = Math.max(1, targetHeight / stepY);
-        columns = (int) Math.ceil((double) resourceCount / rows);
-        int validWidth = columns * stepX;
-        Size sizeWithFixedHeight = new Size(validWidth, rows * stepY);
-
-        // Choose the option closest to the target size
-        double diffWithFixedWidth = (double) Math.abs(sizeWithFixedWidth.width() - targetWidth) + Math.abs(sizeWithFixedWidth.height() - targetHeight);
-        double diffWithFixedHeight = (double) Math.abs(sizeWithFixedHeight.width() - targetWidth) + Math.abs(sizeWithFixedHeight.height() - targetHeight);
-
-        if (diffWithFixedWidth <= diffWithFixedHeight) {
-            return sizeWithFixedWidth;
-        } else {
-            return sizeWithFixedHeight;
-        }
-    }
 }
