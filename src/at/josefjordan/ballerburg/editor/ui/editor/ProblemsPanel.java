@@ -1,6 +1,7 @@
 package at.josefjordan.ballerburg.editor.ui.editor;
 
 import hgb.gui.HGBasePanel;
+import hgb.gui.HGBaseGuiTools;
 import hgb.lib.HGBaseText;
 
 import javax.swing.*;
@@ -19,13 +20,13 @@ final class ProblemsPanel extends HGBasePanel {
      */
     private final ProblemTableModel tableModel = new ProblemTableModel();
     /**
-     * Look-and-feel icon shown for blocking validation errors.
+     * Icon shown for blocking validation errors.
      */
-    private final transient Icon errorIcon = UIManager.getIcon("OptionPane.errorIcon");
+    private final transient Icon errorIcon = HGBaseGuiTools.loadImage("/gfx/error.png");
     /**
-     * Look-and-feel icon shown for non-blocking warnings.
+     * Icon shown for non-blocking warnings.
      */
-    private final transient Icon warningIcon = UIManager.getIcon("OptionPane.warningIcon");
+    private final transient Icon warningIcon = HGBaseGuiTools.loadImage("/gfx/warning.png");
 
     /**
      * Builds the sortable validation table with severity icons and localized headings.

@@ -79,6 +79,9 @@
         <msg code="view">Ansicht</msg>
         <msg code="polygon.hint">Klicken Sie, um Punkte hinzuzuf&#252;gen. Rechtsklick oder Enter zum Abschlie&#223;en. Esc zum Abbrechen.</msg>
         <msg code="polygon.selected_hint">Klicken Sie auf eine Kante, um einen Punkt hinzuzuf&#252;gen. Ziehen Sie Punkte, um sie zu verschieben. Klicken und ziehen Sie im Polygon, um es zu verschieben.</msg>
+        <msg code="aboutinfotabtitle">Über...</msg>
+        <msg code="credits_path">/html/de</msg>
+        <msg code="credits">Credits</msg>
 
     </language>
 
@@ -159,6 +162,9 @@
         <msg code="view">View</msg>
         <msg code="polygon.hint">Click to add points. Right-click or Enter to finish. Esc to cancel.</msg>
         <msg code="polygon.selected_hint">Click on an edge to add a point. Drag points to move them. Click and drag inside the polygon to move it.</msg>
+        <msg code="aboutinfotabtitle">About...</msg>
+        <msg code="credits_path">/html/en</msg>
+        <msg code="credits">Credits</msg>
 
     </language>
 

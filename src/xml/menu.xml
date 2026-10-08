@@ -77,7 +77,7 @@
         <image id="help.about" file="about.png"/>
         <image id="updating" file="updating.gif"/>
     </images>
-    <images path="/gfx/tools">
+    <images path="/gfx/menu">
         <image id="edit.undo" file="undo.png"/>
         <image id="edit.redo" file="redo.png"/>
         <image id="edit.delete_castle" file="delete_castle.png"/>
@@ -91,5 +91,8 @@
         <image id="edit.add_wall" file="add_wall.png"/>
         <image id="edit.add_roof" file="add_roof.png"/>
         <image id="edit.remove" file="remove.png"/>
+        <image id="settings.lan" file="language.png"/>
+        <image id="lan.de" file="lan_de.png"/>
+        <image id="lan.en" file="lan_en.png"/>
     </images>
 </menuconfig>

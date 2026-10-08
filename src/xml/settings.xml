@@ -12,6 +12,8 @@
     <set name="infoIcon" value="/gfx/info.png"/>
     <set name="infoUrl" value=""/>
 
+    <set name="addInfoHTMLPathMsg" value="credits_path"/>
+
     <!--<set name="infoHtmlPath" value="" />
     <set name="infoHtmlMsg" value="help.aboutpage" />
     <set name="infoHtmlWidth" value="400" />
