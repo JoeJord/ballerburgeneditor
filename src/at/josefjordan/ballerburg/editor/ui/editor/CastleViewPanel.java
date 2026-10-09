@@ -9,14 +9,10 @@ import hgb.gui.HGBasePanel;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseWheelEvent;
-import java.awt.geom.Line2D;
-import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * Draws one castle without owning or modifying editor state.
@@ -43,37 +39,13 @@ final class CastleViewPanel extends HGBasePanel {
      */
     private static final double MARGIN = 24.0;
     /**
-     * Grid interval in castle-coordinate units.
+     * Calculates the castle-coordinate bounds used to size and position rendered content.
      */
-    private static final int GRID_SPACING = 1;
+    private final CastleBoundsCalculator boundsCalculator = new CastleBoundsCalculator();
     /**
-     * Grid-line color.
+     * Renders the castle view from a snapshot of this panel's state.
      */
-    private static final Color COLOR_GRID = new Color(210, 210, 210);
-    /**
-     * Selection highlight color.
-     */
-    private static final Color COLOR_SELECTED = new Color(255, 255, 0);
-    /**
-     * Point and hover highlight color.
-     */
-    private static final Color COLOR_HIGHLIGHTED = new Color(255, 100, 100);
-    /**
-     * Polygon outline color.
-     */
-    private static final Color COLOR_OUTLINE = new Color(45, 45, 45);
-    /**
-     * Default polygon fill color.
-     */
-    private static final Color COLOR_FILL_DEFAULT = new Color(120, 130, 140);
-    /**
-     * Roof fill color.
-     */
-    private static final Color COLOR_FILL_ROOF = new Color(145, 65, 55);
-    /**
-     * Masonry fill color.
-     */
-    private static final Color COLOR_FILL_MASONRY = new Color(150, 150, 145);
+    private final CastleRenderer renderer = new CastleRenderer();
     /**
      * Castle currently rendered by this view, or {@code null} when no castle is selected.
      */
@@ -548,15 +520,11 @@ final class CastleViewPanel extends HGBasePanel {
      * Recalculates the preferred drawing size from the castle bounds and zoom.
      */
     private void updatePreferredSize() {
-        int[] bounds = calculateContentBounds();
-        int minimumX = bounds[0];
-        int minimumY = bounds[1];
-        int maximumY = bounds[2];
-        int maximumX = bounds[3];
+        CastleBoundsCalculator.Bounds bounds = boundsCalculator.calculate(castle);
         double scale = BASE_SCALE * zoomFactor;
         int baseWidth = castle != null ? castle.width() : 100;
-        int contentWidth = Math.max(baseWidth, maximumX - minimumX);
-        int contentHeight = maximumY - minimumY;
+        int contentWidth = Math.max(baseWidth, bounds.maximumX() - bounds.minimumX());
+        int contentHeight = bounds.maximumY() - bounds.minimumY();
         int preferredWidth = (int) Math.ceil(2 * MARGIN + contentWidth * scale);
         int preferredHeight = (int) Math.ceil(2 * MARGIN + contentHeight * scale);
         JViewport viewport = getViewport();
@@ -564,12 +532,12 @@ final class CastleViewPanel extends HGBasePanel {
             preferredWidth = adjustPreferredDimension(preferredWidth, viewport.getWidth(), renderingOffsetX);
             preferredHeight = adjustPreferredDimension(preferredHeight, viewport.getHeight(), renderingOffsetY);
         }
-        double[] renderingOrigin = calculateRenderingOrigin(minimumX, maximumY, scale,
+        double[] renderingOrigin = calculateRenderingOrigin(bounds, scale,
                 renderingOffsetX == 0 && renderingOffsetY == 0);
         preferredWidth = Math.max(preferredWidth,
-                (int) Math.ceil(renderingOrigin[0] + maximumX * scale + MARGIN));
+                (int) Math.ceil(renderingOrigin[0] + bounds.maximumX() * scale + MARGIN));
         preferredHeight = Math.max(preferredHeight,
-                (int) Math.ceil(renderingOrigin[1] - minimumY * scale + MARGIN));
+                (int) Math.ceil(renderingOrigin[1] - bounds.minimumY() * scale + MARGIN));
         setPreferredSize(new java.awt.Dimension(preferredWidth, preferredHeight));
         revalidate();
 
@@ -577,104 +545,6 @@ final class CastleViewPanel extends HGBasePanel {
         if (getParent() instanceof javax.swing.JViewport parentViewport) {
             parentViewport.revalidate();
         }
-    }
-
-    /**
-     * Calculates the extents of the castle drawing and positioned objects.
-     *
-     * @return four castle-coordinate bounds in {@code [minX, minY, maxY, maxX]} order
-     */
-    private int[] calculateContentBounds() {
-        int minimumX = 0;
-        int minimumY = 0;
-        int maximumY = 1;
-        int maximumX = castle == null ? 100 : castle.width();
-        if (castle == null) {
-            return new int[]{minimumX, minimumY, maximumY, maximumX};
-        }
-
-        for (DrawingCommand command : castle.drawing()) {
-            if (command instanceof Polygon(List<Point> points)) {
-                for (Point point : points) {
-                    minimumX = Math.min(minimumX, point.x());
-                    minimumY = Math.min(minimumY, point.y());
-                    maximumX = Math.max(maximumX, point.x());
-                    maximumY = Math.max(maximumY, point.y());
-                }
-            }
-        }
-        if (isPositioned(castle.throne())) {
-            Size throneSize = new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT);
-            minimumX = Math.min(minimumX, castle.throne().x());
-            minimumY = Math.min(minimumY, castle.throne().y());
-            maximumX = Math.max(maximumX, castle.throne().x() + CastleFileFormat.THRONE_WIDTH);
-            maximumY = Math.max(maximumY, areaTop(castle.throne(), throneSize));
-        }
-        for (Point cannon : castle.cannons()) {
-            minimumX = Math.min(minimumX, cannon.x());
-            minimumY = Math.min(minimumY, cannon.y());
-            maximumX = Math.max(maximumX, cannon.x() + CastleFileFormat.CANNON_WIDTH);
-            maximumY = Math.max(maximumY, cannon.y() + CastleFileFormat.CANNON_HEIGHT);
-        }
-        int[] bounds = updateResourceBounds(minimumX, minimumY, maximumY, maximumX);
-        minimumX = bounds[0];
-        minimumY = bounds[1];
-        maximumY = bounds[2];
-        maximumX = bounds[3];
-        if (isPositioned(castle.windVane())) {
-            minimumX = Math.min(minimumX, castle.windVane().x());
-            minimumY = Math.min(minimumY, castle.windVane().y());
-            maximumX = Math.max(maximumX, castle.windVane().x() + CastleFileFormat.WIND_VANE_WIDTH);
-            maximumY = Math.max(maximumY, castle.windVane().y() + CastleFileFormat.WIND_VANE_HEIGHT);
-        }
-        return new int[]{minimumX, minimumY, maximumY, maximumX};
-    }
-
-    /**
-     * Expands the castle bounds to include positioned resource-storage areas.
-     *
-     * @param minimumX current minimum horizontal castle coordinate
-     * @param minimumY current minimum vertical castle coordinate
-     * @param maximumY current maximum vertical castle coordinate
-     * @param maximumX current maximum horizontal castle coordinate
-     * @return bounds in {@code [minX, minY, maxY, maxX]} order
-     */
-    private int[] updateResourceBounds(int minimumX, int minimumY, int maximumY, int maximumX) {
-        Point money = castle.money();
-        Size moneyRoom = castle.moneyRoom();
-        if (isPositioned(money)) {
-            minimumX = Math.min(minimumX, money.x());
-            minimumY = Math.min(minimumY, money.y());
-            maximumX = Math.max(maximumX, money.x() + moneyRoom.width());
-            maximumY = Math.max(maximumY, areaTop(money, moneyRoom));
-        }
-        Point powder = castle.powder();
-        Size powderRoom = castle.powderRoom();
-        if (isPositioned(powder)) {
-            minimumX = Math.min(minimumX, powder.x());
-            minimumY = Math.min(minimumY, powder.y());
-            maximumX = Math.max(maximumX, powder.x() + powderRoom.width());
-            maximumY = Math.max(maximumY, areaTop(powder, powderRoom));
-        }
-        Point balls = castle.balls();
-        Size ballRoom = castle.ballRoom();
-        if (isPositioned(balls)) {
-            minimumX = Math.min(minimumX, balls.x());
-            minimumY = Math.min(minimumY, balls.y());
-            maximumX = Math.max(maximumX, balls.x() + ballRoom.width());
-            maximumY = Math.max(maximumY, areaTop(balls, ballRoom));
-        }
-        return new int[]{minimumX, minimumY, maximumY, maximumX};
-    }
-
-    /**
-     * Returns whether both coordinates identify a positioned object.
-     *
-     * @param point coordinate pair to test for the unset-position sentinel
-     * @return {@code true} if neither coordinate uses the unset-position sentinel
-     */
-    private boolean isPositioned(Point point) {
-        return point.x() != Integer.MIN_VALUE && point.y() != Integer.MIN_VALUE;
     }
 
     /**
@@ -690,34 +560,6 @@ final class CastleViewPanel extends HGBasePanel {
             preferred += (int) Math.ceil(Math.abs(renderingOffset));
         }
         return Math.max(preferred, viewportDimension);
-    }
-
-    /**
-     * Calculates the greatest y-coordinate occupied by the castle and its objects.
-     *
-     * @return greatest occupied vertical coordinate, or {@code 1} when no content extends above 1
-     */
-    private int calculateMaximumY() {
-        int maximumY = 1;
-        if (castle != null) {
-            for (DrawingCommand command : castle.drawing()) {
-                if (command instanceof Polygon(List<Point> points)) {
-                    for (Point point : points) {
-                        maximumY = Math.max(maximumY, point.y());
-                    }
-                }
-            }
-            if (castle.throne().x() != Integer.MIN_VALUE && castle.throne().y() != Integer.MIN_VALUE) {
-                maximumY = Math.max(maximumY, areaTop(castle.throne(),
-                        new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT)));
-            }
-            maximumY = Math.max(maximumY, calculateMaximumCannonY(castle));
-            maximumY = Math.max(maximumY, areaTop(castle.money(), castle.moneyRoom()));
-            maximumY = Math.max(maximumY, areaTop(castle.powder(), castle.powderRoom()));
-            maximumY = Math.max(maximumY, areaTop(castle.balls(), castle.ballRoom()));
-            maximumY = Math.max(maximumY, castle.windVane().y() + CastleFileFormat.WIND_VANE_HEIGHT);
-        }
-        return maximumY;
     }
 
     /**
@@ -754,11 +596,9 @@ final class CastleViewPanel extends HGBasePanel {
      * @return an array containing the left origin, bottom origin, and scale
      */
     private double[] calculateRenderingParameters(boolean center) {
-        int[] bounds = calculateBounds();
-        int minimumX = bounds[0];
-        int baseMaximumY = calculateMaximumY();
+        CastleBoundsCalculator.Bounds bounds = boundsCalculator.calculate(castle);
         double scale = BASE_SCALE * zoomFactor;
-        double[] origin = calculateRenderingOrigin(minimumX, baseMaximumY, scale, center);
+        double[] origin = calculateRenderingOrigin(bounds, scale, center);
         double left = origin[0];
         double bottom = origin[1];
         return new double[]{left, bottom, scale};
@@ -767,18 +607,16 @@ final class CastleViewPanel extends HGBasePanel {
     /**
      * Calculates the on-screen origin from the content bounds, scale, and centering state.
      *
-     * @param minimumX minimum castle x-coordinate included in the content bounds
-     * @param maximumY maximum castle y-coordinate included in the content bounds
-     * @param scale    the rendering scale
-     * @param center   whether to center the content within the panel before applying offsets
+     * @param bounds castle-coordinate extents
+     * @param scale  the rendering scale
+     * @param center whether to center the content within the panel before applying offsets
      * @return left and bottom screen-space origins as {@code [x, y]}
      */
-    private double[] calculateRenderingOrigin(int minimumX, int maximumY, double scale, boolean center) {
-        int[] bounds = calculateBounds();
-        int minimumY = bounds[1];
-        int contentWidthInUnits = Math.max(castle != null ? castle.width() : 100, bounds[2] - minimumX);
+    private double[] calculateRenderingOrigin(CastleBoundsCalculator.Bounds bounds, double scale, boolean center) {
+        int contentWidthInUnits = Math.max(castle != null ? castle.width() : 100,
+                bounds.maximumX() - bounds.minimumX());
         double contentWidth = 2 * MARGIN + contentWidthInUnits * scale;
-        double contentHeight = 2 * MARGIN + (maximumY - minimumY) * scale;
+        double contentHeight = 2 * MARGIN + (bounds.maximumY() - bounds.minimumY()) * scale;
         double horizontalOffset = center
                 ? Math.max(0, (getWidth() - contentWidth) / 2.0)
                 : 0;
@@ -786,19 +624,9 @@ final class CastleViewPanel extends HGBasePanel {
                 ? Math.max(0, (getHeight() - contentHeight) / 2.0)
                 : 0;
         return new double[]{
-                MARGIN - minimumX * scale + horizontalOffset + renderingOffsetX,
-                MARGIN + maximumY * scale + verticalOffset + renderingOffsetY,
+                MARGIN - bounds.minimumX() * scale + horizontalOffset + renderingOffsetX,
+                MARGIN + bounds.maximumY() * scale + verticalOffset + renderingOffsetY,
         };
-    }
-
-    /**
-     * Returns the castle content bounds in minimum-x, minimum-y, maximum-x, maximum-y order.
-     *
-     * @return bounds in {@code [minX, minY, maxX, maxY]} order
-     */
-    private int[] calculateBounds() {
-        int[] bounds = calculateContentBounds();
-        return new int[]{bounds[0], bounds[1], bounds[3], bounds[2]};
     }
 
     @Override
@@ -809,440 +637,22 @@ final class CastleViewPanel extends HGBasePanel {
         }
         Graphics2D g = (Graphics2D) graphics.create();
         try {
-            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            if (castle != null) {
-                if (gridVisible) {
-                    drawGrid(g);
-                }
-                drawCastle(g);
-            }
-            if (polygonCreationMode) {
-                drawPolygonCreation(g);
-            }
+            CastleBoundsCalculator.Bounds bounds = boundsCalculator.calculate(castle);
+            double scale = BASE_SCALE * zoomFactor;
+            double[] origin = calculateRenderingOrigin(bounds, scale,
+                    renderingOffsetX == 0 && renderingOffsetY == 0);
+            Point2D edgeHoverMarker = castle != null && selectedPolygon != null && edgeHoverPosition != null
+                    ? findClosestPointOnEdge(selectedPolygon, edgeHoverPosition, origin[0], origin[1], scale)
+                    : null;
+            CastleRenderer.RenderState state = new CastleRenderer.RenderState(castle, selectedPolygon,
+                    selectedPointIndex, selectedCannonIndex, selectedThrone, selectedWindVane,
+                    selectedResourceArea, draggingResourceCorner, gridVisible, polygonCreationMode,
+                    polygonType, creationPoints, mousePosition, edgeHoverMarker,
+                    origin[0], origin[1], scale, getWidth(), getHeight());
+            renderer.draw(g, state);
         } finally {
             g.dispose();
         }
-    }
-
-    /**
-     * Draws the grid.
-     *
-     * @param g graphics context used to draw the grid
-     */
-    private void drawGrid(Graphics2D g) {
-        int[] bounds = calculateBounds();
-        double scale = BASE_SCALE * zoomFactor;
-        double[] origin = calculateRenderingOrigin(bounds[0], calculateMaximumY(), scale,
-                renderingOffsetX == 0 && renderingOffsetY == 0);
-        double left = origin[0];
-        double bottom = origin[1];
-
-        g.setColor(COLOR_GRID);
-        g.setStroke(new BasicStroke(1.0f));
-        int firstX = (int) Math.floor(-left / scale / GRID_SPACING) * GRID_SPACING;
-        int lastX = (int) Math.ceil((getWidth() - left) / scale / GRID_SPACING) * GRID_SPACING;
-        int firstY = (int) Math.floor((bottom - getHeight()) / scale / GRID_SPACING) * GRID_SPACING;
-        int lastY = (int) Math.ceil(bottom / scale / GRID_SPACING) * GRID_SPACING;
-        for (int x = firstX; x <= lastX; x += GRID_SPACING) {
-            double screenX = left + x * scale;
-            g.draw(new Line2D.Double(screenX, 0, screenX, getHeight()));
-        }
-        for (int y = firstY; y <= lastY; y += GRID_SPACING) {
-            double screenY = bottom - y * scale;
-            g.draw(new Line2D.Double(0, screenY, getWidth(), screenY));
-        }
-    }
-
-    /**
-     * Draws the castle.
-     *
-     * @param g graphics context used to draw the castle
-     */
-    private void drawCastle(Graphics2D g) {
-        int[] bounds = calculateBounds();
-        int minimumX = bounds[0];
-        int baseMaximumY = calculateMaximumY();
-
-        double scale = BASE_SCALE * zoomFactor;
-        if (scale <= 0) {
-            return;
-        }
-        double[] origin = calculateRenderingOrigin(minimumX, baseMaximumY, scale,
-                renderingOffsetX == 0 && renderingOffsetY == 0);
-        double left = origin[0];
-        double bottom = origin[1];
-        drawCastlePolygons(g, left, bottom, scale);
-        drawCastleObjects(g, left, bottom, scale);
-        drawEdgeHover(g, left, bottom, scale);
-    }
-
-    /**
-     * Draws the castle polygons.
-     *
-     * @param g      graphics context used to draw the castle polygons
-     * @param left   the castle origin x-coordinate
-     * @param bottom the castle baseline y-coordinate
-     * @param scale  the rendering scale
-     */
-    private void drawCastlePolygons(Graphics2D g, double left, double bottom, double scale) {
-        // Start fill style is 2,9 (masonry) according to BALLER.DAT
-        Color fill = colorFor(new FillStyle(CastleFileFormat.FILL_STYLE_PATTERN, CastleFileFormat.FILL_INDEX_MASONRY));
-        g.setStroke(new BasicStroke(1.0f));
-        for (DrawingCommand command : castle.drawing()) {
-            if (command instanceof FillStyle style) {
-                fill = colorFor(style);
-            } else if (command instanceof Polygon polygon) {
-                drawPolygon(g, polygon, fill, left, bottom, scale);
-            }
-        }
-    }
-
-    /**
-     * Draws the polygon.
-     *
-     * @param g       graphics context used to draw the polygon
-     * @param polygon castle polygon to render
-     * @param fill    color used to fill the polygon
-     * @param left    the castle origin x-coordinate
-     * @param bottom  the castle baseline y-coordinate
-     * @param scale   the rendering scale
-     */
-    private void drawPolygon(Graphics2D g, Polygon polygon, Color fill, double left, double bottom, double scale) {
-        Path2D path = new Path2D.Double();
-        Point first = polygon.points().getFirst();
-        path.moveTo(left + first.x() * scale, bottom - first.y() * scale);
-        for (int i = 1; i < polygon.points().size(); i++) {
-            Point point = polygon.points().get(i);
-            path.lineTo(left + point.x() * scale, bottom - point.y() * scale);
-        }
-        path.closePath();
-        g.setColor(fill);
-        g.fill(path);
-        g.setColor(COLOR_OUTLINE);
-        g.draw(path);
-        if (polygon == selectedPolygon) {
-            drawSelectedPolygonPoints(g, polygon, left, bottom, scale);
-        }
-    }
-
-    /**
-     * Draws the selected polygon points.
-     *
-     * @param g       graphics context used to draw the vertex markers
-     * @param polygon selected polygon whose vertices are marked
-     * @param left    the castle origin x-coordinate
-     * @param bottom  the castle baseline y-coordinate
-     * @param scale   the rendering scale
-     */
-    private void drawSelectedPolygonPoints(Graphics2D g, Polygon polygon, double left, double bottom, double scale) {
-        for (int i = 0; i < polygon.points().size(); i++) {
-            Point point = polygon.points().get(i);
-            double screenX = left + point.x() * scale;
-            double screenY = bottom - point.y() * scale;
-            if (i == selectedPointIndex) {
-                g.setColor(COLOR_SELECTED);
-                g.fill(new Rectangle2D.Double(screenX - 4, screenY - 4, 8, 8));
-            } else {
-                g.setColor(COLOR_HIGHLIGHTED);
-                g.fill(new Rectangle2D.Double(screenX - 3, screenY - 3, 6, 6));
-            }
-        }
-    }
-
-    /**
-     * Draws the castle objects.
-     *
-     * @param g      graphics context used to draw the castle objects
-     * @param left   the castle origin x-coordinate
-     * @param bottom the castle baseline y-coordinate
-     * @param scale  the rendering scale
-     */
-    private void drawCastleObjects(Graphics2D g, double left, double bottom, double scale) {
-        drawThrone(g, left, bottom, scale);
-        drawResourceAreas(g, left, bottom, scale);
-        drawCannons(g, left, bottom, scale);
-        drawResourceContents(g, left, bottom, scale);
-        drawWindVane(g, left, bottom, scale);
-    }
-
-    /**
-     * Draws the throne.
-     *
-     * @param g      graphics context used to draw the throne
-     * @param left   the castle origin x-coordinate
-     * @param bottom the castle baseline y-coordinate
-     * @param scale  the rendering scale
-     */
-    private void drawThrone(Graphics2D g, double left, double bottom, double scale) {
-        if (!isPositioned(castle.throne())) {
-            return;
-        }
-        drawArea(g, castle.throne(),
-                new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT), left, bottom, scale);
-        if (selectedThrone) {
-            Rectangle2D throneRect = new Rectangle2D.Double(left + castle.throne().x() * scale,
-                    bottom - (castle.throne().y() + CastleFileFormat.THRONE_HEIGHT) * scale,
-                    CastleFileFormat.THRONE_WIDTH * scale, CastleFileFormat.THRONE_HEIGHT * scale);
-            g.setColor(COLOR_SELECTED);
-            g.setStroke(new BasicStroke(2.0f));
-            g.draw(throneRect);
-            g.setStroke(new BasicStroke(1.0f));
-        }
-        drawSprite(g, Sprites.KING, castle.throne(), left, bottom, scale);
-    }
-
-    /**
-     * Draws the resource areas.
-     *
-     * @param g      graphics context used to draw storage areas
-     * @param left   the castle origin x-coordinate
-     * @param bottom the castle baseline y-coordinate
-     * @param scale  the rendering scale
-     */
-    private void drawResourceAreas(Graphics2D g, double left, double bottom, double scale) {
-        drawArea(g, castle.money(), castle.moneyRoom(), left, bottom, scale);
-        if (selectedResourceArea == ResourceArea.MONEY) {
-            drawCornerPoints(g, castle.money(), castle.moneyRoom(), left, bottom, scale);
-        }
-        drawArea(g, castle.powder(), castle.powderRoom(), left, bottom, scale);
-        if (selectedResourceArea == ResourceArea.POWDER) {
-            drawCornerPoints(g, castle.powder(), castle.powderRoom(), left, bottom, scale);
-        }
-        drawArea(g, castle.balls(), castle.ballRoom(), left, bottom, scale);
-        if (selectedResourceArea == ResourceArea.BALLS) {
-            drawCornerPoints(g, castle.balls(), castle.ballRoom(), left, bottom, scale);
-        }
-    }
-
-    /**
-     * Draws the cannons.
-     *
-     * @param g      graphics context used to draw cannons
-     * @param left   the castle origin x-coordinate
-     * @param bottom the castle baseline y-coordinate
-     * @param scale  the rendering scale
-     */
-    private void drawCannons(Graphics2D g, double left, double bottom, double scale) {
-        for (int i = 0; i < castle.cannons().size(); i++) {
-            Point cannon = castle.cannons().get(i);
-            drawSprite(g, Sprites.CANNON, cannon, left, bottom, scale);
-            if (i == selectedCannonIndex) {
-                g.setColor(COLOR_SELECTED);
-                g.setStroke(new BasicStroke(2.0f));
-                g.draw(calculateCannonRectangle(cannon, left, bottom, scale));
-                g.setStroke(new BasicStroke(1.0f));
-            }
-        }
-    }
-
-    /**
-     * Draws the resource contents.
-     *
-     * @param g      graphics context used to draw stored resource sprites
-     * @param left   the castle origin x-coordinate
-     * @param bottom the castle baseline y-coordinate
-     * @param scale  the rendering scale
-     */
-    private void drawResourceContents(Graphics2D g, double left, double bottom, double scale) {
-        drawResources(g, new ResourceDisplay(Sprites.MONEY, castle.money(), castle.moneyRoom(),
-                CastleFileFormat.MONEY_WIDTH, CastleFileFormat.MONEY_HEIGHT,
-                divideRoundedUp(castle.resources().money(), CastleFileFormat.MONEY_PER_UNIT)), left, bottom, scale);
-        drawResources(g, new ResourceDisplay(Sprites.POWDER, castle.powder(), castle.powderRoom(),
-                CastleFileFormat.POWDER_WIDTH, CastleFileFormat.POWDER_HEIGHT,
-                divideRoundedUp(castle.resources().powder(), CastleFileFormat.POWDER_PER_UNIT)), left, bottom, scale);
-        drawResources(g, new ResourceDisplay(Sprites.BALL, castle.balls(), castle.ballRoom(),
-                CastleFileFormat.CANNONBALL_WIDTH, CastleFileFormat.CANNONBALL_HEIGHT,
-                castle.resources().balls()), left, bottom, scale);
-    }
-
-    /**
-     * Draws the wind vane.
-     *
-     * @param g      graphics context used to draw the wind vane
-     * @param left   the castle origin x-coordinate
-     * @param bottom the castle baseline y-coordinate
-     * @param scale  the rendering scale
-     */
-    private void drawWindVane(Graphics2D g, double left, double bottom, double scale) {
-        if (!isPositioned(castle.windVane())) {
-            return;
-        }
-        drawSprite(g, Sprites.WIND_VANE, castle.windVane(), left, bottom, scale);
-        if (selectedWindVane) {
-            Rectangle2D windVaneRect = calculateWindVaneRectangle(castle.windVane(), left, bottom, scale);
-            g.setColor(COLOR_SELECTED);
-            g.setStroke(new BasicStroke(2.0f));
-            g.draw(windVaneRect);
-            g.setStroke(new BasicStroke(1.0f));
-        }
-    }
-
-    /**
-     * Draws the edge hover.
-     *
-     * @param g      graphics context used to draw the edge-hover marker
-     * @param left   the castle origin x-coordinate
-     * @param bottom the castle baseline y-coordinate
-     * @param scale  the rendering scale
-     */
-    private void drawEdgeHover(Graphics2D g, double left, double bottom, double scale) {
-        if (selectedPolygon != null && edgeHoverPosition != null) {
-            Point2D hoverPoint = findClosestPointOnEdge(selectedPolygon, edgeHoverPosition, left, bottom, scale);
-            if (hoverPoint != null) {
-                g.setColor(COLOR_SELECTED);
-                g.fill(new Rectangle2D.Double(hoverPoint.getX() - 4, hoverPoint.getY() - 4, 8, 8));
-            }
-        }
-    }
-
-    /**
-     * Returns the upper y-coordinate of the positioned area.
-     *
-     * @param position lower-left castle coordinate of the area
-     * @param size     width and height of the area
-     * @return the y-coordinate of the top edge of the positioned area
-     */
-    private int areaTop(Point position, Size size) {
-        return position.y() + size.height();
-    }
-
-    /**
-     * Draws the area.
-     *
-     * @param g        graphics context used to draw the storage area
-     * @param position lower-left castle coordinate of the area
-     * @param size     width and height of the area
-     * @param left     the castle origin x-coordinate
-     * @param bottom   the castle baseline y-coordinate
-     * @param scale    the rendering scale
-     */
-    private void drawArea(Graphics2D g, Point position, Size size,
-                          double left, double bottom, double scale) {
-        Rectangle2D area = new Rectangle2D.Double(left + position.x() * scale,
-                bottom - (position.y() + size.height()) * scale,
-                size.width() * scale, size.height() * scale);
-        g.setColor(Color.WHITE);
-        g.fill(area);
-    }
-
-    /**
-     * Draws the sprite.
-     *
-     * @param g        graphics context used to draw the sprite
-     * @param sprite   encoded vector data for the sprite
-     * @param position lower-left castle coordinate where the sprite is placed
-     * @param left     the castle origin x-coordinate
-     * @param bottom   the castle baseline y-coordinate
-     * @param scale    the rendering scale
-     */
-    private void drawSprite(Graphics2D g, int[] sprite, Point position,
-                            double left, double bottom, double scale) {
-        Sprites.draw(g, sprite, left + position.x() * scale,
-                bottom - position.y() * scale, scale);
-    }
-
-    /**
-     * Draws the resources.
-     *
-     * @param g       graphics context used to draw the slots
-     * @param display sprite, slot spacing, area, and occupied count to render
-     * @param left    the castle origin x-coordinate
-     * @param bottom  the castle baseline y-coordinate
-     * @param scale   the rendering scale
-     */
-    private void drawResources(Graphics2D g, ResourceDisplay display, double left, double bottom, double scale) {
-        int remaining = Math.max(0, display.count());
-        for (int y = 0; remaining > 0 && y < display.room().height(); y += display.stepY()) {
-            for (int x = 0; remaining > 0 && x < display.room().width(); x += display.stepX(), remaining--) {
-                drawSprite(g, display.sprite(),
-                        new Point(display.position().x() + x, display.position().y() + y),
-                        left, bottom, scale);
-            }
-        }
-        // Draw semi-transparent placeholders for empty slots
-        int slotIndex = 0;
-        for (int y = 0; y < display.room().height(); y += display.stepY()) {
-            for (int x = 0; x < display.room().width(); x += display.stepX()) {
-                if (slotIndex >= display.count()) {
-                    Sprites.draw(g, display.sprite(),
-                            left + (display.position().x() + x) * scale,
-                            bottom - (display.position().y() + y) * scale, scale, 0.15f);
-                }
-                slotIndex++;
-            }
-        }
-    }
-
-    /**
-     * Describes the sprite and storage geometry used to render resource slots.
-     *
-     * @param sprite   sprite data to draw in each slot
-     * @param position lower-left storage-area position
-     * @param room     storage-area dimensions
-     * @param stepX    horizontal spacing between slots
-     * @param stepY    vertical spacing between slots
-     * @param count    number of occupied slots to draw
-     */
-    private record ResourceDisplay(int[] sprite, Point position, Size room, int stepX, int stepY, int count) {
-        @Override
-        public boolean equals(Object other) {
-            if (this == other) {
-                return true;
-            }
-            if (!(other instanceof ResourceDisplay(
-                    int[] sprite1, Point position1, Size room1, int x, int y, int count1
-            ))) {
-                return false;
-            }
-            return Arrays.equals(sprite, sprite1)
-                    && Objects.equals(position, position1)
-                    && Objects.equals(room, room1)
-                    && stepX == x
-                    && stepY == y
-                    && count == count1;
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(Arrays.hashCode(sprite), position, room, stepX, stepY, count);
-        }
-
-        @Override
-        public String toString() {
-            return "ResourceDisplay[sprite=" + Arrays.toString(sprite)
-                    + ", position=" + position
-                    + ", room=" + room
-                    + ", stepX=" + stepX
-                    + ", stepY=" + stepY
-                    + ", count=" + count + "]";
-        }
-    }
-
-    /**
-     * Returns zero for non-positive values; otherwise rounds the quotient up to the next integer.
-     *
-     * @param value   starting resource quantity
-     * @param divisor resource quantity represented by one occupied slot
-     * @return zero for non-positive values, otherwise the quotient rounded upward
-     */
-    private int divideRoundedUp(int value, int divisor) {
-        return value <= 0 ? 0 : (value + divisor - 1) / divisor;
-    }
-
-    /**
-     * Chooses the display color corresponding to a drawing fill style.
-     *
-     * @param style the fill style value
-     * @return the display color mapped from the fill style
-     */
-    private Color colorFor(FillStyle style) {
-        if (style.style() == CastleFileFormat.FILL_STYLE_PATTERN && style.index() == CastleFileFormat.FILL_INDEX_ROOF) {
-            return COLOR_FILL_ROOF;
-        }
-        if (style.style() == CastleFileFormat.FILL_STYLE_PATTERN && style.index() == CastleFileFormat.FILL_INDEX_MASONRY) {
-            return COLOR_FILL_MASONRY;
-        }
-        return COLOR_FILL_DEFAULT;
     }
 
     /**
@@ -1277,73 +687,6 @@ final class CastleViewPanel extends HGBasePanel {
         double screenWidth = CastleFileFormat.WIND_VANE_WIDTH * scale;
         double screenHeight = (CastleFileFormat.WIND_VANE_HEIGHT + 1) * scale;
         return new Rectangle2D.Double(screenX, screenY - (CastleFileFormat.WIND_VANE_HEIGHT + 1) * scale, screenWidth, screenHeight);
-    }
-
-    /**
-     * Finds the highest y-coordinate reached by a cannon in the castle.
-     *
-     * @param castle castle whose cannon positions are inspected
-     * @return the maximum cannon top coordinate, or 1 when the castle has no cannons
-     */
-    static int calculateMaximumCannonY(Castle castle) {
-        int maximumY = 1;
-        for (Point cannon : castle.cannons()) {
-            maximumY = Math.max(maximumY, cannon.y() + CastleFileFormat.CANNON_HEIGHT);
-        }
-        return maximumY;
-    }
-
-    /**
-     * Draws the corner points.
-     *
-     * @param g        graphics context used to draw the resize handles
-     * @param position lower-left castle coordinate of the selected storage area
-     * @param size     width and height of the selected storage area
-     * @param left     the castle origin x-coordinate
-     * @param bottom   the castle baseline y-coordinate
-     * @param scale    the rendering scale
-     */
-    private void drawCornerPoints(Graphics2D g, Point position, Size size, double left, double bottom, double scale) {
-        double x = left + position.x() * scale;
-        double y = bottom - (position.y() + size.height()) * scale;
-        double width = size.width() * scale;
-        double height = size.height() * scale;
-
-        // Bottom-left corner (index 0)
-        if (draggingResourceCorner == 0) {
-            g.setColor(COLOR_SELECTED);
-            g.fill(new Rectangle2D.Double(x - 4, (y + height) - 4, 8, 8));
-        } else {
-            g.setColor(COLOR_HIGHLIGHTED);
-            g.fill(new Rectangle2D.Double(x - 3, (y + height) - 3, 6, 6));
-        }
-
-        // Bottom-right corner (index 1)
-        if (draggingResourceCorner == 1) {
-            g.setColor(COLOR_SELECTED);
-            g.fill(new Rectangle2D.Double((x + width) - 4, (y + height) - 4, 8, 8));
-        } else {
-            g.setColor(COLOR_HIGHLIGHTED);
-            g.fill(new Rectangle2D.Double((x + width) - 3, (y + height) - 3, 6, 6));
-        }
-
-        // Top-left corner (index 2)
-        if (draggingResourceCorner == 2) {
-            g.setColor(COLOR_SELECTED);
-            g.fill(new Rectangle2D.Double(x - 4, y - 4, 8, 8));
-        } else {
-            g.setColor(COLOR_HIGHLIGHTED);
-            g.fill(new Rectangle2D.Double(x - 3, y - 3, 6, 6));
-        }
-
-        // Top-right corner (index 3)
-        if (draggingResourceCorner == 3) {
-            g.setColor(COLOR_SELECTED);
-            g.fill(new Rectangle2D.Double((x + width) - 4, y - 4, 8, 8));
-        } else {
-            g.setColor(COLOR_HIGHLIGHTED);
-            g.fill(new Rectangle2D.Double((x + width) - 3, y - 3, 6, 6));
-        }
     }
 
     /**
@@ -1411,98 +754,6 @@ final class CastleViewPanel extends HGBasePanel {
     void addCreationPoint(Point point) {
         creationPoints.add(point);
         repaint();
-    }
-
-    /**
-     * Draws the polygon creation.
-     *
-     * @param g graphics context used to draw the in-progress polygon
-     */
-    private void drawPolygonCreation(Graphics2D g) {
-        if (creationPoints.isEmpty() && mousePosition == null) {
-            return;
-        }
-
-        // Calculate scale and position
-        int[] bounds = calculateBounds();
-        int minimumX = bounds[0];
-        int baseMaximumY = calculateMaximumY();
-
-        double scale = BASE_SCALE * zoomFactor;
-        if (scale <= 0) {
-            return;
-        }
-        double[] origin = calculateRenderingOrigin(minimumX, baseMaximumY, scale,
-                renderingOffsetX == 0 && renderingOffsetY == 0);
-        double left = origin[0];
-        double bottom = origin[1];
-
-        // Set color based on polygon type
-        Color fillColor = "wall".equals(polygonType) ? COLOR_FILL_MASONRY : COLOR_FILL_ROOF;
-
-        // Draw polygon preview with mouse position as last point
-        if (creationPoints.size() >= 2 && mousePosition != null) {
-            Path2D path = createPolygonPreviewPath(left, bottom, scale);
-            g.setColor(fillColor);
-            g.fill(path);
-            g.setColor(COLOR_OUTLINE);
-            g.setStroke(new BasicStroke(1.0f));
-            g.draw(path);
-        } else if (creationPoints.size() >= 2) {
-            // Draw lines between points without mouse position
-            Path2D path = createPolygonPath(left, bottom, scale);
-            g.setColor(fillColor);
-            g.setStroke(new BasicStroke(1.0f));
-            g.draw(path);
-        }
-
-        // Draw points
-        for (Point point : creationPoints) {
-            double screenX = left + point.x() * scale;
-            double screenY = bottom - point.y() * scale;
-            g.setColor(COLOR_SELECTED);
-            g.fill(new Rectangle2D.Double(screenX - 4, screenY - 4, 8, 8));
-        }
-
-        // Draw yellow square at mouse position
-        if (mousePosition != null) {
-            g.setColor(Color.YELLOW);
-            g.fill(new Rectangle2D.Double(mousePosition.getX() - 4, mousePosition.getY() - 4, 8, 8));
-        }
-    }
-
-    /**
-     * Creates the polygon preview path.
-     *
-     * @param left   the castle origin x-coordinate
-     * @param bottom the castle baseline y-coordinate
-     * @param scale  the rendering scale
-     * @return the created polygon preview path
-     */
-    private Path2D createPolygonPreviewPath(double left, double bottom, double scale) {
-        Path2D path = createPolygonPath(left, bottom, scale);
-        path.lineTo(mousePosition.getX(), mousePosition.getY());
-        path.closePath();
-        return path;
-    }
-
-    /**
-     * Creates the polygon path.
-     *
-     * @param left   the castle origin x-coordinate
-     * @param bottom the castle baseline y-coordinate
-     * @param scale  the rendering scale
-     * @return the created polygon path
-     */
-    private Path2D createPolygonPath(double left, double bottom, double scale) {
-        Path2D path = new Path2D.Double();
-        Point first = creationPoints.getFirst();
-        path.moveTo(left + first.x() * scale, bottom - first.y() * scale);
-        for (int i = 1; i < creationPoints.size(); i++) {
-            Point point = creationPoints.get(i);
-            path.lineTo(left + point.x() * scale, bottom - point.y() * scale);
-        }
-        return path;
     }
 
     /**
