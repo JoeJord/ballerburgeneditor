@@ -1,10 +1,11 @@
-package at.josefjordan.ballerburg.editor.ui.editor;
+package at.josefjordan.ballerburg.editor.ui.editor.castle;
 
 import at.josefjordan.ballerburg.editor.model.CastleDocument;
 import at.josefjordan.ballerburg.editor.model.CastleDocument.Castle;
 import at.josefjordan.ballerburg.editor.model.CastleDocument.Point;
 import at.josefjordan.ballerburg.editor.model.CastleDocument.Size;
 import at.josefjordan.ballerburg.editor.model.CastleFileFormat;
+import at.josefjordan.ballerburg.editor.ui.editor.problems.ProblemsPanel;
 import hgb.lib.HGBaseText;
 
 import java.awt.geom.Path2D;
@@ -15,7 +16,7 @@ import java.util.List;
 /**
  * Validates castle data and produces localized findings for the editor.
  */
-final class CastleValidator {
+public final class CastleValidator {
     /**
      * Maximum permitted horizontal span of positioned castle elements, in castle coordinates.
      */
@@ -39,7 +40,7 @@ final class CastleValidator {
      * @param castle castle to validate
      * @return validation findings in display order
      */
-    List<ProblemsPanel.Problem> validate(Castle castle) {
+    public List<ProblemsPanel.Problem> validate(Castle castle) {
         List<ProblemsPanel.Problem> problems = new ArrayList<>();
         if (castle == null) {
             return problems;

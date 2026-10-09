@@ -1,4 +1,4 @@
-package at.josefjordan.ballerburg.editor.ui.editor;
+package at.josefjordan.ballerburg.editor.ui.editor.castle;
 
 import at.josefjordan.ballerburg.editor.model.CastleDocument.Castle;
 import at.josefjordan.ballerburg.editor.model.CastleDocument.Point;
@@ -9,7 +9,7 @@ import at.josefjordan.ballerburg.editor.model.CastleFileFormat;
 /**
  * Creates immutable castle snapshots with updated resource-storage data.
  */
-final class ResourceAreaEditor {
+public final class ResourceAreaEditor {
     /**
      * Sentinel lower-left position used to mark an absent resource area.
      */
@@ -26,7 +26,7 @@ final class ResourceAreaEditor {
      * @param area   resource area to create
      * @return updated castle snapshot
      */
-    Castle add(Castle castle, ResourceArea area) {
+    public Castle add(Castle castle, ResourceArea area) {
         Point origin = new Point(0, 0);
         return withArea(castle, area, origin, slotSize(area), castle.resources());
     }
@@ -39,7 +39,7 @@ final class ResourceAreaEditor {
      * @param position new lower-left position
      * @return updated castle snapshot
      */
-    Castle move(Castle castle, ResourceArea area, Point position) {
+    public Castle move(Castle castle, ResourceArea area, Point position) {
         return withArea(castle, area, position, areaSize(castle, area), castle.resources());
     }
 
@@ -52,7 +52,7 @@ final class ResourceAreaEditor {
      * @param size     new dimensions
      * @return updated castle snapshot
      */
-    Castle resize(Castle castle, ResourceArea area, Point position, Size size) {
+    public Castle resize(Castle castle, ResourceArea area, Point position, Size size) {
         return withArea(castle, area, position, size, castle.resources());
     }
 
@@ -63,7 +63,7 @@ final class ResourceAreaEditor {
      * @param area   resource area to remove
      * @return updated castle snapshot
      */
-    Castle remove(Castle castle, ResourceArea area) {
+    public Castle remove(Castle castle, ResourceArea area) {
         Resources oldResources = castle.resources();
         Resources newResources = switch (area) {
             case MONEY -> new Resources(0, oldResources.powder(), oldResources.balls(), oldResources.people());

@@ -1,4 +1,4 @@
-package at.josefjordan.ballerburg.editor.ui.editor;
+package at.josefjordan.ballerburg.editor.ui.editor.problems;
 
 import hgb.gui.HGBasePanel;
 import hgb.gui.HGBaseGuiTools;
@@ -14,7 +14,7 @@ import java.util.List;
 /**
  * Displays validation problems for the current castle.
  */
-final class ProblemsPanel extends HGBasePanel {
+public final class ProblemsPanel extends HGBasePanel {
     /**
      * Model holding the severity and localized description for each validation finding.
      */
@@ -31,7 +31,7 @@ final class ProblemsPanel extends HGBasePanel {
     /**
      * Builds the sortable validation table with severity icons and localized headings.
      */
-    ProblemsPanel() {
+    public ProblemsPanel() {
         super(new BorderLayout());
         setBorder(BorderFactory.createTitledBorder(HGBaseText.getText("problems.title")));
         JTable table = new JTable(tableModel);
@@ -50,7 +50,7 @@ final class ProblemsPanel extends HGBasePanel {
      *
      * @param problems the problems to display
      */
-    void setProblems(List<Problem> problems) {
+    public void setProblems(List<Problem> problems) {
         tableModel.setProblems(problems);
     }
 
@@ -143,7 +143,7 @@ final class ProblemsPanel extends HGBasePanel {
     /**
      * The severity levels assigned to validation problems.
      */
-    enum ProblemSeverity {
+    public enum ProblemSeverity {
         /**
          * A problem that prevents a castle from being saved without confirmation.
          */
@@ -160,6 +160,6 @@ final class ProblemsPanel extends HGBasePanel {
      * @param severity severity of the problem
      * @param text     user-visible problem description
      */
-    record Problem(ProblemSeverity severity, String text) {
+    public record Problem(ProblemSeverity severity, String text) {
     }
 }

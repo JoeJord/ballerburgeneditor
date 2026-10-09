@@ -6,6 +6,9 @@ import at.josefjordan.ballerburg.editor.model.CastleDocument.Point;
 import at.josefjordan.ballerburg.editor.model.CastleDocument.Resources;
 import at.josefjordan.ballerburg.editor.model.CastleDocument.Size;
 import at.josefjordan.ballerburg.editor.model.CastleFileFormat;
+import at.josefjordan.ballerburg.editor.ui.editor.castle.*;
+import at.josefjordan.ballerburg.editor.ui.editor.problems.ProblemsPanel;
+import at.josefjordan.ballerburg.editor.ui.editor.properties.PropertyPalettePanel;
 import hgb.gui.HGBasePanel;
 import hgb.lib.HGBaseText;
 

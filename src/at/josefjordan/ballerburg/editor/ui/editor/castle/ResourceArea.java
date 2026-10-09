@@ -1,4 +1,4 @@
-package at.josefjordan.ballerburg.editor.ui.editor;
+package at.josefjordan.ballerburg.editor.ui.editor.castle;
 
 /**
  * Identifies the three resource-storage areas that can be edited in a castle.

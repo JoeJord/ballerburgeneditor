@@ -1,4 +1,4 @@
-package at.josefjordan.ballerburg.editor.ui.editor;
+package at.josefjordan.ballerburg.editor.ui.editor.castle;
 
 import javax.swing.JScrollPane;
 import javax.swing.JViewport;

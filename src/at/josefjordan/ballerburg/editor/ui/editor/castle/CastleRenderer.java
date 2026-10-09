@@ -1,4 +1,4 @@
-package at.josefjordan.ballerburg.editor.ui.editor;
+package at.josefjordan.ballerburg.editor.ui.editor.castle;
 
 import at.josefjordan.ballerburg.editor.model.CastleDocument.Castle;
 import at.josefjordan.ballerburg.editor.model.CastleDocument.DrawingCommand;
@@ -24,21 +24,37 @@ import java.util.Objects;
  * Renders a snapshot of a castle view without owning or modifying editor state.
  */
 final class CastleRenderer {
-    /** Grid-line interval in castle-coordinate units. */
+    /**
+     * Grid-line interval in castle-coordinate units.
+     */
     private static final int GRID_SPACING = 1;
-    /** Color used for grid lines. */
+    /**
+     * Color used for grid lines.
+     */
     private static final Color COLOR_GRID = new Color(210, 210, 210);
-    /** Color used for selected objects and vertices. */
+    /**
+     * Color used for selected objects and vertices.
+     */
     private static final Color COLOR_SELECTED = new Color(255, 255, 0);
-    /** Color used for unselected polygon vertices and resize handles. */
+    /**
+     * Color used for unselected polygon vertices and resize handles.
+     */
     private static final Color COLOR_HIGHLIGHTED = new Color(255, 100, 100);
-    /** Outline color used for castle polygons. */
+    /**
+     * Outline color used for castle polygons.
+     */
     private static final Color COLOR_OUTLINE = new Color(45, 45, 45);
-    /** Fallback fill color for unrecognized polygon fill styles. */
+    /**
+     * Fallback fill color for unrecognized polygon fill styles.
+     */
     private static final Color COLOR_FILL_DEFAULT = new Color(120, 130, 140);
-    /** Fill color used for roof polygons. */
+    /**
+     * Fill color used for roof polygons.
+     */
     private static final Color COLOR_FILL_ROOF = new Color(145, 65, 55);
-    /** Fill color used for masonry polygons. */
+    /**
+     * Fill color used for masonry polygons.
+     */
     private static final Color COLOR_FILL_MASONRY = new Color(150, 150, 145);
 
     /**
@@ -512,8 +528,10 @@ final class CastleRenderer {
             if (this == other) {
                 return true;
             }
-            if (!(other instanceof ResourceDisplay(int[] otherSprite, Point otherPosition, Size otherRoom,
-                    int otherStepX, int otherStepY, int otherCount))) {
+            if (!(other instanceof ResourceDisplay(
+                    int[] otherSprite, Point otherPosition, Size otherRoom,
+                    int otherStepX, int otherStepY, int otherCount
+            ))) {
                 return false;
             }
             return Arrays.equals(sprite, otherSprite)
@@ -573,6 +591,7 @@ final class CastleRenderer {
             mousePosition = copyPoint(mousePosition);
             edgeHoverMarker = copyPoint(edgeHoverMarker);
         }
+
         /**
          * Creates an immutable snapshot of the pointer position.
          *

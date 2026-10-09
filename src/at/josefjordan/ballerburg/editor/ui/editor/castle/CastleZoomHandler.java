@@ -1,4 +1,4 @@
-package at.josefjordan.ballerburg.editor.ui.editor;
+package at.josefjordan.ballerburg.editor.ui.editor.castle;
 
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;

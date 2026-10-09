@@ -1,4 +1,4 @@
-package at.josefjordan.ballerburg.editor.ui.editor;
+package at.josefjordan.ballerburg.editor.ui.editor.properties;
 
 import at.josefjordan.ballerburg.editor.model.CastleDocument.Castle;
 import at.josefjordan.ballerburg.editor.model.CastleDocument.Resources;
@@ -14,7 +14,7 @@ import java.util.function.Consumer;
 /**
  * Property palette for the editable values of the selected castle.
  */
-final class PropertyPalettePanel extends HGBasePanel {
+public final class PropertyPalettePanel extends HGBasePanel {
     /**
      * Localized heading for the selected castle's editable properties.
      */
@@ -63,7 +63,7 @@ final class PropertyPalettePanel extends HGBasePanel {
     /**
      * Creates the localized resource controls and wires their change notifications.
      */
-    PropertyPalettePanel() {
+    public PropertyPalettePanel() {
         super(new GridBagLayout());
         setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
         GridBagConstraints constraints = new GridBagConstraints();
@@ -84,10 +84,10 @@ final class PropertyPalettePanel extends HGBasePanel {
         constraints.weighty = 1.0;
         add(new JLabel(), constraints);
 
-        moneySpinner.addChangeListener(event -> fireResourcesChanged());
-        powderSpinner.addChangeListener(event -> fireResourcesChanged());
-        ballsSpinner.addChangeListener(event -> fireResourcesChanged());
-        peopleSpinner.addChangeListener(event -> fireResourcesChanged());
+        moneySpinner.addChangeListener(_ -> fireResourcesChanged());
+        powderSpinner.addChangeListener(_ -> fireResourcesChanged());
+        ballsSpinner.addChangeListener(_ -> fireResourcesChanged());
+        peopleSpinner.addChangeListener(_ -> fireResourcesChanged());
         actualizeText();
         setCastle(null);
     }
@@ -97,7 +97,7 @@ final class PropertyPalettePanel extends HGBasePanel {
      *
      * @param resourcesListener the callback notified when resource values change
      */
-    void setResourcesListener(Consumer<Resources> resourcesListener) {
+    public void setResourcesListener(Consumer<Resources> resourcesListener) {
         this.resourcesListener = resourcesListener;
     }
 
@@ -106,7 +106,7 @@ final class PropertyPalettePanel extends HGBasePanel {
      *
      * @param castle castle whose resource values and storage capacities to display, or {@code null} to clear
      */
-    void setCastle(Castle castle) {
+    public void setCastle(Castle castle) {
         updating = true;
         try {
             Resources resources = castle == null ? new Resources(0, 0, 0, 0) : castle.resources();

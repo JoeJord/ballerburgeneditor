@@ -1,4 +1,4 @@
-package at.josefjordan.ballerburg.editor.ui.editor;
+package at.josefjordan.ballerburg.editor.ui.editor.castle;
 
 import at.josefjordan.ballerburg.editor.model.CastleDocument.Castle;
 import at.josefjordan.ballerburg.editor.model.CastleDocument.DrawingCommand;
@@ -13,9 +13,13 @@ import java.util.List;
  * Calculates castle-coordinate bounds occupied by the castle geometry and positioned objects.
  */
 final class CastleBoundsCalculator {
-    /** Default castle width used when calculating bounds for an empty view. */
+    /**
+     * Default castle width used when calculating bounds for an empty view.
+     */
     private static final int EMPTY_CASTLE_DEFAULT_WIDTH = 100;
-    /** Lowest upper bound used for content that has no objects extending above the baseline. */
+    /**
+     * Lowest upper bound used for content that has no objects extending above the baseline.
+     */
     private static final int MINIMUM_CONTENT_MAX_Y = 1;
 
     /**

@@ -1,9 +1,10 @@
-package at.josefjordan.ballerburg.editor.ui.editor;
+package at.josefjordan.ballerburg.editor.ui.editor.castle;
 
 import at.josefjordan.ballerburg.editor.model.CastleDocument.*;
 import at.josefjordan.ballerburg.editor.model.CastleDocument.Point;
 import at.josefjordan.ballerburg.editor.model.CastleDocument.Polygon;
 import at.josefjordan.ballerburg.editor.model.CastleFileFormat;
+import at.josefjordan.ballerburg.editor.ui.editor.EditorPanel;
 import hgb.gui.HGBasePanel;
 
 import javax.swing.*;
@@ -17,7 +18,7 @@ import java.util.List;
 /**
  * Draws one castle without owning or modifying editor state.
  */
-final class CastleViewPanel extends HGBasePanel {
+public final class CastleViewPanel extends HGBasePanel {
     /**
      * Minimum supported zoom factor (10%).
      */
@@ -41,11 +42,11 @@ final class CastleViewPanel extends HGBasePanel {
     /**
      * Calculates the castle-coordinate bounds used to size and position rendered content.
      */
-    private final CastleBoundsCalculator boundsCalculator = new CastleBoundsCalculator();
+    private final transient CastleBoundsCalculator boundsCalculator = new CastleBoundsCalculator();
     /**
      * Renders the castle view from a snapshot of this panel's state.
      */
-    private final CastleRenderer renderer = new CastleRenderer();
+    private final transient CastleRenderer renderer = new CastleRenderer();
     /**
      * Castle currently rendered by this view, or {@code null} when no castle is selected.
      */
@@ -130,7 +131,7 @@ final class CastleViewPanel extends HGBasePanel {
     /**
      * Creates the castle canvas and installs its mouse and wheel handlers.
      */
-    CastleViewPanel() {
+    public CastleViewPanel() {
         addMouseListener(new CastleMouseHandler(this));
         addMouseWheelListener(new CastleZoomHandler(this));
     }
@@ -140,7 +141,7 @@ final class CastleViewPanel extends HGBasePanel {
      *
      * @param editorPanel editor that receives edits made in this view
      */
-    void setEditorPanel(EditorPanel editorPanel) {
+    public void setEditorPanel(EditorPanel editorPanel) {
         this.editorPanel = editorPanel;
     }
 
@@ -149,7 +150,7 @@ final class CastleViewPanel extends HGBasePanel {
      *
      * @param visible whether the grid should be visible
      */
-    void setGridVisible(boolean visible) {
+    public void setGridVisible(boolean visible) {
         if (gridVisible != visible) {
             gridVisible = visible;
             repaint();
@@ -161,7 +162,7 @@ final class CastleViewPanel extends HGBasePanel {
      *
      * @return {@code true} if the castle grid is currently visible
      */
-    boolean isGridVisible() {
+    public boolean isGridVisible() {
         return gridVisible;
     }
 
@@ -170,7 +171,7 @@ final class CastleViewPanel extends HGBasePanel {
      *
      * @param zoomListener the callback notified when zoom changes
      */
-    void setZoomListener(Runnable zoomListener) {
+    public void setZoomListener(Runnable zoomListener) {
         this.zoomListener = zoomListener;
     }
 
@@ -179,7 +180,7 @@ final class CastleViewPanel extends HGBasePanel {
      *
      * @param listener the callback to notify when selection changes
      */
-    void setPolygonSelectionListener(Runnable listener) {
+    public void setPolygonSelectionListener(Runnable listener) {
         this.polygonSelectionListener = listener;
     }
 
@@ -188,7 +189,7 @@ final class CastleViewPanel extends HGBasePanel {
      *
      * @param castle castle data to display, or {@code null} to clear the view
      */
-    void setCastle(Castle castle) {
+    public void setCastle(Castle castle) {
         this.castle = castle;
         selectedPolygon = null;
         selectedCannonIndex = -1;
@@ -214,7 +215,7 @@ final class CastleViewPanel extends HGBasePanel {
      *
      * @param castle replacement castle data for the current view
      */
-    void updateCastle(Castle castle) {
+    public void updateCastle(Castle castle) {
         this.castle = castle;
         updatePreferredSize();
         repaint();
@@ -243,7 +244,7 @@ final class CastleViewPanel extends HGBasePanel {
      *
      * @param polygon polygon to select, or {@code null} to clear polygon selection
      */
-    void setSelectedPolygon(Polygon polygon) {
+    public void setSelectedPolygon(Polygon polygon) {
         if (polygon != selectedPolygon) {
             selectedPolygon = polygon;
             edgeHoverPosition = null;
@@ -259,7 +260,7 @@ final class CastleViewPanel extends HGBasePanel {
      *
      * @return the selected polygon, or null when none is selected
      */
-    Polygon getSelectedPolygon() {
+    public Polygon getSelectedPolygon() {
         return selectedPolygon;
     }
 
@@ -268,7 +269,7 @@ final class CastleViewPanel extends HGBasePanel {
      *
      * @return the selected vertex index, or -1 when none is selected
      */
-    int getSelectedPointIndex() {
+    public int getSelectedPointIndex() {
         return selectedPointIndex;
     }
 
@@ -277,7 +278,7 @@ final class CastleViewPanel extends HGBasePanel {
      *
      * @param index selected vertex index, or {@code -1} to clear vertex selection
      */
-    void setSelectedPointIndex(int index) {
+    public void setSelectedPointIndex(int index) {
         if (selectedPointIndex != index) {
             selectedPointIndex = index;
             repaint();
@@ -289,7 +290,7 @@ final class CastleViewPanel extends HGBasePanel {
      *
      * @return the selected cannon index, or -1 when none is selected
      */
-    int getSelectedCannonIndex() {
+    public int getSelectedCannonIndex() {
         return selectedCannonIndex;
     }
 
@@ -298,7 +299,7 @@ final class CastleViewPanel extends HGBasePanel {
      *
      * @param index selected cannon index, or {@code -1} to clear cannon selection
      */
-    void setSelectedCannonIndex(int index) {
+    public void setSelectedCannonIndex(int index) {
         if (selectedCannonIndex != index) {
             selectedCannonIndex = index;
             repaint();
@@ -310,7 +311,7 @@ final class CastleViewPanel extends HGBasePanel {
      *
      * @return {@code true} if the throne is selected
      */
-    boolean isSelectedThrone() {
+    public boolean isSelectedThrone() {
         return selectedThrone;
     }
 
@@ -319,7 +320,7 @@ final class CastleViewPanel extends HGBasePanel {
      *
      * @param selected whether the throne should be selected
      */
-    void setSelectedThrone(boolean selected) {
+    public void setSelectedThrone(boolean selected) {
         if (selectedThrone != selected) {
             selectedThrone = selected;
             repaint();
@@ -331,7 +332,7 @@ final class CastleViewPanel extends HGBasePanel {
      *
      * @return {@code true} if the wind vane is selected
      */
-    boolean isSelectedWindVane() {
+    public boolean isSelectedWindVane() {
         return selectedWindVane;
     }
 
@@ -340,7 +341,7 @@ final class CastleViewPanel extends HGBasePanel {
      *
      * @param selected whether the wind vane should be selected
      */
-    void setSelectedWindVane(boolean selected) {
+    public void setSelectedWindVane(boolean selected) {
         if (selectedWindVane != selected) {
             selectedWindVane = selected;
             repaint();
@@ -352,7 +353,7 @@ final class CastleViewPanel extends HGBasePanel {
      *
      * @return the selected resource area, or null when none is selected
      */
-    ResourceArea getSelectedResourceArea() {
+    public ResourceArea getSelectedResourceArea() {
         return selectedResourceArea;
     }
 
@@ -361,7 +362,7 @@ final class CastleViewPanel extends HGBasePanel {
      *
      * @param resourceArea selected storage area, or {@code null} to clear the selection
      */
-    void setSelectedResourceArea(ResourceArea resourceArea) {
+    public void setSelectedResourceArea(ResourceArea resourceArea) {
         if (!java.util.Objects.equals(selectedResourceArea, resourceArea)) {
             selectedResourceArea = resourceArea;
             draggingResourceCorner = -1;
@@ -490,7 +491,7 @@ final class CastleViewPanel extends HGBasePanel {
      *
      * @return the current zoom factor
      */
-    double getZoomFactor() {
+    public double getZoomFactor() {
         return zoomFactor;
     }
 
@@ -499,7 +500,7 @@ final class CastleViewPanel extends HGBasePanel {
      *
      * @param zoomFactor the desired zoom factor
      */
-    void setZoomFactor(double zoomFactor) {
+    public void setZoomFactor(double zoomFactor) {
         double boundedZoomFactor = Math.clamp(zoomFactor, MIN_ZOOM_FACTOR, MAX_ZOOM_FACTOR);
         if (this.zoomFactor == boundedZoomFactor) {
             return;
@@ -694,7 +695,7 @@ final class CastleViewPanel extends HGBasePanel {
      *
      * @param type fill category for the new polygon ({@code "wall"} or {@code "roof"})
      */
-    void startPolygonCreation(String type) {
+    public void startPolygonCreation(String type) {
         polygonCreationMode = true;
         polygonType = type;
         creationPoints.clear();
@@ -711,7 +712,7 @@ final class CastleViewPanel extends HGBasePanel {
     /**
      * Cancels polygon creation and clears its status-bar hint.
      */
-    void cancelPolygonCreation() {
+    public void cancelPolygonCreation() {
         polygonCreationMode = false;
         polygonType = null;
         creationPoints.clear();
@@ -724,7 +725,7 @@ final class CastleViewPanel extends HGBasePanel {
      *
      * @return {@code true} while the view is collecting vertices for a new polygon
      */
-    boolean isInPolygonCreationMode() {
+    public boolean isInPolygonCreationMode() {
         return polygonCreationMode;
     }
 
@@ -733,7 +734,7 @@ final class CastleViewPanel extends HGBasePanel {
      *
      * @return the active polygon category, or {@code null} when creation is inactive
      */
-    String getPolygonType() {
+    public String getPolygonType() {
         return polygonType;
     }
 
@@ -759,7 +760,7 @@ final class CastleViewPanel extends HGBasePanel {
     /**
      * Clears the in-progress polygon and exits polygon-creation mode.
      */
-    void finishPolygonCreation() {
+    public void finishPolygonCreation() {
         polygonCreationMode = false;
         polygonType = null;
         creationPoints.clear();

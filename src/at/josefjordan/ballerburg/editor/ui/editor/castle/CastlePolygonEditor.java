@@ -1,4 +1,4 @@
-package at.josefjordan.ballerburg.editor.ui.editor;
+package at.josefjordan.ballerburg.editor.ui.editor.castle;
 
 import at.josefjordan.ballerburg.editor.model.CastleDocument.Castle;
 import at.josefjordan.ballerburg.editor.model.CastleDocument.DrawingCommand;
@@ -13,7 +13,7 @@ import java.util.List;
 /**
  * Applies immutable polygon and drawing-command edits to castle snapshots.
  */
-final class CastlePolygonEditor {
+public final class CastlePolygonEditor {
     /**
      * Appends a polygon with the fill style corresponding to its creation category.
      *
@@ -22,7 +22,7 @@ final class CastlePolygonEditor {
      * @param polygonType polygon category, {@code "wall"} or {@code "roof"}
      * @return castle snapshot containing the appended fill-style and polygon commands
      */
-    Castle add(Castle castle, List<Point> points, String polygonType) {
+    public Castle add(Castle castle, List<Point> points, String polygonType) {
         List<DrawingCommand> drawing = new ArrayList<>(castle.drawing());
         int fillIndex = "wall".equals(polygonType)
                 ? CastleFileFormat.FILL_INDEX_MASONRY : CastleFileFormat.FILL_INDEX_ROOF;
@@ -40,7 +40,7 @@ final class CastlePolygonEditor {
      * @param newPoint     replacement vertex
      * @return castle snapshot with the vertex replaced
      */
-    Castle updatePoint(Castle castle, int polygonIndex, int pointIndex, Point newPoint) {
+    public Castle updatePoint(Castle castle, int polygonIndex, int pointIndex, Point newPoint) {
         List<DrawingCommand> drawing = new ArrayList<>();
         int currentPolygonIndex = 0;
         for (DrawingCommand command : castle.drawing()) {
@@ -68,7 +68,7 @@ final class CastlePolygonEditor {
      * @param newPoints    replacement polygon vertices
      * @return castle snapshot with the polygon replaced
      */
-    Castle updatePoints(Castle castle, int polygonIndex, List<Point> newPoints) {
+    public Castle updatePoints(Castle castle, int polygonIndex, List<Point> newPoints) {
         List<DrawingCommand> drawing = new ArrayList<>();
         int currentPolygonIndex = 0;
         for (DrawingCommand command : castle.drawing()) {
@@ -89,7 +89,7 @@ final class CastlePolygonEditor {
      * @param polygon polygon instance to remove
      * @return castle snapshot without the polygon commands
      */
-    Castle remove(Castle castle, Polygon polygon) {
+    public Castle remove(Castle castle, Polygon polygon) {
         List<DrawingCommand> drawing = new ArrayList<>();
         for (DrawingCommand command : castle.drawing()) {
             if (!(command instanceof Polygon candidate) || candidate != polygon) {
@@ -106,7 +106,7 @@ final class CastlePolygonEditor {
      * @param targetPolygon polygon instance to find
      * @return zero-based index among polygon commands, or {@code -1} when absent
      */
-    int indexOf(Castle castle, Polygon targetPolygon) {
+    public int indexOf(Castle castle, Polygon targetPolygon) {
         int index = 0;
         for (DrawingCommand command : castle.drawing()) {
             if (command instanceof Polygon polygon) {
@@ -126,7 +126,7 @@ final class CastlePolygonEditor {
      * @param polygonIndex zero-based index among polygon commands
      * @return polygon at that index, or {@code null} when it is absent
      */
-    Polygon polygonAt(Castle castle, int polygonIndex) {
+    public Polygon polygonAt(Castle castle, int polygonIndex) {
         int index = 0;
         for (DrawingCommand command : castle.drawing()) {
             if (command instanceof Polygon polygon) {
