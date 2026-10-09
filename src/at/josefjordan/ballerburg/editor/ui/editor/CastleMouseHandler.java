@@ -2,10 +2,8 @@ package at.josefjordan.ballerburg.editor.ui.editor;
 
 import at.josefjordan.ballerburg.editor.model.CastleDocument.*;
 
-import javax.swing.*;
 import java.awt.event.*;
 import java.awt.geom.Point2D;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -21,21 +19,13 @@ final class CastleMouseHandler extends MouseAdapter {
      */
     private final CastleHitTester hitTester = new CastleHitTester();
     /**
+     * Owns polygon vertex and polygon movement state during drag gestures.
+     */
+    private final CastlePolygonDragHandler polygonDragHandler;
+    /**
      * Calculates slot-aware storage geometry during resize gestures.
      */
     private final ResourceAreaResizer resourceAreaResizer = new ResourceAreaResizer();
-    /**
-     * Index of the polygon being dragged, or {@code -1} when none is active.
-     */
-    private int draggingPolygonIndex = -1;
-    /**
-     * Index of the dragged polygon vertex, or {@code -1} when moving the whole polygon.
-     */
-    private int draggingPointIndex = -1;
-    /**
-     * Whether the active polygon drag moves all of its vertices.
-     */
-    private boolean draggingEntirePolygon = false;
     /**
      * Index of the cannon being dragged, or {@code -1} when none is active.
      */
@@ -89,10 +79,6 @@ final class CastleMouseHandler extends MouseAdapter {
      */
     private Point2D dragStartPoint;
     /**
-     * Screen-space offset from the polygon's anchor vertex to the pointer.
-     */
-    private Point2D polygonDragOffset;
-    /**
      * Scrolls the castle view while a drag pointer remains near a viewport edge.
      */
     private final CastleDragAutoScroller autoScroller;
@@ -104,6 +90,7 @@ final class CastleMouseHandler extends MouseAdapter {
      */
     CastleMouseHandler(CastleViewPanel panel) {
         this.panel = panel;
+        polygonDragHandler = new CastlePolygonDragHandler(panel, hitTester);
         autoScroller = new CastleDragAutoScroller(panel, this::applyEdgeScrollDelta);
 
         panel.addMouseMotionListener(createMouseMotionListener());
@@ -472,9 +459,7 @@ final class CastleMouseHandler extends MouseAdapter {
      * @param pointIndex   zero-based vertex index within that polygon
      */
     private void startPolygonPointDrag(int polygonIndex, int pointIndex) {
-        draggingPolygonIndex = polygonIndex;
-        draggingPointIndex = pointIndex;
-        draggingEntirePolygon = false;
+        polygonDragHandler.startPointDrag(polygonIndex, pointIndex);
         panel.setSelectedPointIndex(pointIndex);
         clearNonPolygonSelections();
     }
@@ -491,10 +476,7 @@ final class CastleMouseHandler extends MouseAdapter {
      */
     private void startPolygonMove(int polygonIndex, Polygon polygon, double left, double bottom, double scale,
                                   Point2D clickPoint) {
-        draggingPolygonIndex = polygonIndex;
-        draggingPointIndex = -1;
-        draggingEntirePolygon = true;
-        polygonDragOffset = createPolygonDragOffset(polygon, left, bottom, scale, clickPoint);
+        polygonDragHandler.startPolygonMove(polygonIndex, polygon, left, bottom, scale, clickPoint);
         panel.setSelectedPointIndex(-1);
         clearNonPolygonSelections();
     }
@@ -567,9 +549,7 @@ final class CastleMouseHandler extends MouseAdapter {
     @Override
     public void mouseReleased(MouseEvent e) {
         panel.getEditorPanel().endHistoryGroup();
-        draggingPolygonIndex = -1;
-        draggingPointIndex = -1;
-        draggingEntirePolygon = false;
+        polygonDragHandler.clear();
         draggingCannonIndex = -1;
         cannonDragOffset = null;
         draggingThrone = false;
@@ -583,7 +563,6 @@ final class CastleMouseHandler extends MouseAdapter {
         originalResourceSize = null;
         originalResourcePosition = null;
         dragStartPoint = null;
-        polygonDragOffset = null;
         panel.setDraggingResourceCorner(-1);
         autoScroller.stop();
     }
@@ -629,12 +608,10 @@ final class CastleMouseHandler extends MouseAdapter {
             return;
         }
 
-        if (draggingEntirePolygon) {
+        if (polygonDragHandler.isDragging()) {
             Point2D dragPoint = e.getPoint();
-            updateDraggedPolygonPosition(dragPoint, left, bottom, scale);
+            polygonDragHandler.dragTo(dragPoint, left, bottom, scale);
             autoScroller.keepPointerVisible(dragPoint);
-        } else if (draggingPointIndex >= 0) {
-            handlePolygonPointDrag(e.getPoint(), left, bottom, scale);
         }
     }
 
@@ -644,7 +621,7 @@ final class CastleMouseHandler extends MouseAdapter {
      * @return {@code true} if a polygon, vertex, cannon, throne, wind vane, or resource area is being dragged
      */
     private boolean hasActiveDrag() {
-        return draggingPolygonIndex >= 0 || draggingCannonIndex >= 0 || draggingThrone || draggingWindVane
+        return polygonDragHandler.isDragging() || draggingCannonIndex >= 0 || draggingThrone || draggingWindVane
                 || draggingResourceArea != null;
     }
 
@@ -743,31 +720,12 @@ final class CastleMouseHandler extends MouseAdapter {
     }
 
     /**
-     * Moves the active polygon vertex to the pointer's castle coordinate.
+     * Applies viewport scrolling to the currently active drag operation.
      *
-     * @param dragPoint the current drag position
-     * @param left      the castle origin x-coordinate
-     * @param bottom    the castle baseline y-coordinate
-     * @param scale     the rendering scale
+     * @param dragPoint pointer position in panel coordinates
+     * @param deltaX    horizontal scroll displacement in pixels
+     * @param deltaY    vertical scroll displacement in pixels
      */
-    private void handlePolygonPointDrag(Point2D dragPoint, double left, double bottom, double scale) {
-        Point newPoint = toCastlePoint(dragPoint, left, bottom, scale);
-        panel.getEditorPanel().updatePolygonPoint(draggingPolygonIndex, draggingPointIndex, newPoint);
-        autoScroller.keepPointerVisible(dragPoint);
-
-        Castle updatedCastle = panel.getCastle();
-        int currentPolygonIndex = 0;
-        for (DrawingCommand command : updatedCastle.drawing()) {
-            if (command instanceof Polygon polygon) {
-                if (currentPolygonIndex == draggingPolygonIndex) {
-                    panel.setSelectedPolygon(polygon);
-                    break;
-                }
-                currentPolygonIndex++;
-            }
-        }
-    }
-
     private void applyEdgeScrollDelta(Point2D dragPoint, int deltaX, int deltaY) {
         Castle castle = panel.getCastle();
         if (castle == null) {
@@ -788,62 +746,12 @@ final class CastleMouseHandler extends MouseAdapter {
      */
     private void applyScrollDeltaToObject(Point2D dragPoint, int deltaX, int deltaY,
                                           double currentLeft, double currentBottom, double currentScale) {
-        if (draggingEntirePolygon) {
-            adjustPolygonDragOffset(deltaX, deltaY);
-            updateDraggedObjectPosition(dragPoint, currentLeft, currentBottom, currentScale);
-        } else if (draggingPointIndex >= 0) {
-            shiftDraggedPolygonPoint(deltaX, deltaY, currentScale);
+        if (polygonDragHandler.isDragging()) {
+            polygonDragHandler.adjustForScroll(
+                    dragPoint, deltaX, deltaY, currentLeft, currentBottom, currentScale);
         } else {
             adjustObjectDragOffsets(deltaX, deltaY);
             updateDraggedObjectPosition(dragPoint, currentLeft, currentBottom, currentScale);
-        }
-    }
-
-    /**
-     * Adjusts the polygon's pointer offset to compensate for viewport movement.
-     *
-     * @param deltaX horizontal scroll displacement in pixels
-     * @param deltaY vertical scroll displacement in pixels
-     */
-    private void adjustPolygonDragOffset(int deltaX, int deltaY) {
-        if (polygonDragOffset != null) {
-            polygonDragOffset = new Point2D.Double(
-                    polygonDragOffset.getX() - deltaX,
-                    polygonDragOffset.getY() - deltaY);
-        }
-    }
-
-    /**
-     * Moves the dragged polygon vertex by the scroll delta.
-     *
-     * @param deltaX       horizontal scroll displacement in pixels
-     * @param deltaY       vertical scroll displacement in pixels
-     * @param currentScale current screen-pixel scale per castle coordinate
-     */
-    private void shiftDraggedPolygonPoint(int deltaX, int deltaY, double currentScale) {
-        double castleDeltaX = deltaX / currentScale;
-        double castleDeltaY = -deltaY / currentScale;
-        Point currentPoint = hitTester.polygonPointAt(panel.getCastle(), draggingPolygonIndex, draggingPointIndex);
-        if (currentPoint != null) {
-            int newX = (int) Math.round(currentPoint.x() + castleDeltaX);
-            int newY = (int) Math.round(currentPoint.y() + castleDeltaY);
-            panel.getEditorPanel().updatePolygonPoint(draggingPolygonIndex, draggingPointIndex,
-                    new Point(newX, newY));
-        }
-        shiftDragStartPoint(deltaX, deltaY);
-    }
-
-    /**
-     * Adjusts the drag origin to account for viewport scrolling.
-     *
-     * @param deltaX horizontal scroll displacement in pixels
-     * @param deltaY vertical scroll displacement in pixels
-     */
-    private void shiftDragStartPoint(int deltaX, int deltaY) {
-        if (dragStartPoint != null) {
-            dragStartPoint = new Point2D.Double(
-                    dragStartPoint.getX() + deltaX,
-                    dragStartPoint.getY() + deltaY);
         }
     }
 
@@ -906,68 +814,7 @@ final class CastleMouseHandler extends MouseAdapter {
             int newY = (int) Math.round((currentBottom - (dragPoint.getY() - cannonDragOffset.getY())) / currentScale);
             Point newPoint = new Point(newX, newY);
             panel.getEditorPanel().updateCannonPosition(draggingCannonIndex, newPoint);
-        } else if (draggingEntirePolygon) {
-            updateDraggedPolygonPosition(dragPoint, currentLeft, currentBottom, currentScale);
-        } else if (draggingPointIndex >= 0) {
-            int newX = (int) Math.round((dragPoint.getX() - currentLeft) / currentScale);
-            int newY = (int) Math.round((currentBottom - dragPoint.getY()) / currentScale);
-            Point newPoint = new Point(newX, newY);
-            panel.getEditorPanel().updatePolygonPoint(draggingPolygonIndex, draggingPointIndex, newPoint);
         }
-    }
-
-    /**
-     * Translates every vertex so the polygon's first vertex follows the pointer.
-     *
-     * @param dragPoint     pointer position in panel coordinates
-     * @param currentLeft   castle origin's current screen x-coordinate
-     * @param currentBottom castle baseline's current screen y-coordinate
-     * @param currentScale  current screen-pixel scale per castle coordinate
-     */
-    private void updateDraggedPolygonPosition(Point2D dragPoint, double currentLeft,
-                                              double currentBottom, double currentScale) {
-        Polygon polygon = hitTester.polygonAt(panel.getCastle(), draggingPolygonIndex);
-        if (polygon == null || polygonDragOffset == null) {
-            return;
-        }
-
-        Point anchor = polygon.points().getFirst();
-        int targetX = (int) Math.round(
-                (dragPoint.getX() - polygonDragOffset.getX() - currentLeft) / currentScale);
-        int targetY = (int) Math.round(
-                (currentBottom - (dragPoint.getY() - polygonDragOffset.getY())) / currentScale);
-        int deltaX = targetX - anchor.x();
-        int deltaY = targetY - anchor.y();
-
-        List<Point> newPoints = new ArrayList<>();
-        for (Point point : polygon.points()) {
-            newPoints.add(new Point(point.x() + deltaX, point.y() + deltaY));
-        }
-        panel.getEditorPanel().updatePolygonPoints(draggingPolygonIndex, newPoints);
-
-        Polygon updatedPolygon = hitTester.polygonAt(panel.getCastle(), draggingPolygonIndex);
-        if (updatedPolygon != null) {
-            panel.setSelectedPolygon(updatedPolygon);
-        }
-    }
-
-    /**
-     * Calculates the screen-space offset from the click to the polygon's first vertex.
-     *
-     * @param polygon    polygon being moved
-     * @param left       the castle origin x-coordinate
-     * @param bottom     the castle baseline y-coordinate
-     * @param scale      the rendering scale
-     * @param clickPoint click position in panel coordinates
-     * @return screen-space difference between the click and first vertex
-     */
-    private Point2D createPolygonDragOffset(Polygon polygon, double left, double bottom,
-                                            double scale, Point2D clickPoint) {
-        Point anchor = polygon.points().getFirst();
-        double anchorScreenX = left + anchor.x() * scale;
-        double anchorScreenY = bottom - anchor.y() * scale;
-        return new Point2D.Double(clickPoint.getX() - anchorScreenX,
-                clickPoint.getY() - anchorScreenY);
     }
 
 }
