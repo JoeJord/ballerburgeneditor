@@ -5,6 +5,7 @@
 
     <language code="lan.de">
 
+        <msg code="help.aboutinfo">Sie sollten mehr Burgen erstellen,&lt;br&gt;diese dem Volke zur Verf&#252;gung stellen&lt;br&gt;und den Entwicklern huldigen.</msg>
         <msg code="arg_file_not_found">Die angegebene Datei wurde nicht gefunden!</msg>
         <msg code="filetype_description">Ballerburg-Burgdatei</msg>
         <msg code="castle.previous">Vorherige Burg</msg>
@@ -88,6 +89,7 @@
 
     <language code="lan.en">
 
+        <msg code="help.aboutinfo">You should create more castles,&lt;br&gt;make them available to the people,&lt;br&gt;and honor the developers.</msg>
         <msg code="arg_file_not_found">The specified file was not found!</msg>
         <msg code="filetype_description">Ballerburg castle file</msg>
         <msg code="castle.previous">Previous castle</msg>
