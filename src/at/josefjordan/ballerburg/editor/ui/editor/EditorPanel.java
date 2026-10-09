@@ -13,6 +13,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.UnaryOperator;
 
 /**
  * Editor containing the castle view, property palette, and problems panel.
@@ -49,7 +50,11 @@ public class EditorPanel extends HGBasePanel {
     /**
      * Creates immutable castle snapshots with edited resource-storage data.
      */
-    private final ResourceAreaEditor resourceAreaEditor = new ResourceAreaEditor();
+    private final transient ResourceAreaEditor resourceAreaEditor = new ResourceAreaEditor();
+    /**
+     * Applies immutable polygon edits to castle drawing data.
+     */
+    private final transient CastlePolygonEditor polygonEditor = new CastlePolygonEditor();
     /**
      * The current castle document.
      */
@@ -453,7 +458,8 @@ public class EditorPanel extends HGBasePanel {
             return;
         }
 
-        Castle updatedCastle = createCastleWithPolygon(points);
+        Castle oldCastle = document.castles().get(castleIndex);
+        Castle updatedCastle = polygonEditor.add(oldCastle, points, castleView.getPolygonType());
         List<Castle> castles = new ArrayList<>(document.castles());
         castles.set(castleIndex, updatedCastle);
         document = new CastleDocument(castles);
@@ -462,29 +468,6 @@ public class EditorPanel extends HGBasePanel {
         clearPolygonCreationHint();
         documentChanged();
         notifySelectionChanged();
-    }
-
-    /**
-     * Returns a castle copy with the new polygon and its fill-style command appended.
-     *
-     * @param points the ordered polygon vertices
-     * @return castle copy containing the appended polygon drawing commands
-     */
-    private Castle createCastleWithPolygon(List<Point> points) {
-        Castle oldCastle = document.castles().get(castleIndex);
-        List<CastleDocument.DrawingCommand> newDrawing = new ArrayList<>(oldCastle.drawing());
-
-        String polygonType = castleView.getPolygonType();
-        int fillIndex = "wall".equals(polygonType) ? CastleFileFormat.FILL_INDEX_MASONRY : CastleFileFormat.FILL_INDEX_ROOF;
-
-        // Add FillStyle command before the polygon
-        newDrawing.add(new CastleDocument.FillStyle(CastleFileFormat.FILL_STYLE_PATTERN, fillIndex));
-        newDrawing.add(new CastleDocument.Polygon(points));
-
-        return new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
-                oldCastle.windVane(), oldCastle.money(), oldCastle.powder(), oldCastle.balls(),
-                oldCastle.moneyRoom(), oldCastle.powderRoom(), oldCastle.ballRoom(), oldCastle.resources(),
-                oldCastle.reserved(), newDrawing);
     }
 
     /**
@@ -618,41 +601,7 @@ public class EditorPanel extends HGBasePanel {
      * @param newPoint     the replacement point in castle coordinates
      */
     public void updatePolygonPoint(int polygonIndex, int pointIndex, Point newPoint) {
-        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return;
-        }
-        Castle oldCastle = document.castles().get(castleIndex);
-        List<CastleDocument.DrawingCommand> oldDrawing = oldCastle.drawing();
-
-        int currentPolygonIndex = 0;
-        List<CastleDocument.DrawingCommand> newDrawing = new ArrayList<>();
-        for (CastleDocument.DrawingCommand command : oldDrawing) {
-            if (command instanceof CastleDocument.Polygon polygon) {
-                if (currentPolygonIndex == polygonIndex) {
-                    List<Point> newPoints = new ArrayList<>(polygon.points());
-                    newPoints.set(pointIndex, newPoint);
-                    newDrawing.add(new CastleDocument.Polygon(newPoints));
-                } else {
-                    newDrawing.add(polygon);
-                }
-                currentPolygonIndex++;
-            } else {
-                newDrawing.add(command);
-            }
-        }
-
-        Castle updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
-                oldCastle.windVane(), oldCastle.money(), oldCastle.powder(), oldCastle.balls(),
-                oldCastle.moneyRoom(), oldCastle.powderRoom(), oldCastle.ballRoom(), oldCastle.resources(),
-                oldCastle.reserved(), newDrawing);
-        List<Castle> castles = new ArrayList<>(document.castles());
-        castles.set(castleIndex, updatedCastle);
-        document = new CastleDocument(castles);
-        castleView.updateCastle(updatedCastle);
-        updateProblems(updatedCastle);
-        if (changeListener != null) {
-            changeListener.run();
-        }
+        applySelectedCastleEdit(oldCastle -> polygonEditor.updatePoint(oldCastle, polygonIndex, pointIndex, newPoint));
     }
 
     /**
@@ -662,39 +611,7 @@ public class EditorPanel extends HGBasePanel {
      * @param newPoints    the replacement polygon vertices
      */
     public void updatePolygonPoints(int polygonIndex, List<Point> newPoints) {
-        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return;
-        }
-        Castle oldCastle = document.castles().get(castleIndex);
-        List<CastleDocument.DrawingCommand> oldDrawing = oldCastle.drawing();
-
-        int currentPolygonIndex = 0;
-        List<CastleDocument.DrawingCommand> newDrawing = new ArrayList<>();
-        for (CastleDocument.DrawingCommand command : oldDrawing) {
-            if (command instanceof CastleDocument.Polygon polygon) {
-                if (currentPolygonIndex == polygonIndex) {
-                    newDrawing.add(new CastleDocument.Polygon(newPoints));
-                } else {
-                    newDrawing.add(polygon);
-                }
-                currentPolygonIndex++;
-            } else {
-                newDrawing.add(command);
-            }
-        }
-
-        Castle updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
-                oldCastle.windVane(), oldCastle.money(), oldCastle.powder(), oldCastle.balls(),
-                oldCastle.moneyRoom(), oldCastle.powderRoom(), oldCastle.ballRoom(), oldCastle.resources(),
-                oldCastle.reserved(), newDrawing);
-        List<Castle> castles = new ArrayList<>(document.castles());
-        castles.set(castleIndex, updatedCastle);
-        document = new CastleDocument(castles);
-        castleView.updateCastle(updatedCastle);
-        updateProblems(updatedCastle);
-        if (changeListener != null) {
-            changeListener.run();
-        }
+        applySelectedCastleEdit(oldCastle -> polygonEditor.updatePoints(oldCastle, polygonIndex, newPoints));
     }
 
     /**
@@ -853,16 +770,7 @@ public class EditorPanel extends HGBasePanel {
 
         // Update the selected polygon reference to the new polygon
         Castle updatedCastle = document.castles().get(castleIndex);
-        int currentPolygonIndex = 0;
-        for (CastleDocument.DrawingCommand command : updatedCastle.drawing()) {
-            if (command instanceof CastleDocument.Polygon polygon) {
-                if (currentPolygonIndex == polygonIndex) {
-                    castleView.setSelectedPolygon(polygon);
-                    break;
-                }
-                currentPolygonIndex++;
-            }
-        }
+        castleView.setSelectedPolygon(polygonEditor.polygonAt(updatedCastle, polygonIndex));
 
         // Select the newly added point
         castleView.setSelectedPointIndex(edgeIndex + 1);
@@ -894,16 +802,7 @@ public class EditorPanel extends HGBasePanel {
 
         // Update the selected polygon reference to the new polygon
         Castle updatedCastle = document.castles().get(castleIndex);
-        int currentPolygonIndex = 0;
-        for (CastleDocument.DrawingCommand command : updatedCastle.drawing()) {
-            if (command instanceof CastleDocument.Polygon polygon) {
-                if (currentPolygonIndex == polygonIndex) {
-                    castleView.setSelectedPolygon(polygon);
-                    break;
-                }
-                currentPolygonIndex++;
-            }
-        }
+        castleView.setSelectedPolygon(polygonEditor.polygonAt(updatedCastle, polygonIndex));
 
         // Clear the selected point after removal
         castleView.setSelectedPointIndex(-1);
@@ -920,17 +819,7 @@ public class EditorPanel extends HGBasePanel {
         if (castleIndex < 0 || castleIndex >= getCastleCount()) {
             return -1;
         }
-        Castle castle = document.castles().get(castleIndex);
-        int index = 0;
-        for (CastleDocument.DrawingCommand command : castle.drawing()) {
-            if (command instanceof CastleDocument.Polygon polygon) {
-                if (polygon == targetPolygon) {
-                    return index;
-                }
-                index++;
-            }
-        }
-        return -1;
+        return polygonEditor.indexOf(document.castles().get(castleIndex), targetPolygon);
     }
 
     /**
@@ -969,27 +858,8 @@ public class EditorPanel extends HGBasePanel {
             return;
         }
 
-        Castle oldCastle = document.castles().get(castleIndex);
-        List<CastleDocument.DrawingCommand> newDrawing = new ArrayList<>();
-        for (CastleDocument.DrawingCommand command : oldCastle.drawing()) {
-            if (!(command instanceof CastleDocument.Polygon polygon) || polygon != selectedPolygon) {
-                newDrawing.add(command);
-            }
-        }
-
-        Castle updatedCastle = new Castle(oldCastle.width(), oldCastle.cannons(), oldCastle.throne(),
-                oldCastle.windVane(), oldCastle.money(), oldCastle.powder(), oldCastle.balls(),
-                oldCastle.moneyRoom(), oldCastle.powderRoom(), oldCastle.ballRoom(), oldCastle.resources(),
-                oldCastle.reserved(), newDrawing);
-        List<Castle> castles = new ArrayList<>(document.castles());
-        castles.set(castleIndex, updatedCastle);
-        document = new CastleDocument(castles);
-        castleView.updateCastle(updatedCastle);
+        applySelectedCastleEdit(oldCastle -> polygonEditor.remove(oldCastle, selectedPolygon));
         castleView.setSelectedPolygon(null);
-        updateProblems(updatedCastle);
-        if (changeListener != null) {
-            changeListener.run();
-        }
         notifySelectionChanged();
     }
 
@@ -1236,6 +1106,26 @@ public class EditorPanel extends HGBasePanel {
         castleView.setCastle(castle);
         propertyPalette.setCastle(castle);
         updateProblems(castle);
+    }
+
+    /**
+     * Applies a model transformation to the selected castle and refreshes dependent editor views.
+     *
+     * @param edit transformation producing the updated castle snapshot
+     */
+    private void applySelectedCastleEdit(UnaryOperator<Castle> edit) {
+        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
+            return;
+        }
+        Castle updatedCastle = edit.apply(document.castles().get(castleIndex));
+        List<Castle> castles = new ArrayList<>(document.castles());
+        castles.set(castleIndex, updatedCastle);
+        document = new CastleDocument(castles);
+        castleView.updateCastle(updatedCastle);
+        updateProblems(updatedCastle);
+        if (changeListener != null) {
+            changeListener.run();
+        }
     }
 
     /**
