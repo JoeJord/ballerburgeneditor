@@ -317,11 +317,7 @@ public class EditorPanel extends HGBasePanel {
         }
 
         Castle updatedCastle = castleElementEditor.addCannon(oldCastle);
-        List<Castle> castles = new ArrayList<>(document.castles());
-        castles.set(castleIndex, updatedCastle);
-        document = new CastleDocument(castles);
-        castleView.updateCastle(updatedCastle);
-        documentChanged();
+        commitSelectedCastleChange(updatedCastle, true);
     }
 
     /**
@@ -337,11 +333,7 @@ public class EditorPanel extends HGBasePanel {
         }
 
         Castle updatedCastle = castleElementEditor.setThronePosition(oldCastle, new Point(0, 0));
-        List<Castle> castles = new ArrayList<>(document.castles());
-        castles.set(castleIndex, updatedCastle);
-        document = new CastleDocument(castles);
-        castleView.updateCastle(updatedCastle);
-        documentChanged();
+        commitSelectedCastleChange(updatedCastle, true);
     }
 
     /**
@@ -357,11 +349,7 @@ public class EditorPanel extends HGBasePanel {
         }
 
         Castle updatedCastle = castleElementEditor.setWindVanePosition(oldCastle, new Point(0, 0));
-        List<Castle> castles = new ArrayList<>(document.castles());
-        castles.set(castleIndex, updatedCastle);
-        document = new CastleDocument(castles);
-        castleView.updateCastle(updatedCastle);
-        documentChanged();
+        commitSelectedCastleChange(updatedCastle, true);
     }
 
     /**
@@ -405,11 +393,7 @@ public class EditorPanel extends HGBasePanel {
         }
 
         Castle updatedCastle = resourceAreaEditor.add(oldCastle, area);
-        List<Castle> castles = new ArrayList<>(document.castles());
-        castles.set(castleIndex, updatedCastle);
-        document = new CastleDocument(castles);
-        castleView.updateCastle(updatedCastle);
-        documentChanged();
+        commitSelectedCastleChange(updatedCastle, true);
     }
 
     /**
@@ -453,14 +437,9 @@ public class EditorPanel extends HGBasePanel {
 
         Castle oldCastle = document.castles().get(castleIndex);
         Castle updatedCastle = polygonEditor.add(oldCastle, points, castleView.getPolygonType());
-        List<Castle> castles = new ArrayList<>(document.castles());
-        castles.set(castleIndex, updatedCastle);
-        document = new CastleDocument(castles);
-        castleView.updateCastle(updatedCastle);
         castleView.finishPolygonCreation();
         clearPolygonCreationHint();
-        documentChanged();
-        notifySelectionChanged();
+        commitSelectedCastleChange(updatedCastle, true);
     }
 
     /**
@@ -1029,17 +1008,48 @@ public class EditorPanel extends HGBasePanel {
      * @param refreshPropertyPalette whether the property palette should reload the castle
      */
     private void replaceSelectedCastle(Castle updatedCastle, boolean refreshPropertyPalette) {
+        replaceSelectedCastle(updatedCastle, refreshPropertyPalette, false, false);
+    }
+
+    /**
+     * Commits a selected-castle edit that changes selection-dependent editor state.
+     *
+     * @param updatedCastle replacement castle snapshot
+     * @param resetView     whether to reset the view as for a newly selected castle
+     */
+    // The commit path currently always resets the view; retain the policy parameter for explicit delegation.
+    @SuppressWarnings("SameParameterValue")
+    private void commitSelectedCastleChange(Castle updatedCastle, boolean resetView) {
+        replaceSelectedCastle(updatedCastle, true, resetView, true);
+    }
+
+    /**
+     * Replaces the selected castle snapshot and refreshes the dependent editor components.
+     *
+     * @param updatedCastle          replacement castle snapshot
+     * @param refreshPropertyPalette whether to reload the property palette from the replacement
+     * @param resetView              whether to reset the castle view as when changing castle selection
+     * @param notifySelection        whether to notify the selection listener after refreshing the view
+     */
+    private void replaceSelectedCastle(Castle updatedCastle, boolean refreshPropertyPalette, boolean resetView, boolean notifySelection) {
         if (castleIndex < 0 || castleIndex >= getCastleCount()) {
             return;
         }
         List<Castle> castles = new ArrayList<>(document.castles());
         castles.set(castleIndex, updatedCastle);
         document = new CastleDocument(castles);
-        castleView.updateCastle(updatedCastle);
+        if (resetView) {
+            castleView.setCastle(updatedCastle);
+        } else {
+            castleView.updateCastle(updatedCastle);
+        }
         if (refreshPropertyPalette) {
             propertyPalette.setCastle(updatedCastle);
         }
         updateProblems(updatedCastle);
+        if (notifySelection) {
+            notifySelectionChanged();
+        }
         if (changeListener != null) {
             changeListener.run();
         }
