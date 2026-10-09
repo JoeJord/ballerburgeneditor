@@ -63,6 +63,10 @@ public class EditorPanel extends HGBasePanel {
      */
     private final transient CastlePolygonEditor polygonEditor = new CastlePolygonEditor();
     /**
+     * Performs immutable edits to the document's castle collection.
+     */
+    private final transient CastleCollectionEditor castleCollectionEditor = new CastleCollectionEditor();
+    /**
      * The current castle document.
      */
     private transient CastleDocument document;
@@ -281,10 +285,9 @@ public class EditorPanel extends HGBasePanel {
         if (document == null) {
             return;
         }
-        List<Castle> castles = new ArrayList<>(document.castles());
-        castleIndex = castleIndex < 0 ? castles.size() : castleIndex + 1;
-        castles.add(castleIndex, createEmptyCastle());
-        document = new CastleDocument(castles);
+        CastleCollectionEditor.CollectionEdit edit = castleCollectionEditor.add(document, castleIndex);
+        document = edit.document();
+        castleIndex = edit.selectedIndex();
         documentChanged();
     }
 
@@ -295,10 +298,9 @@ public class EditorPanel extends HGBasePanel {
         if (document == null || castleIndex < 0 || castleIndex >= getCastleCount()) {
             return;
         }
-        List<Castle> castles = new ArrayList<>(document.castles());
-        castles.remove(castleIndex);
-        document = new CastleDocument(castles);
-        castleIndex = Math.min(castleIndex, castles.size() - 1);
+        CastleCollectionEditor.CollectionEdit edit = castleCollectionEditor.remove(document, castleIndex);
+        document = edit.document();
+        castleIndex = edit.selectedIndex();
         documentChanged();
     }
 
@@ -988,8 +990,9 @@ public class EditorPanel extends HGBasePanel {
      * @param index the fill index value
      */
     private void setCastleIndex(int index) {
-        if (index >= 0 && index < getCastleCount() && index != castleIndex) {
-            castleIndex = index;
+        int selectedIndex = castleCollectionEditor.selectIndex(index, getCastleCount(), castleIndex);
+        if (selectedIndex != castleIndex) {
+            castleIndex = selectedIndex;
             updateSelectedCastle();
             notifySelectionChanged();
         }
@@ -1086,18 +1089,5 @@ public class EditorPanel extends HGBasePanel {
         if (changeListener != null) {
             changeListener.run();
         }
-    }
-
-    /**
-     * Creates a castle with default dimensions, empty geometry, and unset objects.
-     *
-     * @return the created empty castle
-     */
-    private Castle createEmptyCastle() {
-        Point absent = new Point(Integer.MIN_VALUE, Integer.MIN_VALUE);
-        Size emptySize = new Size(0, 0);
-        return new Castle(0, List.of(), absent, absent, absent, absent, absent,
-                emptySize, emptySize, emptySize, new Resources(0, 0, 0, 0),
-                List.of(0, 0, 0, 0), List.of());
     }
 }
