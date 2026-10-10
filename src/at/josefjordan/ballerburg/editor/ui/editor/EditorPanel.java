@@ -10,7 +10,6 @@ import at.josefjordan.ballerburg.editor.ui.editor.castle.*;
 import at.josefjordan.ballerburg.editor.ui.editor.problems.ProblemsPanel;
 import at.josefjordan.ballerburg.editor.ui.editor.properties.PropertyPalettePanel;
 import hgb.gui.HGBasePanel;
-import hgb.lib.HGBaseText;
 
 import javax.swing.*;
 import java.awt.*;
@@ -67,6 +66,10 @@ public class EditorPanel extends HGBasePanel {
      */
     private final transient CastleCollectionEditor castleCollectionEditor = new CastleCollectionEditor();
     /**
+     * Coordinates selection queries, selection-dependent edits, and polygon hints.
+     */
+    private final transient EditorSelectionController selectionController;
+    /**
      * The current castle document.
      */
     private transient CastleDocument document;
@@ -104,13 +107,16 @@ public class EditorPanel extends HGBasePanel {
      */
     public EditorPanel() {
         super(new BorderLayout());
+        selectionController = new EditorSelectionController(castleView, polygonEditor, castleElementEditor,
+                resourceAreaEditor, new EditorSelectionController.Callbacks(this::getSelectedCastle,
+                this::commitSelectionEdit, this::notifySelectionChanged, this::setStatusBarText));
         castleView.setEditorPanel(this);
         castleView.setZoomListener(() -> {
             if (zoomListener != null) {
                 zoomListener.run();
             }
         });
-        castleView.setPolygonSelectionListener(this::onPolygonSelectionChanged);
+        castleView.setPolygonSelectionListener(selectionController::onPolygonSelectionChanged);
         JScrollPane scrollPane = new JScrollPane(castleView);
         scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
         scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_ALWAYS);
@@ -454,18 +460,14 @@ public class EditorPanel extends HGBasePanel {
      * Sets the polygon creation hint.
      */
     private void setPolygonCreationHint() {
-        if (statusBarListener != null) {
-            statusBarListener.accept(HGBaseText.getText("polygon.hint"));
-        }
+        setStatusBarText(hgb.lib.HGBaseText.getText("polygon.hint"));
     }
 
     /**
      * Clears the polygon-creation status-bar hint.
      */
     private void clearPolygonCreationHint() {
-        if (statusBarListener != null) {
-            statusBarListener.accept("");
-        }
+        setStatusBarText("");
     }
 
     /**
@@ -677,73 +679,14 @@ public class EditorPanel extends HGBasePanel {
      * @param newPoint  the replacement point in castle coordinates
      */
     public void addPolygonPoint(int edgeIndex, Point newPoint) {
-        CastleDocument.Polygon selectedPolygon = castleView.getSelectedPolygon();
-        if (selectedPolygon == null) {
-            return;
-        }
-
-        int polygonIndex = findPolygonIndex(selectedPolygon);
-        if (polygonIndex < 0) {
-            return;
-        }
-
-        List<Point> newPoints = new ArrayList<>(selectedPolygon.points());
-        // Insert the new point after the edge index (edgeIndex is the index of the point where the edge starts)
-        newPoints.add(edgeIndex + 1, newPoint);
-        updatePolygonPoints(polygonIndex, newPoints);
-
-        // Update the selected polygon reference to the new polygon
-        Castle updatedCastle = document.castles().get(castleIndex);
-        castleView.setSelectedPolygon(polygonEditor.polygonAt(updatedCastle, polygonIndex));
-
-        // Select the newly added point
-        castleView.setSelectedPointIndex(edgeIndex + 1);
-        onPointSelectionChanged();
+        selectionController.addPolygonPoint(edgeIndex, newPoint);
     }
 
     /**
      * Removes the selected polygon vertex when the polygon will retain at least three vertices.
      */
     public void removePolygonPoint() {
-        CastleDocument.Polygon selectedPolygon = castleView.getSelectedPolygon();
-        if (selectedPolygon == null || selectedPolygon.points().size() <= 3) {
-            return;
-        }
-
-        int selectedPointIndex = castleView.getSelectedPointIndex();
-        if (selectedPointIndex < 0) {
-            return;
-        }
-
-        int polygonIndex = findPolygonIndex(selectedPolygon);
-        if (polygonIndex < 0) {
-            return;
-        }
-
-        List<Point> newPoints = new ArrayList<>(selectedPolygon.points());
-        newPoints.remove(selectedPointIndex);
-        updatePolygonPoints(polygonIndex, newPoints);
-
-        // Update the selected polygon reference to the new polygon
-        Castle updatedCastle = document.castles().get(castleIndex);
-        castleView.setSelectedPolygon(polygonEditor.polygonAt(updatedCastle, polygonIndex));
-
-        // Clear the selected point after removal
-        castleView.setSelectedPointIndex(-1);
-        onPointSelectionChanged();
-    }
-
-    /**
-     * Finds a polygon's index among the selected castle's polygon drawing commands.
-     *
-     * @param targetPolygon polygon instance to locate
-     * @return zero-based polygon index, or {@code -1} if it is absent
-     */
-    private int findPolygonIndex(CastleDocument.Polygon targetPolygon) {
-        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return -1;
-        }
-        return polygonEditor.indexOf(document.castles().get(castleIndex), targetPolygon);
+        selectionController.removePolygonPoint();
     }
 
     /**
@@ -752,11 +695,7 @@ public class EditorPanel extends HGBasePanel {
      * @return {@code true} if a vertex is selected in a polygon that has more than three vertices
      */
     public boolean hasSelectedPolygonPoint() {
-        if (castleView.getSelectedPointIndex() < 0) {
-            return false;
-        }
-        CastleDocument.Polygon selectedPolygon = castleView.getSelectedPolygon();
-        return selectedPolygon != null && selectedPolygon.points().size() > 3;
+        return selectionController.hasSelectedPolygonPoint();
     }
 
     /**
@@ -765,26 +704,14 @@ public class EditorPanel extends HGBasePanel {
      * @return {@code true} if a polygon vertex index is selected
      */
     public boolean hasSelectedPoint() {
-        return castleView.getSelectedPointIndex() >= 0;
+        return selectionController.hasSelectedPoint();
     }
 
     /**
      * Removes the selected polygon from the current castle drawing.
      */
     public void removePolygon() {
-        CastleDocument.Polygon selectedPolygon = castleView.getSelectedPolygon();
-        if (selectedPolygon == null) {
-            return;
-        }
-
-        int polygonIndex = findPolygonIndex(selectedPolygon);
-        if (polygonIndex < 0) {
-            return;
-        }
-
-        applySelectedCastleEdit(oldCastle -> polygonEditor.remove(oldCastle, selectedPolygon));
-        castleView.setSelectedPolygon(null);
-        notifySelectionChanged();
+        selectionController.removePolygon();
     }
 
     /**
@@ -793,7 +720,7 @@ public class EditorPanel extends HGBasePanel {
      * @return {@code true} if a polygon is selected in the castle view
      */
     public boolean hasSelectedPolygon() {
-        return castleView.getSelectedPolygon() != null;
+        return selectionController.hasSelectedPolygon();
     }
 
     /**
@@ -802,7 +729,7 @@ public class EditorPanel extends HGBasePanel {
      * @return {@code true} if a cannon index is selected
      */
     public boolean hasSelectedCannon() {
-        return castleView.getSelectedCannonIndex() >= 0;
+        return selectionController.hasSelectedCannon();
     }
 
     /**
@@ -811,7 +738,7 @@ public class EditorPanel extends HGBasePanel {
      * @return {@code true} if the throne is selected
      */
     public boolean hasSelectedThrone() {
-        return castleView.isSelectedThrone();
+        return selectionController.hasSelectedThrone();
     }
 
     /**
@@ -820,7 +747,7 @@ public class EditorPanel extends HGBasePanel {
      * @return {@code true} if the wind vane is selected
      */
     public boolean hasSelectedWindVane() {
-        return castleView.isSelectedWindVane();
+        return selectionController.hasSelectedWindVane();
     }
 
     /**
@@ -829,138 +756,49 @@ public class EditorPanel extends HGBasePanel {
      * @return {@code true} if a resource-storage area is selected
      */
     public boolean hasSelectedResourceArea() {
-        return castleView.getSelectedResourceArea() != null;
+        return selectionController.hasSelectedResourceArea();
     }
 
     /**
      * Removes the selected cannon from the current castle.
      */
     public void removeCannon() {
-        int selectedCannonIndex = castleView.getSelectedCannonIndex();
-        if (selectedCannonIndex < 0) {
-            return;
-        }
-
-        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return;
-        }
-
-        Castle oldCastle = document.castles().get(castleIndex);
-        if (selectedCannonIndex >= oldCastle.cannons().size()) {
-            return;
-        }
-
-        Castle updatedCastle = castleElementEditor.removeCannon(oldCastle, selectedCannonIndex);
-        castleView.setSelectedCannonIndex(-1);
-        replaceSelectedCastle(updatedCastle, false);
-        notifySelectionChanged();
+        selectionController.removeCannon();
     }
 
     /**
      * Marks the selected throne position as unset.
      */
     public void removeThrone() {
-        if (!castleView.isSelectedThrone()) {
-            return;
-        }
-
-        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return;
-        }
-
-        Castle oldCastle = document.castles().get(castleIndex);
-        Castle updatedCastle = castleElementEditor.removeThrone(oldCastle);
-        castleView.setSelectedThrone(false);
-        replaceSelectedCastle(updatedCastle, false);
-        notifySelectionChanged();
+        selectionController.removeThrone();
     }
 
     /**
      * Marks the selected wind-vane position as unset.
      */
     public void removeWindVane() {
-        if (!castleView.isSelectedWindVane()) {
-            return;
-        }
-
-        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return;
-        }
-
-        Castle oldCastle = document.castles().get(castleIndex);
-        Castle updatedCastle = castleElementEditor.removeWindVane(oldCastle);
-        castleView.setSelectedWindVane(false);
-        replaceSelectedCastle(updatedCastle, false);
-        notifySelectionChanged();
+        selectionController.removeWindVane();
     }
 
     /**
      * Marks the selected resource-storage position as unset.
      */
     public void removeResourceArea() {
-        ResourceArea selectedResourceArea = castleView.getSelectedResourceArea();
-        if (selectedResourceArea == null) {
-            return;
-        }
-
-        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return;
-        }
-
-        Castle oldCastle = document.castles().get(castleIndex);
-        Castle updatedCastle = resourceAreaEditor.remove(oldCastle, selectedResourceArea);
-
-        castleView.setSelectedResourceArea(null);
-        replaceSelectedCastle(updatedCastle, true);
-        notifySelectionChanged();
+        selectionController.removeResourceArea();
     }
 
     /**
      * Notifies the editor that point selection changed.
      */
     public void onPointSelectionChanged() {
-        if (castleView.getSelectedPolygon() != null) {
-            setPolygonSelectedHint();
-        } else {
-            clearPolygonSelectedHint();
-        }
-        notifySelectionChanged();
-    }
-
-    /**
-     * Sets the polygon selected hint.
-     */
-    private void setPolygonSelectedHint() {
-        if (statusBarListener != null) {
-            statusBarListener.accept(HGBaseText.getText("polygon.selected_hint"));
-        }
-    }
-
-    /**
-     * Clears the polygon-selection hint when creation is not in progress.
-     */
-    private void clearPolygonSelectedHint() {
-        if (statusBarListener != null && !castleView.isInPolygonCreationMode()) {
-            statusBarListener.accept("");
-        }
+        selectionController.onPointSelectionChanged();
     }
 
     /**
      * Notifies selection listeners that the cannon selection changed.
      */
     public void onCannonSelectionChanged() {
-        notifySelectionChanged();
-    }
-
-    /**
-     * Updates the status-bar hint to match the polygon selection.
-     */
-    private void onPolygonSelectionChanged() {
-        if (castleView.getSelectedPolygon() != null) {
-            setPolygonSelectedHint();
-        } else {
-            clearPolygonSelectedHint();
-        }
+        selectionController.onCannonSelectionChanged();
     }
 
     /**
@@ -1052,6 +890,37 @@ public class EditorPanel extends HGBasePanel {
         }
         if (changeListener != null) {
             changeListener.run();
+        }
+    }
+
+    /**
+     * Returns the selected castle snapshot when the document and selection are valid.
+     *
+     * @return the selected castle, or {@code null} when no castle is selected
+     */
+    private Castle getSelectedCastle() {
+        return castleIndex >= 0 && castleIndex < getCastleCount()
+                ? document.castles().get(castleIndex) : null;
+    }
+
+    /**
+     * Commits a castle edit initiated by the selection controller.
+     *
+     * @param updatedCastle          edited castle snapshot
+     * @param refreshPropertyPalette whether to reload the property palette from the updated castle
+     */
+    private void commitSelectionEdit(Castle updatedCastle, boolean refreshPropertyPalette) {
+        replaceSelectedCastle(updatedCastle, refreshPropertyPalette);
+    }
+
+    /**
+     * Displays a status-bar message when a status-bar listener is registered.
+     *
+     * @param text message to display, or an empty string to clear the status
+     */
+    private void setStatusBarText(String text) {
+        if (statusBarListener != null) {
+            statusBarListener.accept(text);
         }
     }
 
