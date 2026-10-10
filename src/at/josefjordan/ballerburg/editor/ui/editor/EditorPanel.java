@@ -11,7 +11,6 @@ import hgb.gui.HGBasePanel;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -47,9 +46,9 @@ public class EditorPanel extends HGBasePanel {
      */
     private final transient CastleValidator castleValidator = new CastleValidator();
     /**
-     * Performs immutable edits to the document's castle collection.
+     * Owns the current document, selected castle, and document-level edit coordination.
      */
-    private final transient CastleCollectionEditor castleCollectionEditor = new CastleCollectionEditor();
+    private final transient EditorDocumentController documentController;
     /**
      * Coordinates selection queries, selection-dependent edits, and polygon hints.
      */
@@ -58,14 +57,6 @@ public class EditorPanel extends HGBasePanel {
      * Implements castle-element creation and editing operations.
      */
     private final transient EditorCastleActions castleActions;
-    /**
-     * The current castle document.
-     */
-    private transient CastleDocument document;
-    /**
-     * The index of the currently selected castle.
-     */
-    private int castleIndex = -1;
     /**
      * The listener notified when the selection changes.
      */
@@ -96,6 +87,9 @@ public class EditorPanel extends HGBasePanel {
      */
     public EditorPanel() {
         super(new BorderLayout());
+        documentController = new EditorDocumentController(new EditorDocumentController.Callbacks(
+                this::updateSelectedCastle, this::refreshEditedCastle,
+                this::notifySelectionChanged, this::notifyDocumentChanged));
         ResourceAreaEditor resourceAreaEditor = new ResourceAreaEditor();
         CastlePolygonEditor polygonEditor = new CastlePolygonEditor();
         CastleElementEditor castleElementEditor = new CastleElementEditor();
@@ -128,7 +122,7 @@ public class EditorPanel extends HGBasePanel {
         splitPane.setRightComponent(propertySplitPane);
         add(splitPane, BorderLayout.CENTER);
         propertyPalette.setResourcesListener(castleActions::updateResources);
-        updateSelectedCastle();
+        updateSelectedCastle(null);
     }
 
     /**
@@ -137,7 +131,7 @@ public class EditorPanel extends HGBasePanel {
      * @return the current document, or null when no document is open
      */
     public CastleDocument getDocument() {
-        return document;
+        return documentController.getDocument();
     }
 
     /**
@@ -164,10 +158,7 @@ public class EditorPanel extends HGBasePanel {
      * @param document the document to process
      */
     public void setDocument(CastleDocument document) {
-        this.document = document;
-        castleIndex = document == null || document.castles().isEmpty() ? -1 : 0;
-        updateSelectedCastle();
-        notifySelectionChanged();
+        documentController.setDocument(document);
     }
 
     /**
@@ -176,7 +167,7 @@ public class EditorPanel extends HGBasePanel {
      * @return the selected castle index, or -1 when none is selected
      */
     public int getCastleIndex() {
-        return castleIndex;
+        return documentController.getCastleIndex();
     }
 
     /**
@@ -185,7 +176,7 @@ public class EditorPanel extends HGBasePanel {
      * @return the number of castles in the document
      */
     public int getCastleCount() {
-        return document == null ? 0 : document.castles().size();
+        return documentController.getCastleCount();
     }
 
     /**
@@ -194,6 +185,7 @@ public class EditorPanel extends HGBasePanel {
      * @return {@code true} when a document is open and at least one castle has validation findings
      */
     public boolean hasProblems() {
+        CastleDocument document = documentController.getDocument();
         return document != null && document.castles().stream()
                 .anyMatch(castle -> !castleValidator.validate(castle).isEmpty());
     }
@@ -204,10 +196,8 @@ public class EditorPanel extends HGBasePanel {
      * @return the selected castle cannon count, or zero if no castle is selected
      */
     public int getCannonCount() {
-        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return 0;
-        }
-        return document.castles().get(castleIndex).cannons().size();
+        Castle castle = documentController.getSelectedCastle();
+        return castle == null ? 0 : castle.cannons().size();
     }
 
     /**
@@ -216,12 +206,8 @@ public class EditorPanel extends HGBasePanel {
      * @return {@code true} if the selected castle has a positioned throne
      */
     public boolean hasThrone() {
-        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return false;
-        }
-        Castle castle = document.castles().get(castleIndex);
-        Point throne = castle.throne();
-        return throne.x() != Integer.MIN_VALUE && throne.y() != Integer.MIN_VALUE;
+        Castle castle = documentController.getSelectedCastle();
+        return castle != null && isPositioned(castle.throne());
     }
 
     /**
@@ -230,12 +216,8 @@ public class EditorPanel extends HGBasePanel {
      * @return {@code true} if the selected castle has a positioned wind vane
      */
     public boolean hasWindVane() {
-        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return false;
-        }
-        Castle castle = document.castles().get(castleIndex);
-        Point windVane = castle.windVane();
-        return windVane.x() != Integer.MIN_VALUE && windVane.y() != Integer.MIN_VALUE;
+        Castle castle = documentController.getSelectedCastle();
+        return castle != null && isPositioned(castle.windVane());
     }
 
     /**
@@ -244,12 +226,8 @@ public class EditorPanel extends HGBasePanel {
      * @return {@code true} if the selected castle has a positioned money-storage area
      */
     public boolean hasMoney() {
-        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return false;
-        }
-        Castle castle = document.castles().get(castleIndex);
-        Point money = castle.money();
-        return money.x() != Integer.MIN_VALUE && money.y() != Integer.MIN_VALUE;
+        Castle castle = documentController.getSelectedCastle();
+        return castle != null && isPositioned(castle.money());
     }
 
     /**
@@ -258,12 +236,8 @@ public class EditorPanel extends HGBasePanel {
      * @return {@code true} if the selected castle has a positioned powder-storage area
      */
     public boolean hasPowder() {
-        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return false;
-        }
-        Castle castle = document.castles().get(castleIndex);
-        Point powder = castle.powder();
-        return powder.x() != Integer.MIN_VALUE && powder.y() != Integer.MIN_VALUE;
+        Castle castle = documentController.getSelectedCastle();
+        return castle != null && isPositioned(castle.powder());
     }
 
     /**
@@ -272,38 +246,22 @@ public class EditorPanel extends HGBasePanel {
      * @return {@code true} if the selected castle has a positioned cannonball-storage area
      */
     public boolean hasBalls() {
-        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return false;
-        }
-        Castle castle = document.castles().get(castleIndex);
-        Point balls = castle.balls();
-        return balls.x() != Integer.MIN_VALUE && balls.y() != Integer.MIN_VALUE;
+        Castle castle = documentController.getSelectedCastle();
+        return castle != null && isPositioned(castle.balls());
     }
 
     /**
      * Inserts a new empty castle after the selected castle, or at the end if none is selected.
      */
     public void addCastle() {
-        if (document == null) {
-            return;
-        }
-        CastleCollectionEditor.CollectionEdit edit = castleCollectionEditor.add(document, castleIndex);
-        document = edit.document();
-        castleIndex = edit.selectedIndex();
-        documentChanged();
+        documentController.addCastle();
     }
 
     /**
      * Deletes the selected castle.
      */
     public void deleteCastle() {
-        if (document == null || castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return;
-        }
-        CastleCollectionEditor.CollectionEdit edit = castleCollectionEditor.remove(document, castleIndex);
-        document = edit.document();
-        castleIndex = edit.selectedIndex();
-        documentChanged();
+        documentController.removeSelectedCastle();
     }
 
     /**
@@ -391,14 +349,14 @@ public class EditorPanel extends HGBasePanel {
      * Selects the previous castle when one exists.
      */
     public void showPreviousCastle() {
-        setCastleIndex(castleIndex - 1);
+        documentController.selectIndex(getCastleIndex() - 1);
     }
 
     /**
      * Selects the next castle when one exists.
      */
     public void showNextCastle() {
-        setCastleIndex(castleIndex + 1);
+        documentController.selectIndex(getCastleIndex() + 1);
     }
 
     /**
@@ -684,28 +642,29 @@ public class EditorPanel extends HGBasePanel {
     }
 
     /**
-     * Selects the requested castle index when it is in range and differs from the current index.
-     *
-     * @param index the fill index value
-     */
-    private void setCastleIndex(int index) {
-        int selectedIndex = castleCollectionEditor.selectIndex(index, getCastleCount(), castleIndex);
-        if (selectedIndex != castleIndex) {
-            castleIndex = selectedIndex;
-            updateSelectedCastle();
-            notifySelectionChanged();
-        }
-    }
-
-    /**
      * Updates the selected castle.
      */
-    private void updateSelectedCastle() {
-        Castle castle = castleIndex >= 0 && castleIndex < getCastleCount()
-                ? document.castles().get(castleIndex) : null;
+    private void updateSelectedCastle(Castle castle) {
         castleView.setCastle(castle);
         propertyPalette.setCastle(castle);
         updateProblems(castle);
+    }
+
+    /**
+     * Refreshes the views affected by an edit to the selected castle.
+     *
+     * @param edit details controlling how the updated castle is displayed
+     */
+    private void refreshEditedCastle(EditorDocumentController.CastleEdit edit) {
+        if (edit.resetView()) {
+            castleView.setCastle(edit.castle());
+        } else {
+            castleView.updateCastle(edit.castle());
+        }
+        if (edit.refreshPropertyPalette()) {
+            propertyPalette.setCastle(edit.castle());
+        }
+        updateProblems(edit.castle());
     }
 
     /**
@@ -715,7 +674,7 @@ public class EditorPanel extends HGBasePanel {
      * @param refreshPropertyPalette whether the property palette should reload the castle
      */
     private void replaceSelectedCastle(Castle updatedCastle, boolean refreshPropertyPalette) {
-        replaceSelectedCastle(updatedCastle, refreshPropertyPalette, false, false);
+        documentController.replaceSelectedCastle(updatedCastle, refreshPropertyPalette, false, false);
     }
 
     /**
@@ -727,39 +686,7 @@ public class EditorPanel extends HGBasePanel {
     // The commit path currently always resets the view; retain the policy parameter for explicit delegation.
     @SuppressWarnings("SameParameterValue")
     private void commitSelectedCastleChange(Castle updatedCastle, boolean resetView) {
-        replaceSelectedCastle(updatedCastle, true, resetView, true);
-    }
-
-    /**
-     * Replaces the selected castle snapshot and refreshes the dependent editor components.
-     *
-     * @param updatedCastle          replacement castle snapshot
-     * @param refreshPropertyPalette whether to reload the property palette from the replacement
-     * @param resetView              whether to reset the castle view as when changing castle selection
-     * @param notifySelection        whether to notify the selection listener after refreshing the view
-     */
-    private void replaceSelectedCastle(Castle updatedCastle, boolean refreshPropertyPalette, boolean resetView, boolean notifySelection) {
-        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return;
-        }
-        List<Castle> castles = new ArrayList<>(document.castles());
-        castles.set(castleIndex, updatedCastle);
-        document = new CastleDocument(castles);
-        if (resetView) {
-            castleView.setCastle(updatedCastle);
-        } else {
-            castleView.updateCastle(updatedCastle);
-        }
-        if (refreshPropertyPalette) {
-            propertyPalette.setCastle(updatedCastle);
-        }
-        updateProblems(updatedCastle);
-        if (notifySelection) {
-            notifySelectionChanged();
-        }
-        if (changeListener != null) {
-            changeListener.run();
-        }
+        documentController.replaceSelectedCastle(updatedCastle, true, resetView, true);
     }
 
     /**
@@ -768,8 +695,7 @@ public class EditorPanel extends HGBasePanel {
      * @return the selected castle, or {@code null} when no castle is selected
      */
     private Castle getSelectedCastle() {
-        return castleIndex >= 0 && castleIndex < getCastleCount()
-                ? document.castles().get(castleIndex) : null;
+        return documentController.getSelectedCastle();
     }
 
     /**
@@ -812,13 +738,21 @@ public class EditorPanel extends HGBasePanel {
     }
 
     /**
-     * Notifies the registered listener that the document changed and refreshes validation problems.
+     * Notifies the registered listener that document contents changed.
      */
-    private void documentChanged() {
-        updateSelectedCastle();
-        notifySelectionChanged();
+    private void notifyDocumentChanged() {
         if (changeListener != null) {
             changeListener.run();
         }
+    }
+
+    /**
+     * Checks whether a point differs from the model's unset-position sentinel.
+     *
+     * @param point position to check
+     * @return {@code true} if both coordinates are defined
+     */
+    private boolean isPositioned(Point point) {
+        return point.x() != Integer.MIN_VALUE && point.y() != Integer.MIN_VALUE;
     }
 }
