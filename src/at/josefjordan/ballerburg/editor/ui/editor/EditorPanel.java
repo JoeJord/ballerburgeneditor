@@ -3,9 +3,7 @@ package at.josefjordan.ballerburg.editor.ui.editor;
 import at.josefjordan.ballerburg.editor.model.CastleDocument;
 import at.josefjordan.ballerburg.editor.model.CastleDocument.Castle;
 import at.josefjordan.ballerburg.editor.model.CastleDocument.Point;
-import at.josefjordan.ballerburg.editor.model.CastleDocument.Resources;
 import at.josefjordan.ballerburg.editor.model.CastleDocument.Size;
-import at.josefjordan.ballerburg.editor.model.CastleFileFormat;
 import at.josefjordan.ballerburg.editor.ui.editor.castle.*;
 import at.josefjordan.ballerburg.editor.ui.editor.problems.ProblemsPanel;
 import at.josefjordan.ballerburg.editor.ui.editor.properties.PropertyPalettePanel;
@@ -15,7 +13,6 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.UnaryOperator;
 
 /**
  * Editor containing the castle view, property palette, and problems panel.
@@ -50,18 +47,6 @@ public class EditorPanel extends HGBasePanel {
      */
     private final transient CastleValidator castleValidator = new CastleValidator();
     /**
-     * Creates immutable castle snapshots with edited resource-storage data.
-     */
-    private final transient ResourceAreaEditor resourceAreaEditor = new ResourceAreaEditor();
-    /**
-     * Creates immutable castle snapshots for non-resource castle-element edits.
-     */
-    private final transient CastleElementEditor castleElementEditor = new CastleElementEditor();
-    /**
-     * Applies immutable polygon edits to castle drawing data.
-     */
-    private final transient CastlePolygonEditor polygonEditor = new CastlePolygonEditor();
-    /**
      * Performs immutable edits to the document's castle collection.
      */
     private final transient CastleCollectionEditor castleCollectionEditor = new CastleCollectionEditor();
@@ -69,6 +54,10 @@ public class EditorPanel extends HGBasePanel {
      * Coordinates selection queries, selection-dependent edits, and polygon hints.
      */
     private final transient EditorSelectionController selectionController;
+    /**
+     * Implements castle-element creation and editing operations.
+     */
+    private final transient EditorCastleActions castleActions;
     /**
      * The current castle document.
      */
@@ -107,9 +96,16 @@ public class EditorPanel extends HGBasePanel {
      */
     public EditorPanel() {
         super(new BorderLayout());
+        ResourceAreaEditor resourceAreaEditor = new ResourceAreaEditor();
+        CastlePolygonEditor polygonEditor = new CastlePolygonEditor();
+        CastleElementEditor castleElementEditor = new CastleElementEditor();
         selectionController = new EditorSelectionController(castleView, polygonEditor, castleElementEditor,
                 resourceAreaEditor, new EditorSelectionController.Callbacks(this::getSelectedCastle,
                 this::commitSelectionEdit, this::notifySelectionChanged, this::setStatusBarText));
+        castleActions = new EditorCastleActions(castleView, castleElementEditor, resourceAreaEditor, polygonEditor,
+                new EditorCastleActions.Callbacks(this::getSelectedCastle,
+                        castle -> commitSelectedCastleChange(castle, true),
+                        this::replaceSelectedCastle, this::setStatusBarText));
         castleView.setEditorPanel(this);
         castleView.setZoomListener(() -> {
             if (zoomListener != null) {
@@ -131,7 +127,7 @@ public class EditorPanel extends HGBasePanel {
         problemsPanel.setPreferredSize(new Dimension(0, PROBLEMS_PANEL_PREFERRED_HEIGHT));
         splitPane.setRightComponent(propertySplitPane);
         add(splitPane, BorderLayout.CENTER);
-        propertyPalette.setResourcesListener(this::updateResources);
+        propertyPalette.setResourcesListener(castleActions::updateResources);
         updateSelectedCastle();
     }
 
@@ -314,48 +310,21 @@ public class EditorPanel extends HGBasePanel {
      * Adds a cannon at the origin of the selected castle unless its cannon slots are full.
      */
     public void addCannon() {
-        if (document == null || castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return;
-        }
-        Castle oldCastle = document.castles().get(castleIndex);
-        if (oldCastle.cannons().size() >= CastleFileFormat.CANNON_POSITION_COUNT) {
-            return;
-        }
-
-        Castle updatedCastle = castleElementEditor.addCannon(oldCastle);
-        commitSelectedCastleChange(updatedCastle, true);
+        castleActions.addCannon();
     }
 
     /**
      * Adds a throne at the origin of the selected castle.
      */
     public void addThrone() {
-        if (document == null || castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return;
-        }
-        Castle oldCastle = document.castles().get(castleIndex);
-        if (hasThrone()) {
-            return;
-        }
-
-        Castle updatedCastle = castleElementEditor.setThronePosition(oldCastle, new Point(0, 0));
-        commitSelectedCastleChange(updatedCastle, true);
+        castleActions.addThrone();
     }
 
     /**
      * Adds a wind vane at the origin of the selected castle.
      */
     public void addWindVane() {
-        if (document == null || castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return;
-        }
-        Castle oldCastle = document.castles().get(castleIndex);
-        if (hasWindVane()) {
-            return;
-        }
-
-        Castle updatedCastle = castleElementEditor.setWindVanePosition(oldCastle, new Point(0, 0));
-        commitSelectedCastleChange(updatedCastle, true);
+        castleActions.addWindVane();
     }
 
     /**
@@ -385,43 +354,21 @@ public class EditorPanel extends HGBasePanel {
      * @param area resource area to add
      */
     private void addResourceArea(ResourceArea area) {
-        if (document == null || castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return;
-        }
-        Castle oldCastle = document.castles().get(castleIndex);
-        boolean alreadyPositioned = switch (area) {
-            case MONEY -> hasMoney();
-            case POWDER -> hasPowder();
-            case BALLS -> hasBalls();
-        };
-        if (alreadyPositioned) {
-            return;
-        }
-
-        Castle updatedCastle = resourceAreaEditor.add(oldCastle, area);
-        commitSelectedCastleChange(updatedCastle, true);
+        castleActions.addResourceArea(area);
     }
 
     /**
      * Starts interactive creation of a masonry wall polygon.
      */
     public void addWall() {
-        if (document == null || castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return;
-        }
-        castleView.startPolygonCreation("wall");
-        setPolygonCreationHint();
+        castleActions.addWall();
     }
 
     /**
      * Starts interactive creation of a roof polygon.
      */
     public void addRoof() {
-        if (document == null || castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return;
-        }
-        castleView.startPolygonCreation("roof");
-        setPolygonCreationHint();
+        castleActions.addRoof();
     }
 
     /**
@@ -430,44 +377,14 @@ public class EditorPanel extends HGBasePanel {
      * @param points the ordered polygon vertices
      */
     public void finishPolygonCreation(List<Point> points) {
-        if (document == null || castleIndex < 0 || castleIndex >= getCastleCount()) {
-            castleView.finishPolygonCreation();
-            clearPolygonCreationHint();
-            return;
-        }
-        if (points.size() < 3) {
-            castleView.finishPolygonCreation();
-            clearPolygonCreationHint();
-            return;
-        }
-
-        Castle oldCastle = document.castles().get(castleIndex);
-        Castle updatedCastle = polygonEditor.add(oldCastle, points, castleView.getPolygonType());
-        castleView.finishPolygonCreation();
-        clearPolygonCreationHint();
-        commitSelectedCastleChange(updatedCastle, true);
+        castleActions.finishPolygonCreation(points);
     }
 
     /**
      * Cancels polygon creation and clears its status-bar hint.
      */
     public void cancelPolygonCreation() {
-        castleView.cancelPolygonCreation();
-        clearPolygonCreationHint();
-    }
-
-    /**
-     * Sets the polygon creation hint.
-     */
-    private void setPolygonCreationHint() {
-        setStatusBarText(hgb.lib.HGBaseText.getText("polygon.hint"));
-    }
-
-    /**
-     * Clears the polygon-creation status-bar hint.
-     */
-    private void clearPolygonCreationHint() {
-        setStatusBarText("");
+        castleActions.cancelPolygonCreation();
     }
 
     /**
@@ -575,7 +492,7 @@ public class EditorPanel extends HGBasePanel {
      * @param newPoint     the replacement point in castle coordinates
      */
     public void updatePolygonPoint(int polygonIndex, int pointIndex, Point newPoint) {
-        applySelectedCastleEdit(oldCastle -> polygonEditor.updatePoint(oldCastle, polygonIndex, pointIndex, newPoint));
+        castleActions.updatePolygonPoint(polygonIndex, pointIndex, newPoint);
     }
 
     /**
@@ -585,7 +502,7 @@ public class EditorPanel extends HGBasePanel {
      * @param newPoints    the replacement polygon vertices
      */
     public void updatePolygonPoints(int polygonIndex, List<Point> newPoints) {
-        applySelectedCastleEdit(oldCastle -> polygonEditor.updatePoints(oldCastle, polygonIndex, newPoints));
+        castleActions.updatePolygonPoints(polygonIndex, newPoints);
     }
 
     /**
@@ -595,16 +512,7 @@ public class EditorPanel extends HGBasePanel {
      * @param newPosition the new position in castle coordinates
      */
     public void updateCannonPosition(int cannonIndex, Point newPosition) {
-        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return;
-        }
-        Castle oldCastle = document.castles().get(castleIndex);
-        if (cannonIndex < 0 || cannonIndex >= oldCastle.cannons().size()) {
-            return;
-        }
-
-        Castle updatedCastle = castleElementEditor.moveCannon(oldCastle, cannonIndex, newPosition);
-        replaceSelectedCastle(updatedCastle, false);
+        castleActions.updateCannonPosition(cannonIndex, newPosition);
     }
 
     /**
@@ -613,13 +521,7 @@ public class EditorPanel extends HGBasePanel {
      * @param newPosition the new position in castle coordinates
      */
     public void updateThronePosition(Point newPosition) {
-        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return;
-        }
-        Castle oldCastle = document.castles().get(castleIndex);
-
-        Castle updatedCastle = castleElementEditor.setThronePosition(oldCastle, newPosition);
-        replaceSelectedCastle(updatedCastle, false);
+        castleActions.updateThronePosition(newPosition);
     }
 
     /**
@@ -628,13 +530,7 @@ public class EditorPanel extends HGBasePanel {
      * @param newPosition the new position in castle coordinates
      */
     public void updateWindVanePosition(Point newPosition) {
-        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return;
-        }
-        Castle oldCastle = document.castles().get(castleIndex);
-
-        Castle updatedCastle = castleElementEditor.setWindVanePosition(oldCastle, newPosition);
-        replaceSelectedCastle(updatedCastle, false);
+        castleActions.updateWindVanePosition(newPosition);
     }
 
     /**
@@ -645,14 +541,7 @@ public class EditorPanel extends HGBasePanel {
      * @param newSize      the new resource-area dimensions
      */
     public void updateResourceAreaSize(ResourceArea resourceArea, Point newPosition, Size newSize) {
-        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return;
-        }
-        Castle oldCastle = document.castles().get(castleIndex);
-
-        Castle updatedCastle = resourceAreaEditor.resize(oldCastle, resourceArea, newPosition, newSize);
-
-        replaceSelectedCastle(updatedCastle, true);
+        castleActions.updateResourceAreaSize(resourceArea, newPosition, newSize);
     }
 
     /**
@@ -662,14 +551,7 @@ public class EditorPanel extends HGBasePanel {
      * @param newPosition  the new position in castle coordinates
      */
     public void updateResourceAreaPosition(ResourceArea resourceArea, Point newPosition) {
-        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return;
-        }
-        Castle oldCastle = document.castles().get(castleIndex);
-
-        Castle updatedCastle = resourceAreaEditor.move(oldCastle, resourceArea, newPosition);
-
-        replaceSelectedCastle(updatedCastle, false);
+        castleActions.updateResourceAreaPosition(resourceArea, newPosition);
     }
 
     /**
@@ -827,19 +709,6 @@ public class EditorPanel extends HGBasePanel {
     }
 
     /**
-     * Applies a model transformation to the selected castle and refreshes dependent editor views.
-     *
-     * @param edit transformation producing the updated castle snapshot
-     */
-    private void applySelectedCastleEdit(UnaryOperator<Castle> edit) {
-        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return;
-        }
-        Castle updatedCastle = edit.apply(document.castles().get(castleIndex));
-        replaceSelectedCastle(updatedCastle, false);
-    }
-
-    /**
      * Replaces the selected castle and refreshes its dependent editor views.
      *
      * @param updatedCastle          replacement castle snapshot
@@ -931,23 +800,6 @@ public class EditorPanel extends HGBasePanel {
      */
     private void updateProblems(Castle castle) {
         problemsPanel.setProblems(castleValidator.validate(castle));
-    }
-
-    /**
-     * Updates the selected castle with values from the property palette.
-     *
-     * @param resources edited starting quantities received from the property palette
-     */
-    private void updateResources(Resources resources) {
-        if (castleIndex < 0 || castleIndex >= getCastleCount()) {
-            return;
-        }
-        Castle oldCastle = document.castles().get(castleIndex);
-        if (oldCastle.resources().equals(resources)) {
-            return;
-        }
-        Castle updatedCastle = castleElementEditor.updateResources(oldCastle, resources);
-        replaceSelectedCastle(updatedCastle, false);
     }
 
     /**
