@@ -524,8 +524,7 @@ public final class CastleViewPanel extends HGBasePanel {
     private void updatePreferredSize() {
         CastleBoundsCalculator.Bounds bounds = boundsCalculator.calculate(castle);
         double scale = BASE_SCALE * zoomFactor;
-        int baseWidth = castle != null ? castle.width() : 100;
-        int contentWidth = Math.max(baseWidth, bounds.maximumX() - bounds.minimumX());
+        int contentWidth = bounds.maximumX() - bounds.minimumX();
         int contentHeight = bounds.maximumY() - bounds.minimumY();
         int preferredWidth = (int) Math.ceil(2 * MARGIN + contentWidth * scale);
         int preferredHeight = (int) Math.ceil(2 * MARGIN + contentHeight * scale);
@@ -615,8 +614,7 @@ public final class CastleViewPanel extends HGBasePanel {
      * @return left and bottom screen-space origins as {@code [x, y]}
      */
     private double[] calculateRenderingOrigin(CastleBoundsCalculator.Bounds bounds, double scale, boolean center) {
-        int contentWidthInUnits = Math.max(castle != null ? castle.width() : 100,
-                bounds.maximumX() - bounds.minimumX());
+        int contentWidthInUnits = bounds.maximumX() - bounds.minimumX();
         double contentWidth = 2 * MARGIN + contentWidthInUnits * scale;
         double contentHeight = 2 * MARGIN + (bounds.maximumY() - bounds.minimumY()) * scale;
         double horizontalOffset = center
