@@ -13,7 +13,7 @@ public final class ResourceAreaEditor {
     /**
      * Sentinel lower-left position used to mark an absent resource area.
      */
-    private static final Point UNSET_POSITION = new Point(Integer.MIN_VALUE, Integer.MIN_VALUE);
+    private static final Point UNSET_POSITION = Point.unset();
     /**
      * Zero-sized dimensions used when a resource area is removed.
      */

@@ -753,6 +753,6 @@ public class EditorPanel extends HGBasePanel {
      * @return {@code true} if both coordinates are defined
      */
     private boolean isPositioned(Point point) {
-        return point.x() != Integer.MIN_VALUE && point.y() != Integer.MIN_VALUE;
+        return point.isSet();
     }
 }

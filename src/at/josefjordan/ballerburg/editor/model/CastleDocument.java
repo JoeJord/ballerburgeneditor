@@ -24,6 +24,23 @@ public record CastleDocument(List<Castle> castles) {
      * @param y vertical castle coordinate
      */
     public record Point(int x, int y) {
+        /**
+         * Creates a point marked as unset in both coordinate axes.
+         *
+         * @return the unset-position sentinel
+         */
+        public static Point unset() {
+            return new Point(Integer.MIN_VALUE, Integer.MIN_VALUE);
+        }
+
+        /**
+         * Checks whether this point has a defined position.
+         *
+         * @return {@code true} if neither coordinate is the unset sentinel
+         */
+        public boolean isSet() {
+            return x != Integer.MIN_VALUE && y != Integer.MIN_VALUE;
+        }
     }
 
     /**

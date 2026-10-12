@@ -190,7 +190,7 @@ public final class CastleWriter {
      * @return {@code true} unless either coordinate uses the unset-point sentinel
      */
     private boolean isSet(Point point) {
-        return point.x() != Integer.MIN_VALUE && point.y() != Integer.MIN_VALUE;
+        return point.isSet();
     }
 
     /**

@@ -49,7 +49,7 @@ final class CastleBoundsCalculator {
         }
 
         Point throne = castle.throne();
-        if (isPositioned(throne)) {
+        if (throne.isSet()) {
             Size throneSize = new Size(CastleFileFormat.THRONE_WIDTH, CastleFileFormat.THRONE_HEIGHT);
             minimumX = Math.min(minimumX, throne.x());
             minimumY = Math.min(minimumY, throne.y());
@@ -66,7 +66,7 @@ final class CastleBoundsCalculator {
 
         for (ResourceArea area : ResourceArea.values()) {
             Point position = resourcePosition(castle, area);
-            if (isPositioned(position)) {
+            if (position.isSet()) {
                 Size size = resourceSize(castle, area);
                 minimumX = Math.min(minimumX, position.x());
                 minimumY = Math.min(minimumY, position.y());
@@ -76,7 +76,7 @@ final class CastleBoundsCalculator {
         }
 
         Point windVane = castle.windVane();
-        if (isPositioned(windVane)) {
+        if (windVane.isSet()) {
             minimumX = Math.min(minimumX, windVane.x());
             minimumY = Math.min(minimumY, windVane.y());
             maximumX = Math.max(maximumX, windVane.x() + CastleFileFormat.WIND_VANE_WIDTH);
@@ -113,16 +113,6 @@ final class CastleBoundsCalculator {
             case POWDER -> castle.powderRoom();
             case BALLS -> castle.ballRoom();
         };
-    }
-
-    /**
-     * Checks whether a point is set rather than using the unset-position sentinel.
-     *
-     * @param point point to inspect
-     * @return {@code true} if neither coordinate equals {@link Integer#MIN_VALUE}
-     */
-    boolean isPositioned(Point point) {
-        return point.x() != Integer.MIN_VALUE && point.y() != Integer.MIN_VALUE;
     }
 
     /**

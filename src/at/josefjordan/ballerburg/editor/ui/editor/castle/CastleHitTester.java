@@ -322,6 +322,6 @@ final class CastleHitTester {
     // Keep the positive predicate name: callers use it to reject unset positions in guard clauses.
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     private boolean isPositioned(Point point) {
-        return point.x() != Integer.MIN_VALUE && point.y() != Integer.MIN_VALUE;
+        return point.isSet();
     }
 }

@@ -132,6 +132,6 @@ public final class CastleElementEditor {
      * @return a point whose coordinates are both {@link Integer#MIN_VALUE}
      */
     private Point unsetPosition() {
-        return new Point(Integer.MIN_VALUE, Integer.MIN_VALUE);
+        return Point.unset();
     }
 }

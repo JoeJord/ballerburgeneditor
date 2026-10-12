@@ -509,7 +509,7 @@ final class CastleRenderer {
     // Keep the positive predicate name to make callers' unset-position guard clauses read naturally.
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     private boolean isPositioned(Point point) {
-        return point.x() != Integer.MIN_VALUE && point.y() != Integer.MIN_VALUE;
+        return point.isSet();
     }
 
     /**

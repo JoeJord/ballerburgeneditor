@@ -207,7 +207,7 @@ public final class CastleReader {
         Point point = readPoint(cursor);
         if (point.x() == CastleFileFormat.UNUSED_CANNON_COORDINATE
                 && point.y() == CastleFileFormat.UNUSED_CANNON_COORDINATE) {
-            return new Point(Integer.MIN_VALUE, Integer.MIN_VALUE);
+            return Point.unset();
         }
         return point;
     }

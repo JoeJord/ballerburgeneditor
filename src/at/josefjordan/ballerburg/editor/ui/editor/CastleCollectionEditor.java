@@ -59,7 +59,7 @@ final class CastleCollectionEditor {
      * @return a new empty castle initialized with default values
      */
     private Castle createEmptyCastle() {
-        Point absent = new Point(Integer.MIN_VALUE, Integer.MIN_VALUE);
+        Point absent = Point.unset();
         Size emptySize = new Size(0, 0);
         return new Castle(0, List.of(), absent, absent, absent, absent, absent,
                 emptySize, emptySize, emptySize, new Resources(0, 0, 0, 0),

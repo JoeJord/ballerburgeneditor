@@ -307,7 +307,7 @@ public final class CastleValidator {
      * @return {@code true} if both coordinates are set
      */
     private boolean hasPoint(Point point) {
-        return point.x() != Integer.MIN_VALUE && point.y() != Integer.MIN_VALUE;
+        return point.isSet();
     }
 
     /**
