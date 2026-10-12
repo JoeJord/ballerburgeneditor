@@ -14,11 +14,6 @@
 
     <set name="addInfoHTMLPathMsg" value="credits_path"/>
 
-    <!--<set name="infoHtmlPath" value="" />
-    <set name="infoHtmlMsg" value="help.aboutpage" />
-    <set name="infoHtmlWidth" value="400" />
-    <set name="infoHtmlHeight" value="250" />-->
-
     <set name="standard_width" value="600"/>
     <set name="standard_height" value="400"/>
 
@@ -27,16 +22,12 @@
     <set name="fileMessages" value="/xml/messages.xml"/>
     <set name="fileLog" value=""/>
 
-    <!--<set name="progressColorNormal" value="0" />
-    <set name="progressColorFinished" value="1113888" />-->
-
     <set name="fileDescription" value="filetype_description"/>
     <set name="fileExtensions" value="dat"/>
     <set name="filePath" value=""/>
     <set name="fileRecentList" value="4"/>
 
     <set name="titleWasChanged" value=" * "/>
-    <!--<set name="titleHideUnnamed" value="1" />-->
 
     <set name="updateUrl" value="http://www.hagru.at/update/hgbase.version.txt"/>
 
