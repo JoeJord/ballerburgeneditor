@@ -19,14 +19,12 @@ public final class CastlePolygonEditor {
      *
      * @param castle      source castle
      * @param points      ordered polygon vertices
-     * @param polygonType polygon category, {@code "wall"} or {@code "roof"}
+     * @param polygonType polygon fill category
      * @return castle snapshot containing the appended fill-style and polygon commands
      */
-    public Castle add(Castle castle, List<Point> points, String polygonType) {
+    public Castle add(Castle castle, List<Point> points, CastlePolygonType polygonType) {
         List<DrawingCommand> drawing = new ArrayList<>(castle.drawing());
-        int fillIndex = "wall".equals(polygonType)
-                ? CastleFileFormat.FILL_INDEX_MASONRY : CastleFileFormat.FILL_INDEX_ROOF;
-        drawing.add(new FillStyle(CastleFileFormat.FILL_STYLE_PATTERN, fillIndex));
+        drawing.add(new FillStyle(CastleFileFormat.FILL_STYLE_PATTERN, polygonType.fillIndex()));
         drawing.add(new Polygon(points));
         return withDrawing(castle, drawing);
     }

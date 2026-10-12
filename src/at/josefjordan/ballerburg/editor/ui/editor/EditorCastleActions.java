@@ -7,6 +7,7 @@ import at.josefjordan.ballerburg.editor.model.CastleDocument.Size;
 import at.josefjordan.ballerburg.editor.model.CastleFileFormat;
 import at.josefjordan.ballerburg.editor.ui.editor.castle.CastleElementEditor;
 import at.josefjordan.ballerburg.editor.ui.editor.castle.CastlePolygonEditor;
+import at.josefjordan.ballerburg.editor.ui.editor.castle.CastlePolygonType;
 import at.josefjordan.ballerburg.editor.ui.editor.castle.CastleViewPanel;
 import at.josefjordan.ballerburg.editor.ui.editor.castle.ResourceArea;
 import at.josefjordan.ballerburg.editor.ui.editor.castle.ResourceAreaEditor;
@@ -123,14 +124,14 @@ final class EditorCastleActions {
      * Starts interactive creation of a wall polygon for the selected castle.
      */
     void addWall() {
-        startPolygonCreation("wall");
+        startPolygonCreation(CastlePolygonType.WALL);
     }
 
     /**
      * Starts interactive creation of a roof polygon for the selected castle.
      */
     void addRoof() {
-        startPolygonCreation("roof");
+        startPolygonCreation(CastlePolygonType.ROOF);
     }
 
     /**
@@ -273,7 +274,7 @@ final class EditorCastleActions {
      *
      * @param polygonType polygon type understood by the castle canvas
      */
-    private void startPolygonCreation(String polygonType) {
+    private void startPolygonCreation(CastlePolygonType polygonType) {
         if (selectedCastle() == null) {
             return;
         }

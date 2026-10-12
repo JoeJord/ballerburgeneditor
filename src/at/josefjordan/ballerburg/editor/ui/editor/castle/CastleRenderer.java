@@ -446,7 +446,10 @@ final class CastleRenderer {
             return;
         }
 
-        Color fill = "wall".equals(state.polygonType()) ? COLOR_FILL_MASONRY : COLOR_FILL_ROOF;
+        Color fill = switch (state.polygonType()) {
+            case WALL -> COLOR_FILL_MASONRY;
+            case ROOF -> COLOR_FILL_ROOF;
+        };
         if (points.size() >= 2 && state.mousePosition() != null) {
             Path2D path = createPolygonPath(points, state.left(), state.bottom(), state.scale(), false);
             path.lineTo(state.mousePosition().getX(), state.mousePosition().getY());
@@ -584,7 +587,7 @@ final class CastleRenderer {
     record RenderState(Castle castle, Polygon selectedPolygon, int selectedPointIndex, int selectedCannonIndex,
                        boolean selectedThrone, boolean selectedWindVane, ResourceArea selectedResourceArea,
                        int draggingResourceCorner, boolean gridVisible, boolean polygonCreationMode,
-                       String polygonType, List<Point> creationPoints, Point2D mousePosition,
+                       CastlePolygonType polygonType, List<Point> creationPoints, Point2D mousePosition,
                        Point2D edgeHoverMarker, double left, double bottom, double scale, int width, int height) {
         RenderState {
             creationPoints = List.copyOf(creationPoints);

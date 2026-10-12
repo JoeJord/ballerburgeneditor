@@ -14,6 +14,7 @@ import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Draws one castle without owning or modifying editor state.
@@ -110,7 +111,7 @@ public final class CastleViewPanel extends HGBasePanel {
     /**
      * The fill category used for the polygon being created.
      */
-    private String polygonType = null; // "wall" or "roof"
+    private CastlePolygonType polygonType;
     /**
      * Vertices entered for the polygon being created, in click order.
      */
@@ -693,11 +694,11 @@ public final class CastleViewPanel extends HGBasePanel {
     /**
      * Starts the polygon creation.
      *
-     * @param type fill category for the new polygon ({@code "wall"} or {@code "roof"})
+     * @param type fill category for the new polygon
      */
-    public void startPolygonCreation(String type) {
+    public void startPolygonCreation(CastlePolygonType type) {
         polygonCreationMode = true;
-        polygonType = type;
+        polygonType = Objects.requireNonNull(type);
         creationPoints.clear();
         mousePosition = null;
         selectedPolygon = null;
@@ -734,7 +735,7 @@ public final class CastleViewPanel extends HGBasePanel {
      *
      * @return the active polygon category, or {@code null} when creation is inactive
      */
-    public String getPolygonType() {
+    public CastlePolygonType getPolygonType() {
         return polygonType;
     }
 
