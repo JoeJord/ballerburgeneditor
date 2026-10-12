@@ -12,9 +12,7 @@ import java.awt.*;
 import java.awt.event.MouseWheelEvent;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * Draws one castle without owning or modifying editor state.
@@ -105,21 +103,9 @@ public final class CastleViewPanel extends HGBasePanel {
      */
     private transient Runnable zoomListener;
     /**
-     * Whether clicks are currently adding vertices to a new polygon.
+     * Owns the in-progress polygon's category, vertices, and preview pointer.
      */
-    private boolean polygonCreationMode = false;
-    /**
-     * The fill category used for the polygon being created.
-     */
-    private CastlePolygonType polygonType;
-    /**
-     * Vertices entered for the polygon being created, in click order.
-     */
-    private final List<Point> creationPoints = new ArrayList<>();
-    /**
-     * Current screen-space pointer position used to draw the polygon preview.
-     */
-    private transient Point2D mousePosition = null;
+    private final CastlePolygonCreation polygonCreation = new CastlePolygonCreation();
     /**
      * Current screen-space pointer position used to highlight a selected polygon edge.
      */
@@ -197,9 +183,7 @@ public final class CastleViewPanel extends HGBasePanel {
         selectedThrone = false;
         selectedWindVane = false;
         selectedResourceArea = null;
-        polygonCreationMode = false;
-        polygonType = null;
-        creationPoints.clear();
+        polygonCreation.clearForCastleSelection();
         edgeHoverPosition = null;
         zoomFactor = 1.0;
         renderingOffsetX = 0;
@@ -632,7 +616,7 @@ public final class CastleViewPanel extends HGBasePanel {
     @Override
     protected void paintComponent(Graphics graphics) {
         super.paintComponent(graphics);
-        if (castle == null && !polygonCreationMode) {
+        if (castle == null && !polygonCreation.isActive()) {
             return;
         }
         Graphics2D g = (Graphics2D) graphics.create();
@@ -646,8 +630,8 @@ public final class CastleViewPanel extends HGBasePanel {
                     : null;
             CastleRenderer.RenderState state = new CastleRenderer.RenderState(castle, selectedPolygon,
                     selectedPointIndex, selectedCannonIndex, selectedThrone, selectedWindVane,
-                    selectedResourceArea, draggingResourceCorner, gridVisible, polygonCreationMode,
-                    polygonType, creationPoints, mousePosition, edgeHoverMarker,
+                    selectedResourceArea, draggingResourceCorner, gridVisible, polygonCreation.isActive(),
+                    polygonCreation.type(), polygonCreation.points(), polygonCreation.mousePosition(), edgeHoverMarker,
                     origin[0], origin[1], scale, getWidth(), getHeight());
             renderer.draw(g, state);
         } finally {
@@ -695,10 +679,7 @@ public final class CastleViewPanel extends HGBasePanel {
      * @param type fill category for the new polygon
      */
     public void startPolygonCreation(CastlePolygonType type) {
-        polygonCreationMode = true;
-        polygonType = Objects.requireNonNull(type);
-        creationPoints.clear();
-        mousePosition = null;
+        polygonCreation.start(type);
         selectedPolygon = null;
         selectedCannonIndex = -1;
         selectedThrone = false;
@@ -712,9 +693,7 @@ public final class CastleViewPanel extends HGBasePanel {
      * Cancels polygon creation and clears its status-bar hint.
      */
     public void cancelPolygonCreation() {
-        polygonCreationMode = false;
-        polygonType = null;
-        creationPoints.clear();
+        polygonCreation.cancel();
         updatePreferredSize();
         repaint();
     }
@@ -725,7 +704,7 @@ public final class CastleViewPanel extends HGBasePanel {
      * @return {@code true} while the view is collecting vertices for a new polygon
      */
     public boolean isInPolygonCreationMode() {
-        return polygonCreationMode;
+        return polygonCreation.isActive();
     }
 
     /**
@@ -734,7 +713,7 @@ public final class CastleViewPanel extends HGBasePanel {
      * @return the active polygon category, or {@code null} when creation is inactive
      */
     public CastlePolygonType getPolygonType() {
-        return polygonType;
+        return polygonCreation.type();
     }
 
     /**
@@ -743,7 +722,7 @@ public final class CastleViewPanel extends HGBasePanel {
      * @return a copy of the vertices entered so far, in click order
      */
     List<Point> getCreationPoints() {
-        return new ArrayList<>(creationPoints);
+        return polygonCreation.points();
     }
 
     /**
@@ -752,7 +731,7 @@ public final class CastleViewPanel extends HGBasePanel {
      * @param point new vertex in castle coordinates
      */
     void addCreationPoint(Point point) {
-        creationPoints.add(point);
+        polygonCreation.addPoint(point);
         repaint();
     }
 
@@ -760,10 +739,7 @@ public final class CastleViewPanel extends HGBasePanel {
      * Clears the in-progress polygon and exits polygon-creation mode.
      */
     public void finishPolygonCreation() {
-        polygonCreationMode = false;
-        polygonType = null;
-        creationPoints.clear();
-        mousePosition = null;
+        polygonCreation.finish();
         repaint();
     }
 
@@ -773,7 +749,7 @@ public final class CastleViewPanel extends HGBasePanel {
      * @param position current pointer position in screen coordinates, or {@code null} when no preview is shown
      */
     void setMousePosition(Point2D position) {
-        mousePosition = position;
+        polygonCreation.setMousePosition(position);
         repaint();
     }
 
