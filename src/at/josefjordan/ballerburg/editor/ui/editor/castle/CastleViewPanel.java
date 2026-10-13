@@ -19,29 +19,13 @@ import java.util.List;
  */
 public final class CastleViewPanel extends HGBasePanel {
     /**
-     * Minimum supported zoom factor (10%).
-     */
-    public static final double MIN_ZOOM_FACTOR = 0.10; // corresponds 10 %
-    /**
-     * Maximum supported zoom factor (1000%).
-     */
-    public static final double MAX_ZOOM_FACTOR = 10.0; // corresponds 1000 %
-    /**
-     * Additional multiplier applied to mouse-wheel scrolling.
-     */
-    private static final int WHEEL_SCROLL_MULTIPLIER = 4;
-    /**
-     * Base drawing scale at 100% zoom.
-     */
-    private static final double BASE_SCALE = 4.0; // Base scale multiplier for 100% zoom
-    /**
-     * Padding around castle contents in screen pixels.
-     */
-    private static final double MARGIN = 24.0;
-    /**
      * Calculates the castle-coordinate bounds used to size and position rendered content.
      */
     private final transient CastleBoundsCalculator boundsCalculator = new CastleBoundsCalculator();
+    /**
+     * Coordinates zoom, viewport scrolling, and castle-to-screen transforms.
+     */
+    private final transient CastleViewTransformController transformController = new CastleViewTransformController(this, boundsCalculator);
     /**
      * Renders the castle view from a snapshot of this panel's state.
      */
@@ -86,22 +70,6 @@ public final class CastleViewPanel extends HGBasePanel {
      * Editor controller that receives view edits.
      */
     private EditorPanel editorPanel;
-    /**
-     * The current zoom factor.
-     */
-    private double zoomFactor = 1.0;
-    /**
-     * Horizontal screen-space correction used to keep the zoom anchor in place.
-     */
-    private double renderingOffsetX;
-    /**
-     * Vertical screen-space correction used to keep the zoom anchor in place.
-     */
-    private double renderingOffsetY;
-    /**
-     * The listener notified when zoom changes.
-     */
-    private transient Runnable zoomListener;
     /**
      * Owns the in-progress polygon's category, vertices, and preview pointer.
      */
@@ -159,7 +127,7 @@ public final class CastleViewPanel extends HGBasePanel {
      * @param zoomListener the callback notified when zoom changes
      */
     public void setZoomListener(Runnable zoomListener) {
-        this.zoomListener = zoomListener;
+        transformController.setZoomListener(zoomListener);
     }
 
     /**
@@ -185,10 +153,7 @@ public final class CastleViewPanel extends HGBasePanel {
         selectedResourceArea = null;
         polygonCreation.clearForCastleSelection();
         edgeHoverPosition = null;
-        zoomFactor = 1.0;
-        renderingOffsetX = 0;
-        renderingOffsetY = 0;
-        notifyZoomChanged();
+        transformController.reset();
         updatePreferredSize();
         centerCastle();
         SwingUtilities.invokeLater(this::centerCastle);
@@ -368,81 +333,13 @@ public final class CastleViewPanel extends HGBasePanel {
     }
 
     /**
-     * Multiplies and clamps the current zoom factor.
-     *
-     * @param multiplier the zoom multiplier to apply
-     */
-    void adjustZoom(double multiplier) {
-        adjustZoom(multiplier, null);
-    }
-
-    /**
      * Changes zoom while keeping the supplied cursor position anchored in the viewport.
      *
      * @param multiplier the zoom multiplier to apply
      * @param mousePoint the cursor point to keep fixed during zoom
      */
     void adjustZoom(double multiplier, java.awt.Point mousePoint) {
-        JViewport viewport = getViewport();
-        java.awt.Point oldViewPosition = viewport == null ? null : viewport.getViewPosition();
-        double[] oldRenderingParameters = mousePoint == null ? null : getRenderingParameters();
-        java.awt.Point mouseViewportPoint = viewport == null || mousePoint == null ? null : new java.awt.Point(
-                mousePoint.x - oldViewPosition.x,
-                mousePoint.y - oldViewPosition.y);
-
-        double worldX = mousePoint == null ? 0 : (mousePoint.x - oldRenderingParameters[0]) / oldRenderingParameters[2];
-        double worldY = mousePoint == null ? 0 : (oldRenderingParameters[1] - mousePoint.y) / oldRenderingParameters[2];
-        zoomFactor *= multiplier;
-        zoomFactor = Math.clamp(zoomFactor, MIN_ZOOM_FACTOR, MAX_ZOOM_FACTOR);
-
-        // Calculate the new transform without the old cursor correction first.
-        renderingOffsetX = 0;
-        renderingOffsetY = 0;
-        updatePreferredSize();
-        setSize(getPreferredSize());
-
-        if (mousePoint != null && viewport != null) {
-            double[] newRenderingParameters = calculateRenderingParameters(false);
-            double newPanelX = newRenderingParameters[0] + worldX * newRenderingParameters[2];
-            double newPanelY = newRenderingParameters[1] - worldY * newRenderingParameters[2];
-
-            java.awt.Point newViewPosition = new java.awt.Point(
-                    (int) Math.round(newPanelX - mouseViewportPoint.x),
-                    (int) Math.round(newPanelY - mouseViewportPoint.y));
-            if (viewport.getParent() instanceof JScrollPane scrollPane) {
-                scrollPane.validate();
-            }
-            java.awt.Dimension extent = viewport.getExtentSize();
-            java.awt.Dimension viewSize = getPreferredSize();
-            int maxScrollX = Math.max(0, viewSize.width - extent.width);
-            int maxScrollY = Math.max(0, viewSize.height - extent.height);
-            int scrollX = Math.clamp(newViewPosition.x, 0, maxScrollX);
-            int scrollY = Math.clamp(newViewPosition.y, 0, maxScrollY);
-            viewport.setViewPosition(new java.awt.Point(scrollX, scrollY));
-
-            // If the view cannot scroll far enough, preserve the cursor point
-            // by translating the content inside the viewport instead.
-            renderingOffsetX = mouseViewportPoint.x + scrollX - newPanelX;
-            renderingOffsetY = mouseViewportPoint.y + scrollY - newPanelY;
-            updatePreferredSize();
-            setSize(getPreferredSize());
-            viewport.revalidate();
-            if (viewport.getParent() != null) {
-                viewport.getParent().revalidate();
-            }
-        }
-
-        notifyZoomChanged();
-        repaint();
-    }
-
-    /**
-     * Returns the viewport.
-     *
-     * @return the containing viewport, or null when this panel is not in one
-     */
-    private JViewport getViewport() {
-        return getParent() instanceof JViewport viewport ? viewport : null;
+        transformController.adjustZoom(multiplier, mousePoint);
     }
 
     /**
@@ -452,23 +349,7 @@ public final class CastleViewPanel extends HGBasePanel {
      * @param horizontal whether to scroll horizontally
      */
     void scrollByWheel(MouseWheelEvent event, boolean horizontal) {
-        JViewport viewport = getViewport();
-        if (viewport == null || !(viewport.getParent() instanceof JScrollPane scrollPane)) {
-            return;
-        }
-
-        JScrollBar scrollBar = horizontal
-                ? scrollPane.getHorizontalScrollBar()
-                : scrollPane.getVerticalScrollBar();
-        int units = event.getUnitsToScroll();
-        if (units == 0) {
-            units = event.getWheelRotation();
-        }
-        int unitIncrement = scrollBar.getUnitIncrement(units);
-        if (unitIncrement <= 0) {
-            unitIncrement = Math.max(1, event.getScrollAmount());
-        }
-        scrollBar.setValue(scrollBar.getValue() + units * unitIncrement * WHEEL_SCROLL_MULTIPLIER);
+        transformController.scrollByWheel(event, horizontal);
     }
 
     /**
@@ -477,7 +358,7 @@ public final class CastleViewPanel extends HGBasePanel {
      * @return the current zoom factor
      */
     public double getZoomFactor() {
-        return zoomFactor;
+        return transformController.zoomFactor();
     }
 
     /**
@@ -486,83 +367,21 @@ public final class CastleViewPanel extends HGBasePanel {
      * @param zoomFactor the desired zoom factor
      */
     public void setZoomFactor(double zoomFactor) {
-        double boundedZoomFactor = Math.clamp(zoomFactor, MIN_ZOOM_FACTOR, MAX_ZOOM_FACTOR);
-        if (this.zoomFactor == boundedZoomFactor) {
-            return;
-        }
-        adjustZoom(boundedZoomFactor / this.zoomFactor);
-    }
-
-    /**
-     * Notifies the registered listener that the zoom factor changed.
-     */
-    private void notifyZoomChanged() {
-        if (zoomListener != null) {
-            zoomListener.run();
-        }
+        transformController.setZoomFactor(zoomFactor);
     }
 
     /**
      * Recalculates the preferred drawing size from the castle bounds and zoom.
      */
     private void updatePreferredSize() {
-        CastleBoundsCalculator.Bounds bounds = boundsCalculator.calculate(castle);
-        double scale = BASE_SCALE * zoomFactor;
-        int contentWidth = bounds.maximumX() - bounds.minimumX();
-        int contentHeight = bounds.maximumY() - bounds.minimumY();
-        int preferredWidth = (int) Math.ceil(2 * MARGIN + contentWidth * scale);
-        int preferredHeight = (int) Math.ceil(2 * MARGIN + contentHeight * scale);
-        JViewport viewport = getViewport();
-        if (viewport != null) {
-            preferredWidth = adjustPreferredDimension(preferredWidth, viewport.getWidth(), renderingOffsetX);
-            preferredHeight = adjustPreferredDimension(preferredHeight, viewport.getHeight(), renderingOffsetY);
-        }
-        double[] renderingOrigin = calculateRenderingOrigin(bounds, scale,
-                renderingOffsetX == 0 && renderingOffsetY == 0);
-        preferredWidth = Math.max(preferredWidth,
-                (int) Math.ceil(renderingOrigin[0] + bounds.maximumX() * scale + MARGIN));
-        preferredHeight = Math.max(preferredHeight,
-                (int) Math.ceil(renderingOrigin[1] - bounds.minimumY() * scale + MARGIN));
-        setPreferredSize(new java.awt.Dimension(preferredWidth, preferredHeight));
-        revalidate();
-
-        // Also revalidate the scroll pane viewport to update scrollbars
-        if (getParent() instanceof javax.swing.JViewport parentViewport) {
-            parentViewport.revalidate();
-        }
-    }
-
-    /**
-     * Adjusts the preferred dimension.
-     *
-     * @param preferred         current preferred panel dimension in pixels
-     * @param viewportDimension viewport extent along this axis in pixels
-     * @param renderingOffset   screen-space correction along this axis
-     * @return a dimension large enough for both the preferred size and viewport
-     */
-    private int adjustPreferredDimension(int preferred, int viewportDimension, double renderingOffset) {
-        if (preferred > viewportDimension) {
-            preferred += (int) Math.ceil(Math.abs(renderingOffset));
-        }
-        return Math.max(preferred, viewportDimension);
+        transformController.updatePreferredSize(castle);
     }
 
     /**
      * Centers the view within its scroll pane after the preferred size is updated.
      */
     private void centerCastle() {
-        JViewport viewport = getViewport();
-        if (viewport != null && viewport.getParent() instanceof JScrollPane) {
-            viewport.revalidate();
-            viewport.getParent().validate();
-            java.awt.Dimension panelSize = getPreferredSize();
-            java.awt.Dimension viewportSize = viewport.getSize();
-
-            int scrollX = Math.max(0, (panelSize.width - viewportSize.width) / 2);
-            int scrollY = Math.max(0, (panelSize.height - viewportSize.height) / 2);
-
-            viewport.setViewPosition(new java.awt.Point(scrollX, scrollY));
-        }
+        transformController.centerCastle();
     }
 
     /**
@@ -571,46 +390,7 @@ public final class CastleViewPanel extends HGBasePanel {
      * @return an array containing the left origin, bottom origin, and scale
      */
     double[] getRenderingParameters() {
-        return calculateRenderingParameters(renderingOffsetX == 0 && renderingOffsetY == 0);
-    }
-
-    /**
-     * Returns the drawing origin and scale used for screen-coordinate conversion.
-     *
-     * @param center whether to center the content within the panel before applying offsets
-     * @return an array containing the left origin, bottom origin, and scale
-     */
-    private double[] calculateRenderingParameters(boolean center) {
-        CastleBoundsCalculator.Bounds bounds = boundsCalculator.calculate(castle);
-        double scale = BASE_SCALE * zoomFactor;
-        double[] origin = calculateRenderingOrigin(bounds, scale, center);
-        double left = origin[0];
-        double bottom = origin[1];
-        return new double[]{left, bottom, scale};
-    }
-
-    /**
-     * Calculates the on-screen origin from the content bounds, scale, and centering state.
-     *
-     * @param bounds castle-coordinate extents
-     * @param scale  the rendering scale
-     * @param center whether to center the content within the panel before applying offsets
-     * @return left and bottom screen-space origins as {@code [x, y]}
-     */
-    private double[] calculateRenderingOrigin(CastleBoundsCalculator.Bounds bounds, double scale, boolean center) {
-        int contentWidthInUnits = bounds.maximumX() - bounds.minimumX();
-        double contentWidth = 2 * MARGIN + contentWidthInUnits * scale;
-        double contentHeight = 2 * MARGIN + (bounds.maximumY() - bounds.minimumY()) * scale;
-        double horizontalOffset = center
-                ? Math.max(0, (getWidth() - contentWidth) / 2.0)
-                : 0;
-        double verticalOffset = center
-                ? Math.max(0, (getHeight() - contentHeight) / 2.0)
-                : 0;
-        return new double[]{
-                MARGIN - bounds.minimumX() * scale + horizontalOffset + renderingOffsetX,
-                MARGIN + bounds.maximumY() * scale + verticalOffset + renderingOffsetY,
-        };
+        return transformController.renderingParameters(castle);
     }
 
     @Override
@@ -621,10 +401,9 @@ public final class CastleViewPanel extends HGBasePanel {
         }
         Graphics2D g = (Graphics2D) graphics.create();
         try {
-            CastleBoundsCalculator.Bounds bounds = boundsCalculator.calculate(castle);
-            double scale = BASE_SCALE * zoomFactor;
-            double[] origin = calculateRenderingOrigin(bounds, scale,
-                    renderingOffsetX == 0 && renderingOffsetY == 0);
+            double[] transform = transformController.renderingParameters(castle);
+            double scale = transform[2];
+            double[] origin = {transform[0], transform[1]};
             Point2D edgeHoverMarker = castle != null && selectedPolygon != null && edgeHoverPosition != null
                     ? findClosestPointOnEdge(selectedPolygon, edgeHoverPosition, origin[0], origin[1], scale)
                     : null;
