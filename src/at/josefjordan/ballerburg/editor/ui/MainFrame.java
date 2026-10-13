@@ -14,10 +14,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * The main frame for the editor.
@@ -40,29 +37,9 @@ public class MainFrame extends HGBaseFrame {
      */
     private JLabel castlePositionLabel;
     /**
-     * Earlier document snapshots, with the most recent state at the head.
+     * Tracks document snapshots for undo and redo.
      */
-    private final Deque<CastleDocument> undoHistory = new ArrayDeque<>();
-    /**
-     * Undone document snapshots available to restore, with the next state at the head.
-     */
-    private final Deque<CastleDocument> redoHistory = new ArrayDeque<>();
-    /**
-     * Current document snapshot used as the baseline for recording edits.
-     */
-    private transient CastleDocument historyDocument;
-    /**
-     * Whether a history snapshot is currently being restored.
-     */
-    private boolean restoringHistory;
-    /**
-     * Whether edits are currently grouped into one undoable operation.
-     */
-    private boolean historyGroupActive;
-    /**
-     * Whether the active edit group has recorded a document change.
-     */
-    private boolean historyGroupChanged;
+    private final transient DocumentHistory documentHistory;
 
     /**
      * Creates the main editor frame using the specified settings file.
@@ -71,6 +48,10 @@ public class MainFrame extends HGBaseFrame {
      */
     public MainFrame(String settingsFile) {
         super(settingsFile);
+        documentHistory = new DocumentHistory(
+                document -> editorPanel.setDocument(document),
+                () -> setChanged(true),
+                this::updateFileMenuStates);
     }
 
     /**
@@ -93,7 +74,7 @@ public class MainFrame extends HGBaseFrame {
     private void initializeEditor() {
         editorPanel = new EditorPanel();
         editorPanel.setSelectionListener(this::updateCastleNavigation);
-        editorPanel.setChangeListener(this::recordDocumentChange);
+        editorPanel.setChangeListener(() -> documentHistory.recordChange(editorPanel.getDocument()));
         editorPanel.setHistoryGroupListeners(this::beginHistoryGroup, this::endHistoryGroup);
         editorPanel.setZoomListener(this::updateZoomDisplay);
         if (getStatusBar() instanceof StatusBar statusBar) {
@@ -121,7 +102,7 @@ public class MainFrame extends HGBaseFrame {
 
         previousCastleButton = new JButton("◀");
         previousCastleButton.setFocusable(false);
-        previousCastleButton.addActionListener(event -> editorPanel.showPreviousCastle());
+        previousCastleButton.addActionListener(_ -> editorPanel.showPreviousCastle());
         toolbar.add(previousCastleButton, insertionIndex++);
 
         castlePositionLabel = new JLabel();
@@ -131,7 +112,7 @@ public class MainFrame extends HGBaseFrame {
 
         nextCastleButton = new JButton("▶");
         nextCastleButton.setFocusable(false);
-        nextCastleButton.addActionListener(event -> editorPanel.showNextCastle());
+        nextCastleButton.addActionListener(_ -> editorPanel.showNextCastle());
         toolbar.add(nextCastleButton, insertionIndex);
         actualizeCastleNavigationText();
     }
@@ -442,7 +423,7 @@ public class MainFrame extends HGBaseFrame {
      * @return {@code true} if an earlier document snapshot is available to undo
      */
     public boolean canUndo() {
-        return !undoHistory.isEmpty();
+        return documentHistory.canUndo();
     }
 
     /**
@@ -451,45 +432,35 @@ public class MainFrame extends HGBaseFrame {
      * @return {@code true} if an undone document snapshot is available to redo
      */
     public boolean canRedo() {
-        return !redoHistory.isEmpty();
+        return documentHistory.canRedo();
     }
 
     /**
      * Undoes the most recent document change when one is available.
      */
     public void undo() {
-        if (!canUndo()) {
-            return;
-        }
-        redoHistory.push(historyDocument);
-        restoreHistoryState(undoHistory.pop());
+        documentHistory.undo();
     }
 
     /**
      * Redoes the most recently undone document change when one is available.
      */
     public void redo() {
-        if (!canRedo()) {
-            return;
-        }
-        undoHistory.push(historyDocument);
-        restoreHistoryState(redoHistory.pop());
+        documentHistory.redo();
     }
 
     /**
      * Begins a group of related document edits.
      */
     public void beginHistoryGroup() {
-        historyGroupActive = true;
-        historyGroupChanged = false;
+        documentHistory.beginGroup();
     }
 
     /**
      * Ends the current group of related document edits.
      */
     public void endHistoryGroup() {
-        historyGroupActive = false;
-        historyGroupChanged = false;
+        documentHistory.endGroup();
     }
 
     @Override
@@ -503,7 +474,7 @@ public class MainFrame extends HGBaseFrame {
         CastleDocument document = new CastleDocument(List.of());
         editorPanel.setDocument(document);
         editorPanel.addCastle();
-        resetHistory(editorPanel.getDocument());
+        documentHistory.reset(editorPanel.getDocument());
         return 0;
     }
 
@@ -512,7 +483,7 @@ public class MainFrame extends HGBaseFrame {
         try {
             CastleDocument document = new CastleReader().read(file.toPath());
             editorPanel.setDocument(document);
-            resetHistory(document);
+            documentHistory.reset(document);
             return 0;
         } catch (IOException | IllegalArgumentException exception) {
             HGBaseDialog.printError(exception, this);
@@ -548,57 +519,13 @@ public class MainFrame extends HGBaseFrame {
     @Override
     public int onFileClose() {
         editorPanel.setDocument(null);
-        resetHistory(null);
+        documentHistory.reset(null);
         return super.onFileClose();
     }
 
-    /**
-     * Records a changed document snapshot, coalescing changes made in one history group.
-     */
-    private void recordDocumentChange() {
-        CastleDocument currentDocument = editorPanel.getDocument();
-        if (!restoringHistory && !Objects.equals(currentDocument, historyDocument)) {
-            if (historyDocument != null && (!historyGroupActive || !historyGroupChanged)) {
-                undoHistory.push(historyDocument);
-            }
-            if (!historyGroupActive || !historyGroupChanged) {
-                redoHistory.clear();
-            }
-            historyDocument = currentDocument;
-            historyGroupChanged = true;
-        }
-        setChanged(true);
-    }
-
-    /**
-     * Restores a document from undo/redo history.
-     *
-     * @param document document snapshot to restore
-     */
-    private void restoreHistoryState(CastleDocument document) {
-        restoringHistory = true;
-        try {
-            editorPanel.setDocument(document);
-            historyDocument = document;
-            setChanged(true);
-        } finally {
-            restoringHistory = false;
-        }
+    private void updateFileMenuStates() {
         if (getMenu() != null) {
             getMenu().setFileMenuStates();
         }
-    }
-
-    /**
-     * Clears undo/redo state and establishes the current history baseline.
-     *
-     * @param document document snapshot to use as the new history baseline, or {@code null} when closed
-     */
-    private void resetHistory(CastleDocument document) {
-        undoHistory.clear();
-        redoHistory.clear();
-        historyDocument = document;
-        historyGroupActive = false;
-        historyGroupChanged = false;
     }
 }
