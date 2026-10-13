@@ -29,6 +29,6 @@
 
     <set name="titleWasChanged" value=" * "/>
 
-    <set name="updateUrl" value="http://www.hagru.at/update/hgbase.version.txt"/>
+    <set name="updateUrl" value="http://www.tjger.com/update/checkversion.php?gameid=ballerburgeneditor&amp;format=XML" />
 
 </settings>
