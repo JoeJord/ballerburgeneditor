@@ -35,37 +35,13 @@ public final class CastleViewPanel extends HGBasePanel {
      */
     private transient Castle castle;
     /**
-     * Currently selected polygon, or {@code null} when no polygon is selected.
+     * Owns the selected castle element and edge-hover state.
      */
-    private transient Polygon selectedPolygon;
-    /**
-     * Index of the selected vertex in the selected polygon, or {@code -1}.
-     */
-    private int selectedPointIndex = -1;
-    /**
-     * Index of the selected cannon, or {@code -1}.
-     */
-    private int selectedCannonIndex = -1;
-    /**
-     * Whether the throne is highlighted as selected.
-     */
-    private boolean selectedThrone = false;
-    /**
-     * Whether the wind vane is highlighted as selected.
-     */
-    private boolean selectedWindVane = false;
+    private final transient CastleViewSelection selection = new CastleViewSelection();
     /**
      * Whether the grid is displayed.
      */
     private boolean gridVisible;
-    /**
-     * Storage area currently selected for moving or resizing, if any.
-     */
-    private ResourceArea selectedResourceArea;
-    /**
-     * The corner currently being resized, or -1 when none is active.
-     */
-    private int draggingResourceCorner = -1; // 0-3 for corners, -1 if not dragging
     /**
      * Editor controller that receives view edits.
      */
@@ -73,11 +49,7 @@ public final class CastleViewPanel extends HGBasePanel {
     /**
      * Owns the in-progress polygon's category, vertices, and preview pointer.
      */
-    private final CastlePolygonCreation polygonCreation = new CastlePolygonCreation();
-    /**
-     * Current screen-space pointer position used to highlight a selected polygon edge.
-     */
-    private transient Point2D edgeHoverPosition = null;
+    private final transient CastlePolygonCreation polygonCreation = new CastlePolygonCreation();
     /**
      * The polygon selection listener.
      */
@@ -146,13 +118,8 @@ public final class CastleViewPanel extends HGBasePanel {
      */
     public void setCastle(Castle castle) {
         this.castle = castle;
-        selectedPolygon = null;
-        selectedCannonIndex = -1;
-        selectedThrone = false;
-        selectedWindVane = false;
-        selectedResourceArea = null;
+        selection.clearForCastleSelection();
         polygonCreation.clearForCastleSelection();
-        edgeHoverPosition = null;
         transformController.reset();
         updatePreferredSize();
         centerCastle();
@@ -195,9 +162,7 @@ public final class CastleViewPanel extends HGBasePanel {
      * @param polygon polygon to select, or {@code null} to clear polygon selection
      */
     public void setSelectedPolygon(Polygon polygon) {
-        if (polygon != selectedPolygon) {
-            selectedPolygon = polygon;
-            edgeHoverPosition = null;
+        if (selection.setSelectedPolygon(polygon)) {
             repaint();
             if (polygonSelectionListener != null) {
                 polygonSelectionListener.run();
@@ -211,7 +176,7 @@ public final class CastleViewPanel extends HGBasePanel {
      * @return the selected polygon, or null when none is selected
      */
     public Polygon getSelectedPolygon() {
-        return selectedPolygon;
+        return selection.selectedPolygon();
     }
 
     /**
@@ -220,7 +185,7 @@ public final class CastleViewPanel extends HGBasePanel {
      * @return the selected vertex index, or -1 when none is selected
      */
     public int getSelectedPointIndex() {
-        return selectedPointIndex;
+        return selection.selectedPointIndex();
     }
 
     /**
@@ -229,8 +194,7 @@ public final class CastleViewPanel extends HGBasePanel {
      * @param index selected vertex index, or {@code -1} to clear vertex selection
      */
     public void setSelectedPointIndex(int index) {
-        if (selectedPointIndex != index) {
-            selectedPointIndex = index;
+        if (selection.setSelectedPointIndex(index)) {
             repaint();
         }
     }
@@ -241,7 +205,7 @@ public final class CastleViewPanel extends HGBasePanel {
      * @return the selected cannon index, or -1 when none is selected
      */
     public int getSelectedCannonIndex() {
-        return selectedCannonIndex;
+        return selection.selectedCannonIndex();
     }
 
     /**
@@ -250,8 +214,7 @@ public final class CastleViewPanel extends HGBasePanel {
      * @param index selected cannon index, or {@code -1} to clear cannon selection
      */
     public void setSelectedCannonIndex(int index) {
-        if (selectedCannonIndex != index) {
-            selectedCannonIndex = index;
+        if (selection.setSelectedCannonIndex(index)) {
             repaint();
         }
     }
@@ -262,7 +225,7 @@ public final class CastleViewPanel extends HGBasePanel {
      * @return {@code true} if the throne is selected
      */
     public boolean isSelectedThrone() {
-        return selectedThrone;
+        return selection.selectedThrone();
     }
 
     /**
@@ -271,8 +234,7 @@ public final class CastleViewPanel extends HGBasePanel {
      * @param selected whether the throne should be selected
      */
     public void setSelectedThrone(boolean selected) {
-        if (selectedThrone != selected) {
-            selectedThrone = selected;
+        if (selection.setSelectedThrone(selected)) {
             repaint();
         }
     }
@@ -283,7 +245,7 @@ public final class CastleViewPanel extends HGBasePanel {
      * @return {@code true} if the wind vane is selected
      */
     public boolean isSelectedWindVane() {
-        return selectedWindVane;
+        return selection.selectedWindVane();
     }
 
     /**
@@ -292,8 +254,7 @@ public final class CastleViewPanel extends HGBasePanel {
      * @param selected whether the wind vane should be selected
      */
     public void setSelectedWindVane(boolean selected) {
-        if (selectedWindVane != selected) {
-            selectedWindVane = selected;
+        if (selection.setSelectedWindVane(selected)) {
             repaint();
         }
     }
@@ -304,7 +265,7 @@ public final class CastleViewPanel extends HGBasePanel {
      * @return the selected resource area, or null when none is selected
      */
     public ResourceArea getSelectedResourceArea() {
-        return selectedResourceArea;
+        return selection.selectedResourceArea();
     }
 
     /**
@@ -313,9 +274,7 @@ public final class CastleViewPanel extends HGBasePanel {
      * @param resourceArea selected storage area, or {@code null} to clear the selection
      */
     public void setSelectedResourceArea(ResourceArea resourceArea) {
-        if (!java.util.Objects.equals(selectedResourceArea, resourceArea)) {
-            selectedResourceArea = resourceArea;
-            draggingResourceCorner = -1;
+        if (selection.setSelectedResourceArea(resourceArea)) {
             repaint();
         }
     }
@@ -326,8 +285,7 @@ public final class CastleViewPanel extends HGBasePanel {
      * @param cornerIndex active resize handle index, or {@code -1} when none is being dragged
      */
     void setDraggingResourceCorner(int cornerIndex) {
-        if (draggingResourceCorner != cornerIndex) {
-            draggingResourceCorner = cornerIndex;
+        if (selection.setDraggingResourceCorner(cornerIndex)) {
             repaint();
         }
     }
@@ -404,12 +362,16 @@ public final class CastleViewPanel extends HGBasePanel {
             double[] transform = transformController.renderingParameters(castle);
             double scale = transform[2];
             double[] origin = {transform[0], transform[1]};
-            Point2D edgeHoverMarker = castle != null && selectedPolygon != null && edgeHoverPosition != null
-                    ? findClosestPointOnEdge(selectedPolygon, edgeHoverPosition, origin[0], origin[1], scale)
+            Point2D edgeHoverMarker = castle != null && selection.selectedPolygon() != null
+                    && selection.edgeHoverPosition() != null
+                    ? findClosestPointOnEdge(selection.selectedPolygon(), selection.edgeHoverPosition(),
+                    origin[0], origin[1], scale)
                     : null;
-            CastleRenderer.RenderState state = new CastleRenderer.RenderState(castle, selectedPolygon,
-                    selectedPointIndex, selectedCannonIndex, selectedThrone, selectedWindVane,
-                    selectedResourceArea, draggingResourceCorner, gridVisible, polygonCreation.isActive(),
+            CastleRenderer.RenderState state = new CastleRenderer.RenderState(castle, selection.selectedPolygon(),
+                    selection.selectedPointIndex(), selection.selectedCannonIndex(),
+                    selection.selectedThrone(), selection.selectedWindVane(),
+                    selection.selectedResourceArea(), selection.draggingResourceCorner(), gridVisible,
+                    polygonCreation.isActive(),
                     polygonCreation.type(), polygonCreation.points(), polygonCreation.mousePosition(), edgeHoverMarker,
                     origin[0], origin[1], scale, getWidth(), getHeight());
             renderer.draw(g, state);
@@ -459,11 +421,7 @@ public final class CastleViewPanel extends HGBasePanel {
      */
     public void startPolygonCreation(CastlePolygonType type) {
         polygonCreation.start(type);
-        selectedPolygon = null;
-        selectedCannonIndex = -1;
-        selectedThrone = false;
-        selectedWindVane = false;
-        selectedResourceArea = null;
+        selection.clearForPolygonCreation();
         updatePreferredSize();
         repaint();
     }
@@ -538,8 +496,9 @@ public final class CastleViewPanel extends HGBasePanel {
      * @param position current pointer position in screen coordinates, or {@code null} to clear edge highlighting
      */
     void setEdgeHoverPosition(Point2D position) {
-        edgeHoverPosition = position;
-        repaint();
+        if (selection.setEdgeHoverPosition(position)) {
+            repaint();
+        }
     }
 
     /**
@@ -551,6 +510,8 @@ public final class CastleViewPanel extends HGBasePanel {
      * @return zero-based edge-start vertex index, or {@code -1} when the pointer is not near an eligible edge
      */
     int findEdgeIndexForHoverPosition(double left, double bottom, double scale) {
+        Polygon selectedPolygon = selection.selectedPolygon();
+        Point2D edgeHoverPosition = selection.edgeHoverPosition();
         if (selectedPolygon == null || edgeHoverPosition == null) {
             return -1;
         }
