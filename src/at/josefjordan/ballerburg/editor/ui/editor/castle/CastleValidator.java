@@ -18,6 +18,25 @@ import java.util.List;
  */
 public final class CastleValidator {
     /**
+     * A positioned castle element and its dimensions.
+     *
+     * @param position lower-left position of the element
+     * @param size     dimensions of the element
+     */
+    private record PositionedArea(Point position, Size size) {
+    }
+
+    /**
+     * A pair of positioned areas and the localization key for their overlap finding.
+     *
+     * @param first           first area in the pair
+     * @param second          second area in the pair
+     * @param localizationKey localization key for the overlap finding
+     */
+    private record OverlapCheck(PositionedArea first, PositionedArea second, String localizationKey) {
+    }
+
+    /**
      * Maximum permitted horizontal span of positioned castle elements, in castle coordinates.
      */
     private static final int MAX_CASTLE_ELEMENT_WIDTH = 200;
@@ -61,14 +80,19 @@ public final class CastleValidator {
             addMissingProblem(problems, isInsideWall(castle, castle.powder(), castle.powderRoom()), "problems.powder_outside_wall");
         }
 
-        addOverlapProblem(problems, castle.throne(), THRONE_SIZE, castle.money(), castle.moneyRoom(), "problems.overlap_throne_money");
-        addOverlapProblem(problems, castle.throne(), THRONE_SIZE, castle.balls(), castle.ballRoom(), "problems.overlap_throne_balls");
-        addOverlapProblem(problems, castle.throne(), THRONE_SIZE, castle.powder(), castle.powderRoom(), "problems.overlap_throne_powder");
-        addOverlapProblem(problems, castle.money(), castle.moneyRoom(), castle.balls(), castle.ballRoom(), "problems.overlap_money_balls");
-        addOverlapProblem(problems, castle.money(), castle.moneyRoom(), castle.powder(), castle.powderRoom(), "problems.overlap_money_powder");
-        addOverlapProblem(problems, castle.balls(), castle.ballRoom(), castle.powder(), castle.powderRoom(), "problems.overlap_balls_powder");
-        addCannonOverlapProblems(problems, castle);
-        addWindVaneOverlapProblems(problems, castle);
+        PositionedArea throne = new PositionedArea(castle.throne(), THRONE_SIZE);
+        PositionedArea money = new PositionedArea(castle.money(), castle.moneyRoom());
+        PositionedArea balls = new PositionedArea(castle.balls(), castle.ballRoom());
+        PositionedArea powder = new PositionedArea(castle.powder(), castle.powderRoom());
+        addOverlapProblems(problems,
+                new OverlapCheck(throne, money, "problems.overlap_throne_money"),
+                new OverlapCheck(throne, balls, "problems.overlap_throne_balls"),
+                new OverlapCheck(throne, powder, "problems.overlap_throne_powder"),
+                new OverlapCheck(money, balls, "problems.overlap_money_balls"),
+                new OverlapCheck(money, powder, "problems.overlap_money_powder"),
+                new OverlapCheck(balls, powder, "problems.overlap_balls_powder"));
+        addCannonOverlapProblems(problems, castle, throne, money, balls, powder);
+        addWindVaneOverlapProblems(problems, castle, throne, money, balls, powder);
         addZeroWarning(problems, hasPoint(castle.money()), castle.resources().money(), "problems.zero_money");
         addZeroWarning(problems, hasPoint(castle.powder()), castle.resources().powder(), "problems.zero_powder");
         addZeroWarning(problems, hasPoint(castle.balls()), castle.resources().balls(), "problems.zero_balls");
@@ -149,17 +173,25 @@ public final class CastleValidator {
      *
      * @param problems findings list to append to
      * @param castle   castle whose cannons are checked
+     * @param throne   positioned throne area
+     * @param money    positioned money-storage area
+     * @param balls    positioned cannonball-storage area
+     * @param powder   positioned powder-storage area
      */
-    private void addCannonOverlapProblems(List<ProblemsPanel.Problem> problems, Castle castle) {
+    private void addCannonOverlapProblems(List<ProblemsPanel.Problem> problems, Castle castle, PositionedArea throne, PositionedArea money, PositionedArea balls, PositionedArea powder) {
         for (int index = 0; index < castle.cannons().size(); index++) {
-            Point cannon = castle.cannons().get(index);
-            addOverlapProblem(problems, cannon, CANNON_SIZE, castle.throne(), THRONE_SIZE, "problems.overlap_cannon_throne");
-            addOverlapProblem(problems, cannon, CANNON_SIZE, castle.money(), castle.moneyRoom(), "problems.overlap_cannon_money");
-            addOverlapProblem(problems, cannon, CANNON_SIZE, castle.balls(), castle.ballRoom(), "problems.overlap_cannon_balls");
-            addOverlapProblem(problems, cannon, CANNON_SIZE, castle.powder(), castle.powderRoom(), "problems.overlap_cannon_powder");
-            addPolygonOverlapProblems(problems, cannon, CANNON_SIZE, castle, "problems.overlap_cannon_wall", "problems.overlap_cannon_roof");
+            PositionedArea cannon = new PositionedArea(castle.cannons().get(index), CANNON_SIZE);
+            addOverlapProblems(problems,
+                    new OverlapCheck(cannon, throne, "problems.overlap_cannon_throne"),
+                    new OverlapCheck(cannon, money, "problems.overlap_cannon_money"),
+                    new OverlapCheck(cannon, balls, "problems.overlap_cannon_balls"),
+                    new OverlapCheck(cannon, powder, "problems.overlap_cannon_powder"));
+            addPolygonOverlapProblems(problems, cannon.position(), cannon.size(), castle,
+                    "problems.overlap_cannon_wall", "problems.overlap_cannon_roof");
             for (int otherIndex = index + 1; otherIndex < castle.cannons().size(); otherIndex++) {
-                addOverlapProblem(problems, cannon, CANNON_SIZE, castle.cannons().get(otherIndex), CANNON_SIZE, "problems.overlap_cannon_cannon");
+                addOverlapProblems(problems, new OverlapCheck(cannon,
+                        new PositionedArea(castle.cannons().get(otherIndex), CANNON_SIZE),
+                        "problems.overlap_cannon_cannon"));
             }
         }
     }
@@ -169,17 +201,24 @@ public final class CastleValidator {
      *
      * @param problems findings list to append to
      * @param castle   castle whose wind vane is checked
+     * @param throne   positioned throne area
+     * @param money    positioned money-storage area
+     * @param balls    positioned cannonball-storage area
+     * @param powder   positioned powder-storage area
      */
-    private void addWindVaneOverlapProblems(List<ProblemsPanel.Problem> problems, Castle castle) {
-        Point windVane = castle.windVane();
-        addOverlapProblem(problems, windVane, WIND_VANE_SIZE, castle.throne(), THRONE_SIZE, "problems.overlap_windvane_throne");
-        addOverlapProblem(problems, windVane, WIND_VANE_SIZE, castle.money(), castle.moneyRoom(), "problems.overlap_windvane_money");
-        addOverlapProblem(problems, windVane, WIND_VANE_SIZE, castle.balls(), castle.ballRoom(), "problems.overlap_windvane_balls");
-        addOverlapProblem(problems, windVane, WIND_VANE_SIZE, castle.powder(), castle.powderRoom(), "problems.overlap_windvane_powder");
+    private void addWindVaneOverlapProblems(List<ProblemsPanel.Problem> problems, Castle castle, PositionedArea throne, PositionedArea money, PositionedArea balls, PositionedArea powder) {
+        PositionedArea windVane = new PositionedArea(castle.windVane(), WIND_VANE_SIZE);
+        addOverlapProblems(problems,
+                new OverlapCheck(windVane, throne, "problems.overlap_windvane_throne"),
+                new OverlapCheck(windVane, money, "problems.overlap_windvane_money"),
+                new OverlapCheck(windVane, balls, "problems.overlap_windvane_balls"),
+                new OverlapCheck(windVane, powder, "problems.overlap_windvane_powder"));
         for (Point cannon : castle.cannons()) {
-            addOverlapProblem(problems, windVane, WIND_VANE_SIZE, cannon, CANNON_SIZE, "problems.overlap_windvane_cannon");
+            addOverlapProblems(problems, new OverlapCheck(windVane,
+                    new PositionedArea(cannon, CANNON_SIZE), "problems.overlap_windvane_cannon"));
         }
-        addPolygonOverlapProblems(problems, windVane, WIND_VANE_SIZE, castle, "problems.overlap_windvane_wall", "problems.overlap_windvane_roof");
+        addPolygonOverlapProblems(problems, windVane.position(), windVane.size(), castle,
+                "problems.overlap_windvane_wall", "problems.overlap_windvane_roof");
     }
 
     /**
@@ -236,18 +275,20 @@ public final class CastleValidator {
     }
 
     /**
-     * Adds an error finding when two positioned areas overlap.
+     * Adds an error finding for each overlapping pair of positioned areas.
      *
-     * @param problems       findings list to append to
-     * @param firstPosition  lower-left position of the first area
-     * @param firstSize      dimensions of the first area
-     * @param secondPosition lower-left position of the second area
-     * @param secondSize     dimensions of the second area
-     * @param textKey        localization key for the overlap finding
+     * @param problems findings list to append to
+     * @param checks   ordered overlap checks to evaluate
      */
-    private void addOverlapProblem(List<ProblemsPanel.Problem> problems, Point firstPosition, Size firstSize, Point secondPosition, Size secondSize, String textKey) {
-        if (hasPoint(firstPosition) && hasPoint(secondPosition) && rectangle(firstPosition, firstSize).intersects(rectangle(secondPosition, secondSize))) {
-            problems.add(problem(ProblemsPanel.ProblemSeverity.ERROR, textKey));
+    private void addOverlapProblems(List<ProblemsPanel.Problem> problems, OverlapCheck... checks) {
+        for (OverlapCheck check : checks) {
+            PositionedArea first = check.first();
+            PositionedArea second = check.second();
+            if (hasPoint(first.position()) && hasPoint(second.position())
+                    && rectangle(first.position(), first.size()).intersects(
+                    rectangle(second.position(), second.size()))) {
+                problems.add(problem(ProblemsPanel.ProblemSeverity.ERROR, check.localizationKey()));
+            }
         }
     }
 
