@@ -125,6 +125,14 @@ public class EditorPanel extends HGBasePanel {
         updateSelectedCastle(null);
     }
 
+    @Override
+    public void actualizeText() {
+        super.actualizeText();
+        propertyPalette.actualizeText();
+        problemsPanel.actualizeText();
+        updateProblems(getSelectedCastle());
+    }
+
     /**
      * Returns the current document, or null when no document is open.
      *

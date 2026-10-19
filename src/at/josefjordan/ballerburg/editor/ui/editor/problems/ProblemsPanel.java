@@ -20,6 +20,10 @@ public final class ProblemsPanel extends HGBasePanel {
      */
     private final ProblemTableModel tableModel = new ProblemTableModel();
     /**
+     * Table displaying validation findings.
+     */
+    private final JTable table = new JTable(tableModel);
+    /**
      * Icon shown for blocking validation errors.
      */
     private final transient Icon errorIcon = HGBaseGuiTools.loadImage("/gfx/error.png");
@@ -34,14 +38,11 @@ public final class ProblemsPanel extends HGBasePanel {
     public ProblemsPanel() {
         super(new BorderLayout());
         setBorder(BorderFactory.createTitledBorder(HGBaseText.getText("problems.title")));
-        JTable table = new JTable(tableModel);
         table.setShowGrid(false);
         table.setRowHeight(Math.max(table.getRowHeight(), 22));
         table.setFillsViewportHeight(true);
         table.setRowSorter(new ProblemTableRowSorter(tableModel));
-        table.getColumnModel().getColumn(0).setPreferredWidth(28);
-        table.getColumnModel().getColumn(0).setMaxWidth(28);
-        table.getColumnModel().getColumn(0).setCellRenderer(new SeverityCellRenderer());
+        configureSeverityColumn();
         add(new JScrollPane(table), BorderLayout.CENTER);
     }
 
@@ -61,6 +62,16 @@ public final class ProblemsPanel extends HGBasePanel {
                 HGBaseText.getText("problems.type"),
                 HGBaseText.getText("problems.description")
         });
+        configureSeverityColumn();
+    }
+
+    /**
+     * Applies the icon renderer and compact sizing to the severity column.
+     */
+    private void configureSeverityColumn() {
+        table.getColumnModel().getColumn(0).setPreferredWidth(28);
+        table.getColumnModel().getColumn(0).setMaxWidth(28);
+        table.getColumnModel().getColumn(0).setCellRenderer(new SeverityCellRenderer());
     }
 
     /**

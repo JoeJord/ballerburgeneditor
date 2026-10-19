@@ -51,6 +51,10 @@ public class StatusBar extends HGBaseStatusBar {
      */
     private final JLabel zoomResetLabel = new JLabel("1:1");
     /**
+     * Localization key for the currently displayed hint, or an empty string when there is none.
+     */
+    private String hintKey = "";
+    /**
      * The listener notified when zoom changes.
      */
     private transient IntConsumer zoomListener;
@@ -63,7 +67,7 @@ public class StatusBar extends HGBaseStatusBar {
         getPanel(ZOOM_PANEL_INDEX).remove(getLabel(ZOOM_PANEL_INDEX));
         zoomSlider.setFocusable(false);
         zoomSlider.setToolTipText("Zoom");
-        zoomSlider.addChangeListener(event -> {
+        zoomSlider.addChangeListener(_ -> {
             int zoomPercent = zoomSlider.getValue();
             zoomLabel.setText(zoomPercent + "%");
             if (zoomListener != null) {
@@ -93,6 +97,7 @@ public class StatusBar extends HGBaseStatusBar {
     @Override
     public void actualizeText() {
         zoomResetLabel.setToolTipText(HGBaseText.getText("zoom.reset_tooltip"));
+        setHint(hintKey);
     }
 
     /**
@@ -118,9 +123,10 @@ public class StatusBar extends HGBaseStatusBar {
     /**
      * Displays a hint in the status bar.
      *
-     * @param hint status-bar message to display in the first panel
+     * @param hintKey localization key for the status-bar message, or an empty string to clear it
      */
-    void setHint(String hint) {
-        setText(0, hint);
+    void setHint(String hintKey) {
+        this.hintKey = hintKey;
+        setText(0, hintKey.isEmpty() ? "" : HGBaseText.getText(hintKey));
     }
 }

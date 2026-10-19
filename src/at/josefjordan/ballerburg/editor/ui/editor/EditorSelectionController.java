@@ -8,7 +8,6 @@ import at.josefjordan.ballerburg.editor.ui.editor.castle.CastlePolygonEditor;
 import at.josefjordan.ballerburg.editor.ui.editor.castle.CastleViewPanel;
 import at.josefjordan.ballerburg.editor.ui.editor.castle.ResourceArea;
 import at.josefjordan.ballerburg.editor.ui.editor.castle.ResourceAreaEditor;
-import hgb.lib.HGBaseText;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -275,7 +274,7 @@ final class EditorSelectionController {
      */
     void onPointSelectionChanged() {
         if (castleView.getSelectedPolygon() != null) {
-            callbacks.statusBarUpdater().accept(HGBaseText.getText("polygon.selected_hint"));
+            callbacks.statusBarUpdater().accept("polygon.selected_hint");
         } else if (!castleView.isInPolygonCreationMode()) {
             callbacks.statusBarUpdater().accept("");
         }
@@ -294,7 +293,7 @@ final class EditorSelectionController {
      */
     void onPolygonSelectionChanged() {
         if (castleView.getSelectedPolygon() != null) {
-            callbacks.statusBarUpdater().accept(HGBaseText.getText("polygon.selected_hint"));
+            callbacks.statusBarUpdater().accept("polygon.selected_hint");
         } else if (!castleView.isInPolygonCreationMode()) {
             callbacks.statusBarUpdater().accept("");
         }

@@ -11,7 +11,6 @@ import at.josefjordan.ballerburg.editor.ui.editor.castle.CastlePolygonType;
 import at.josefjordan.ballerburg.editor.ui.editor.castle.CastleViewPanel;
 import at.josefjordan.ballerburg.editor.ui.editor.castle.ResourceArea;
 import at.josefjordan.ballerburg.editor.ui.editor.castle.ResourceAreaEditor;
-import hgb.lib.HGBaseText;
 
 import java.util.List;
 import java.util.function.BiConsumer;
@@ -279,7 +278,7 @@ final class EditorCastleActions {
             return;
         }
         castleView.startPolygonCreation(polygonType);
-        callbacks.statusBarUpdater().accept(HGBaseText.getText("polygon.hint"));
+        callbacks.statusBarUpdater().accept("polygon.hint");
     }
 
     /**
