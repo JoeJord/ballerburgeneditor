@@ -11,11 +11,14 @@ import at.josefjordan.ballerburg.editor.model.CastleFileFormat;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.Paint;
 import java.awt.RenderingHints;
 import java.awt.geom.Line2D;
 import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
+import java.awt.TexturePaint;
+import java.awt.image.BufferedImage;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -49,13 +52,33 @@ final class CastleRenderer {
      */
     private static final Color COLOR_FILL_DEFAULT = new Color(120, 130, 140);
     /**
-     * Fill color used for roof polygons.
+     * Brick color used by the monochrome masonry fill pattern.
      */
-    private static final Color COLOR_FILL_ROOF = new Color(145, 65, 55);
+    private static final Color COLOR_PATTERN_BRICK = new Color(35, 35, 35);
     /**
-     * Fill color used for masonry polygons.
+     * Mortar color used by the monochrome fill patterns.
      */
-    private static final Color COLOR_FILL_MASONRY = new Color(150, 150, 145);
+    private static final Color COLOR_PATTERN_MORTAR = new Color(245, 245, 245);
+    /**
+     * Pattern raster resolution matching the view's pixels per castle unit at 100% zoom.
+     */
+    private static final int PATTERN_PIXELS_PER_UNIT = 4;
+    /**
+     * Logical pattern width and roof-repeat height, in castle units.
+     */
+    private static final int PATTERN_PERIOD = 12;
+    /**
+     * Logical height of the masonry pattern's two brick courses, in castle units.
+     */
+    private static final int MASONRY_PATTERN_HEIGHT = 6;
+    /**
+     * Repeating brick pattern with alternating, offset vertical joints.
+     */
+    private static final BufferedImage MASONRY_PATTERN = createMasonryPattern();
+    /**
+     * Repeating diagonal tile pattern used for roofs.
+     */
+    private static final BufferedImage ROOF_PATTERN = createRoofPattern();
 
     /**
      * Draws the grid, castle, selection markers, and in-progress polygon preview.
@@ -125,11 +148,12 @@ final class CastleRenderer {
      * @param state    view state containing ordered drawing commands
      */
     private void drawCastlePolygons(Graphics2D graphics, RenderState state) {
-        Color fill = colorFor(new FillStyle(CastleFileFormat.FILL_STYLE_PATTERN, CastleFileFormat.FILL_INDEX_MASONRY));
+        Paint fill = paintFor(new FillStyle(CastleFileFormat.FILL_STYLE_PATTERN,
+                CastleFileFormat.FILL_INDEX_MASONRY), state);
         graphics.setStroke(new BasicStroke(1.0f));
         for (DrawingCommand command : state.castle().drawing()) {
             if (command instanceof FillStyle style) {
-                fill = colorFor(style);
+                fill = paintFor(style, state);
             } else if (command instanceof Polygon polygon) {
                 drawPolygon(graphics, polygon, fill, state);
             }
@@ -141,12 +165,12 @@ final class CastleRenderer {
      *
      * @param graphics graphics context to draw with
      * @param polygon  polygon to render
-     * @param fill     fill color active for the polygon
+     * @param fill     fill paint active for the polygon
      * @param state    view transform and polygon-selection state
      */
-    private void drawPolygon(Graphics2D graphics, Polygon polygon, Color fill, RenderState state) {
+    private void drawPolygon(Graphics2D graphics, Polygon polygon, Paint fill, RenderState state) {
         Path2D path = createPolygonPath(polygon.points(), state.left(), state.bottom(), state.scale(), true);
-        graphics.setColor(fill);
+        graphics.setPaint(fill);
         graphics.fill(path);
         graphics.setColor(COLOR_OUTLINE);
         graphics.draw(path);
@@ -382,21 +406,97 @@ final class CastleRenderer {
     }
 
     /**
-     * Maps a file-format fill style to its display color.
+     * Maps a file-format fill style to its zoom-scaled display pattern.
      *
      * @param style fill-style command to map
-     * @return the roof, masonry, or default polygon fill color
+     * @param state view transform used to anchor and scale the pattern
+     * @return the roof, masonry, or default polygon fill paint
      */
-    private Color colorFor(FillStyle style) {
+    private Paint paintFor(FillStyle style, RenderState state) {
+        BufferedImage pattern;
         if (style.style() == CastleFileFormat.FILL_STYLE_PATTERN
                 && style.index() == CastleFileFormat.FILL_INDEX_ROOF) {
-            return COLOR_FILL_ROOF;
-        }
-        if (style.style() == CastleFileFormat.FILL_STYLE_PATTERN
+            pattern = ROOF_PATTERN;
+        } else if (style.style() == CastleFileFormat.FILL_STYLE_PATTERN
                 && style.index() == CastleFileFormat.FILL_INDEX_MASONRY) {
-            return COLOR_FILL_MASONRY;
+            pattern = MASONRY_PATTERN;
+        } else {
+            return COLOR_FILL_DEFAULT;
         }
-        return COLOR_FILL_DEFAULT;
+
+        double scale = state.scale();
+        double width = PATTERN_PERIOD * scale;
+        double height = (pattern == MASONRY_PATTERN ? MASONRY_PATTERN_HEIGHT : PATTERN_PERIOD) * scale;
+        Rectangle2D anchor = new Rectangle2D.Double(
+                state.left(), state.bottom() - height, width, height);
+        return new TexturePaint(pattern, anchor);
+    }
+
+    /**
+     * Creates the repeating brick image used by masonry polygons.
+     *
+     * @return a monochrome brick pattern
+     */
+    private static BufferedImage createMasonryPattern() {
+        int width = PATTERN_PERIOD * PATTERN_PIXELS_PER_UNIT;
+        int courseHeight = 3 * PATTERN_PIXELS_PER_UNIT;
+        BufferedImage pattern = new BufferedImage(width, courseHeight * 2, BufferedImage.TYPE_INT_RGB);
+        for (int y = 0; y < pattern.getHeight(); y++) {
+            int course = y / courseHeight;
+            int verticalOffset = course == 0 ? 0 : width / 4;
+            for (int x = 0; x < width; x++) {
+                boolean mortar = y % courseHeight < 2 || (x + verticalOffset) % (width / 2) < 2;
+                pattern.setRGB(x, y, (mortar ? COLOR_PATTERN_MORTAR : COLOR_PATTERN_BRICK).getRGB());
+            }
+        }
+        return pattern;
+    }
+
+    /**
+     * Creates the repeating diagonal tile image used by roof polygons.
+     *
+     * @return a monochrome roof-tile pattern
+     */
+    private static BufferedImage createRoofPattern() {
+        int tileSpacing = 6 * PATTERN_PIXELS_PER_UNIT;
+        int period = tileSpacing * 2;
+        int tileRadius = 4;
+        BufferedImage pattern = new BufferedImage(period, period, BufferedImage.TYPE_INT_RGB);
+        for (int y = 0; y < period; y++) {
+            for (int x = 0; x < period; x++) {
+                pattern.setRGB(x, y, COLOR_PATTERN_BRICK.getRGB());
+            }
+        }
+
+        for (int row = 0; row < period / tileSpacing; row++) {
+            int centerY = tileSpacing / 2 + row * tileSpacing;
+            int horizontalOffset = (row & 1) == 0 ? tileSpacing / 2 : 0;
+            for (int centerX = horizontalOffset; centerX < period + tileSpacing; centerX += tileSpacing) {
+                drawRoofTile(pattern, centerX, centerY, tileRadius);
+            }
+        }
+        return pattern;
+    }
+
+    /**
+     * Draws one diamond-shaped roof-tile outline into the repeating pattern.
+     *
+     * @param pattern    roof pattern image
+     * @param centerX    tile center's horizontal coordinate
+     * @param centerY    tile center's vertical coordinate
+     * @param tileRadius distance from the center to each diamond tip
+     */
+    private static void drawRoofTile(BufferedImage pattern, int centerX, int centerY, int tileRadius) {
+        int period = pattern.getWidth();
+        for (int offsetY = -tileRadius; offsetY <= tileRadius; offsetY++) {
+            for (int offsetX = -tileRadius; offsetX <= tileRadius; offsetX++) {
+                if (Math.abs(offsetX) + Math.abs(offsetY) == tileRadius) {
+                    int x = Math.floorMod(centerX + offsetX, period);
+                    int y = Math.floorMod(centerY + offsetY, period);
+                    pattern.setRGB(x, y, COLOR_PATTERN_MORTAR.getRGB());
+                }
+            }
+        }
     }
 
     /**
@@ -446,22 +546,23 @@ final class CastleRenderer {
             return;
         }
 
-        Color fill = switch (state.polygonType()) {
-            case WALL -> COLOR_FILL_MASONRY;
-            case ROOF -> COLOR_FILL_ROOF;
+        int fillIndex = switch (state.polygonType()) {
+            case WALL -> CastleFileFormat.FILL_INDEX_MASONRY;
+            case ROOF -> CastleFileFormat.FILL_INDEX_ROOF;
         };
+        Paint fill = paintFor(new FillStyle(CastleFileFormat.FILL_STYLE_PATTERN, fillIndex), state);
         if (points.size() >= 2 && state.mousePosition() != null) {
             Path2D path = createPolygonPath(points, state.left(), state.bottom(), state.scale(), false);
             path.lineTo(state.mousePosition().getX(), state.mousePosition().getY());
             path.closePath();
-            graphics.setColor(fill);
+            graphics.setPaint(fill);
             graphics.fill(path);
             graphics.setColor(COLOR_OUTLINE);
             graphics.setStroke(new BasicStroke(1.0f));
             graphics.draw(path);
         } else if (points.size() >= 2) {
             Path2D path = createPolygonPath(points, state.left(), state.bottom(), state.scale(), false);
-            graphics.setColor(fill);
+            graphics.setColor(COLOR_OUTLINE);
             graphics.setStroke(new BasicStroke(1.0f));
             graphics.draw(path);
         }
