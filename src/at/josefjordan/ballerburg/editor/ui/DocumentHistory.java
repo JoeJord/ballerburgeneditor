@@ -5,7 +5,7 @@ import at.josefjordan.ballerburg.editor.model.CastleDocument;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Objects;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 
 /**
  * Tracks document snapshots for undo and redo operations.
@@ -14,15 +14,15 @@ final class DocumentHistory {
     /**
      * Earlier document snapshots, with the most recent state at the head.
      */
-    private final Deque<CastleDocument> undoHistory = new ArrayDeque<>();
+    private final Deque<Snapshot> undoHistory = new ArrayDeque<>();
     /**
      * Undone document snapshots available to restore, with the next state at the head.
      */
-    private final Deque<CastleDocument> redoHistory = new ArrayDeque<>();
+    private final Deque<Snapshot> redoHistory = new ArrayDeque<>();
     /**
      * Callback that installs a document snapshot in the editor.
      */
-    private final Consumer<CastleDocument> documentRestorer;
+    private final BiConsumer<CastleDocument, Integer> documentRestorer;
     /**
      * Callback that marks the current document as modified.
      */
@@ -51,11 +51,11 @@ final class DocumentHistory {
     /**
      * Creates a history manager using callbacks for restoring documents and updating frame state.
      *
-     * @param documentRestorer     restores a document snapshot in the editor
-     * @param changeMarker         marks the current document as changed
-     * @param historyStateUpdater  updates UI state that depends on undo/redo availability
+     * @param documentRestorer    restores a document snapshot in the editor
+     * @param changeMarker        marks the current document as changed
+     * @param historyStateUpdater updates UI state that depends on undo/redo availability
      */
-    DocumentHistory(Consumer<CastleDocument> documentRestorer, Runnable changeMarker,
+    DocumentHistory(BiConsumer<CastleDocument, Integer> documentRestorer, Runnable changeMarker,
                     Runnable historyStateUpdater) {
         this.documentRestorer = documentRestorer;
         this.changeMarker = changeMarker;
@@ -85,10 +85,10 @@ final class DocumentHistory {
      *
      * @param document current document snapshot
      */
-    void recordChange(CastleDocument document) {
+    void recordChange(CastleDocument document, int castleIndex) {
         if (!restoring && !Objects.equals(document, currentDocument)) {
             if (currentDocument != null && (!groupActive || !groupChanged)) {
-                undoHistory.push(currentDocument);
+                undoHistory.push(new Snapshot(currentDocument, castleIndex));
             }
             if (!groupActive || !groupChanged) {
                 redoHistory.clear();
@@ -106,8 +106,9 @@ final class DocumentHistory {
         if (!canUndo()) {
             return;
         }
-        redoHistory.push(currentDocument);
-        restore(undoHistory.pop());
+        Snapshot snapshot = undoHistory.pop();
+        redoHistory.push(new Snapshot(currentDocument, snapshot.castleIndex()));
+        restore(snapshot);
     }
 
     /**
@@ -117,8 +118,9 @@ final class DocumentHistory {
         if (!canRedo()) {
             return;
         }
-        undoHistory.push(currentDocument);
-        restore(redoHistory.pop());
+        Snapshot snapshot = redoHistory.pop();
+        undoHistory.push(new Snapshot(currentDocument, snapshot.castleIndex()));
+        restore(snapshot);
     }
 
     /**
@@ -153,17 +155,26 @@ final class DocumentHistory {
     /**
      * Installs a snapshot from the history and refreshes the dependent frame state.
      *
-     * @param document document snapshot to restore
+     * @param snapshot document snapshot and castle selection to restore
      */
-    private void restore(CastleDocument document) {
+    private void restore(Snapshot snapshot) {
         restoring = true;
         try {
-            documentRestorer.accept(document);
-            currentDocument = document;
+            documentRestorer.accept(snapshot.document(), snapshot.castleIndex());
+            currentDocument = snapshot.document();
             changeMarker.run();
         } finally {
             restoring = false;
         }
         historyStateUpdater.run();
+    }
+
+    /**
+     * A document state and the castle selected when that state was recorded.
+     *
+     * @param document    document snapshot
+     * @param castleIndex selected castle index
+     */
+    private record Snapshot(CastleDocument document, int castleIndex) {
     }
 }

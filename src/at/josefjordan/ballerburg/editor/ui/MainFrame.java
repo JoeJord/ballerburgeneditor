@@ -49,7 +49,7 @@ public class MainFrame extends HGBaseFrame {
     public MainFrame(String settingsFile) {
         super(settingsFile);
         documentHistory = new DocumentHistory(
-                document -> editorPanel.setDocument(document),
+                (document, castleIndex) -> editorPanel.restoreDocument(document, castleIndex),
                 () -> setChanged(true),
                 this::updateFileMenuStates);
     }
@@ -74,7 +74,7 @@ public class MainFrame extends HGBaseFrame {
     private void initializeEditor() {
         editorPanel = new EditorPanel();
         editorPanel.setSelectionListener(this::updateCastleNavigation);
-        editorPanel.setChangeListener(() -> documentHistory.recordChange(editorPanel.getDocument()));
+        editorPanel.setChangeListener(castleIndex -> documentHistory.recordChange(editorPanel.getDocument(), castleIndex));
         editorPanel.setHistoryGroupListeners(this::beginHistoryGroup, this::endHistoryGroup);
         editorPanel.setZoomListener(this::updateZoomDisplay);
         if (getStatusBar() instanceof StatusBar statusBar) {

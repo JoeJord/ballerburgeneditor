@@ -39,7 +39,7 @@ final class EditorDocumentController {
     record Callbacks(Consumer<Castle> selectionUpdater,
                      Consumer<CastleEdit> editUpdater,
                      Runnable selectionNotifier,
-                     Runnable documentNotifier) {
+                     Consumer<Integer> documentNotifier) {
     }
 
     /**
@@ -104,8 +104,18 @@ final class EditorDocumentController {
      * @param document replacement document, or {@code null} to clear the editor
      */
     void setDocument(CastleDocument document) {
+        setDocument(document, 0);
+    }
+
+    /**
+     * Replaces the document and selects the requested castle when it exists.
+     *
+     * @param document    replacement document, or {@code null} to clear the editor
+     * @param castleIndex requested castle index
+     */
+    void setDocument(CastleDocument document, int castleIndex) {
         this.document = document;
-        castleIndex = document == null || document.castles().isEmpty() ? -1 : 0;
+        this.castleIndex = document == null || document.castles().isEmpty() ? -1 : Math.clamp(castleIndex, 0, document.castles().size() - 1);
         callbacks.selectionUpdater().accept(getSelectedCastle());
         callbacks.selectionNotifier().run();
     }
@@ -118,7 +128,7 @@ final class EditorDocumentController {
             return;
         }
         CastleCollectionEditor.CollectionEdit edit = castleCollectionEditor.add(document, castleIndex);
-        applyCollectionEdit(edit);
+        applyCollectionEdit(edit, edit.selectedIndex());
     }
 
     /**
@@ -128,8 +138,9 @@ final class EditorDocumentController {
         if (document == null || getSelectedCastle() == null) {
             return;
         }
+        int removedIndex = castleIndex;
         CastleCollectionEditor.CollectionEdit edit = castleCollectionEditor.remove(document, castleIndex);
-        applyCollectionEdit(edit);
+        applyCollectionEdit(edit, removedIndex);
     }
 
     /**
@@ -166,19 +177,20 @@ final class EditorDocumentController {
         if (notifySelection) {
             callbacks.selectionNotifier().run();
         }
-        callbacks.documentNotifier().run();
+        callbacks.documentNotifier().accept(castleIndex);
     }
 
     /**
      * Stores the result of a castle-collection operation and refreshes selection and document listeners.
      *
-     * @param edit result containing the updated document and selection index
+     * @param edit               result containing the updated document and selection index
+     * @param historyCastleIndex index of the castle affected by the operation
      */
-    private void applyCollectionEdit(CastleCollectionEditor.CollectionEdit edit) {
+    private void applyCollectionEdit(CastleCollectionEditor.CollectionEdit edit, int historyCastleIndex) {
         document = edit.document();
         castleIndex = edit.selectedIndex();
         callbacks.selectionUpdater().accept(getSelectedCastle());
         callbacks.selectionNotifier().run();
-        callbacks.documentNotifier().run();
+        callbacks.documentNotifier().accept(historyCastleIndex);
     }
 }

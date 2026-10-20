@@ -12,6 +12,7 @@ import hgb.gui.HGBasePanel;
 import javax.swing.*;
 import java.awt.*;
 import java.util.List;
+import java.util.function.IntConsumer;
 
 /**
  * Editor containing the castle view, property palette, and problems panel.
@@ -64,7 +65,7 @@ public class EditorPanel extends HGBasePanel {
     /**
      * The listener notified when the document changes.
      */
-    private transient Runnable changeListener;
+    private transient IntConsumer changeListener;
     /**
      * Callback that starts grouping changes into one history operation.
      */
@@ -167,6 +168,16 @@ public class EditorPanel extends HGBasePanel {
      */
     public void setDocument(CastleDocument document) {
         documentController.setDocument(document);
+    }
+
+    /**
+     * Restores a document snapshot and selects the castle associated with its history operation.
+     *
+     * @param document    document snapshot to restore
+     * @param castleIndex index of the castle to select
+     */
+    public void restoreDocument(CastleDocument document, int castleIndex) {
+        documentController.setDocument(document, castleIndex);
     }
 
     /**
@@ -379,9 +390,9 @@ public class EditorPanel extends HGBasePanel {
     /**
      * Registers the callback invoked when document data changes.
      *
-     * @param changeListener the callback notified when the document changes
+     * @param changeListener callback receiving the index of the castle affected by the change
      */
-    public void setChangeListener(Runnable changeListener) {
+    public void setChangeListener(IntConsumer changeListener) {
         this.changeListener = changeListener;
     }
 
@@ -748,9 +759,9 @@ public class EditorPanel extends HGBasePanel {
     /**
      * Notifies the registered listener that document contents changed.
      */
-    private void notifyDocumentChanged() {
+    private void notifyDocumentChanged(int historyCastleIndex) {
         if (changeListener != null) {
-            changeListener.run();
+            changeListener.accept(historyCastleIndex);
         }
     }
 
