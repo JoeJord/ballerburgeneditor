@@ -440,6 +440,7 @@ public class MainFrame extends HGBaseFrame {
      */
     public void undo() {
         documentHistory.undo();
+        clearStatusBarHint();
     }
 
     /**
@@ -447,6 +448,16 @@ public class MainFrame extends HGBaseFrame {
      */
     public void redo() {
         documentHistory.redo();
+        clearStatusBarHint();
+    }
+
+    /**
+     * Clears the status-bar hint text.
+     */
+    private void clearStatusBarHint() {
+        if (getStatusBar() instanceof StatusBar statusBar) {
+            statusBar.setHint("");
+        }
     }
 
     /**
@@ -520,6 +531,7 @@ public class MainFrame extends HGBaseFrame {
     public int onFileClose() {
         editorPanel.setDocument(null);
         documentHistory.reset(null);
+        clearStatusBarHint();
         return super.onFileClose();
     }
 
