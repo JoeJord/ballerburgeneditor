@@ -4,7 +4,7 @@
     <include file="/hgb/lib/xml/settings.default"/>
 
     <set name="appName" value="Ballerburgen Editor"/>
-    <set name="appVersion" value="v0.1"/>
+    <set name="appVersion" value="v1.0"/>
     <set name="appIcon" value="/gfx/icon.png"/>
     <set name="appFrame" value="true"/>
 
@@ -29,6 +29,6 @@
 
     <set name="titleWasChanged" value=" * "/>
 
-    <set name="updateUrl" value="http://www.tjger.com/update/checkversion.php?gameid=ballerburgeneditor&amp;format=XML" />
+    <set name="updateUrl" value="https://tjger.ddns.net/tjgerversiondb/checkversion.php?gameid=ballerburgeneditor&amp;format=XML" />
 
 </settings>
