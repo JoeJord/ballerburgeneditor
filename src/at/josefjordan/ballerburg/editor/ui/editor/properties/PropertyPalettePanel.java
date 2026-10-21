@@ -136,7 +136,9 @@ public final class PropertyPalettePanel extends HGBasePanel {
      * @return the configured resource-value spinner
      */
     private static JSpinner createSpinner() {
-        return new JSpinner(new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 1));
+        JSpinner spinner = new JSpinner(new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 1));
+        ((JSpinner.DefaultEditor) spinner.getEditor()).getTextField().setColumns(5);
+        return spinner;
     }
 
     /**
