@@ -54,7 +54,6 @@ final class CastleMouseHandler extends MouseAdapter {
         panel.addMouseMotionListener(createMouseMotionListener());
         panel.addKeyListener(createKeyListener());
         panel.setFocusable(true);
-        panel.requestFocusInWindow();
     }
 
     /**
@@ -108,6 +107,7 @@ final class CastleMouseHandler extends MouseAdapter {
 
     @Override
     public void mousePressed(MouseEvent e) {
+        panel.requestFocusInWindow();
         if (panel.isInPolygonCreationMode()) {
             polygonCreationHandler.handleMousePressed(e);
             return;
