@@ -4,7 +4,7 @@
     <include file="/hgb/lib/xml/settings.default"/>
 
     <set name="appName" value="Ballerburgen Editor"/>
-    <set name="appVersion" value="v1.0"/>
+    <set name="appVersion" value="v1.1"/>
     <set name="appIcon" value="/gfx/icon.png"/>
     <set name="appFrame" value="true"/>
 
