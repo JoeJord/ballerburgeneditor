@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<menuconfig>
+    <menu id="file">
+        <item id="file.new" type="action" shortcut="Ctrl+N"/>
+        <item id="file.open" type="action" shortcut="Ctrl+O"/>
+        <item id="file.close" type="action" shortcut="Ctrl+W"/>
+        <item id="file.recent" type="action"/>
+        <item/>
+        <item id="file.save" type="action" shortcut="Ctrl+S"/>
+        <item id="file.saveas" type="action"/>
+        <item/>
+        <item id="file.exit" type="action"/>
+    </menu>
+    <menu id="edit">
+        <item id="edit.undo" type="action" shortcut="Ctrl+Z"/>
+        <item id="edit.redo" type="action" shortcut="Ctrl+Y"/>
+        <item/>
+        <item id="edit.delete_castle" type="action"/>
+        <item id="edit.add_castle" type="action"/>
+        <item id="edit.add_throne" type="action"/>
+        <item id="edit.add_money" type="action"/>
+        <item id="edit.add_powder" type="action"/>
+        <item id="edit.add_cannonballs" type="action"/>
+        <item id="edit.add_cannon" type="action"/>
+        <item id="edit.add_windvane" type="action"/>
+        <item id="edit.add_wall" type="action"/>
+        <item id="edit.add_roof" type="action"/>
+        <item id="edit.remove" type="action" shortcut="del"/>
+    </menu>
+    <menu id="view">
+        <item id="view.grid" type="checkbox" option="grid"/>
+    </menu>
+    <menu id="settings">
+        <menu id="settings.lan">
+            <item id="lan.de;lan.en" option="language" type="radio"/>
+        </menu>
+        <menu id="settings.laf" type="laf"/>
+    </menu>
+    <menu id="help">
+        <menu id="help.update">
+            <item id="help.update.check" type="action"/>
+            <item id="help.update.autocheck" option="autocheckupdate" type="checkbox"/>
+        </menu>
+        <item/>
+        <item id="help.about" type="action"/>
+    </menu>
+    <toolbar>
+        <item id="file.exit"/>
+        <item id="file.new"/>
+        <item id="file.save"/>
+        <item/>
+        <item id="edit.undo"/>
+        <item id="edit.redo"/>
+        <item/>
+        <item id="edit.delete_castle"/>
+        <item id="edit.add_castle"/>
+        <item id="edit.add_throne"/>
+        <item id="edit.add_money"/>
+        <item id="edit.add_powder"/>
+        <item id="edit.add_cannonballs"/>
+        <item id="edit.add_cannon"/>
+        <item id="edit.add_windvane"/>
+        <item id="edit.add_wall"/>
+        <item id="edit.add_roof"/>
+        <item id="edit.remove"/>
+    </toolbar>
+    <images path="/hgb/gui/gfx">
+        <image id="null" file="null.png"/>
+        <image id="nullx" file="nullx.png"/>
+        <image id="file.new" file="new.png"/>
+        <image id="file.open" file="open.png"/>
+        <image id="file.save" file="save.png"/>
+        <image id="file.exit" file="exit.png"/>
+        <image id="edit.cut" file="cut.png"/>
+        <image id="edit.copy" file="copy.png"/>
+        <image id="edit.paste" file="paste.png"/>
+        <image id="help.about" file="about.png"/>
+        <image id="updating" file="updating.gif"/>
+    </images>
+    <images path="/gfx/menu">
+        <image id="edit.undo" file="undo.png"/>
+        <image id="edit.redo" file="redo.png"/>
+        <image id="edit.delete_castle" file="delete_castle.png"/>
+        <image id="edit.add_castle" file="add_castle.png"/>
+        <image id="edit.add_throne" file="add_throne.png"/>
+        <image id="edit.add_money" file="add_money.png"/>
+        <image id="edit.add_powder" file="add_powder.png"/>
+        <image id="edit.add_cannonballs" file="add_cannonballs.png"/>
+        <image id="edit.add_cannon" file="add_cannon.png"/>
+        <image id="edit.add_windvane" file="add_windvane.png"/>
+        <image id="edit.add_wall" file="add_wall.png"/>
+        <image id="edit.add_roof" file="add_roof.png"/>
+        <image id="edit.remove" file="remove.png"/>
+        <image id="settings.lan" file="language.png"/>
+        <image id="lan.de" file="lan_de.png"/>
+        <image id="lan.en" file="lan_en.png"/>
+    </images>
+</menuconfig>

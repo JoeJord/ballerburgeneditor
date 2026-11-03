@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<settings>
+
+    <include file="/hgb/lib/xml/settings.default"/>
+
+    <set name="appName" value="Ballerburgen Editor"/>
+    <set name="appVersion" value="v1.1"/>
+    <set name="appIcon" value="/gfx/icon.png"/>
+    <set name="appFrame" value="true"/>
+
+    <set name="infoCopyright" value="Copyright (c) 2026 by Josef Jordan"/>
+    <set name="infoIcon" value="/gfx/info.png"/>
+    <set name="infoUrl" value=""/>
+
+    <set name="addInfoHTMLPathMsg" value="credits_path"/>
+
+    <set name="standard_width" value="600"/>
+    <set name="standard_height" value="400"/>
+
+    <set name="fileConfig" value="config.xml"/>
+    <set name="fileMenu" value="/xml/menu.xml"/>
+    <set name="fileMessages" value="/xml/messages.xml"/>
+    <set name="fileLog" value=""/>
+
+    <set name="fileDescription" value="filetype_description"/>
+    <set name="fileExtensions" value="dat"/>
+    <set name="filePath" value=""/>
+    <set name="fileRecentList" value="4"/>
+
+    <set name="titleWasChanged" value=" * "/>
+
+    <set name="updateUrl" value="https://tjger.ddns.net/tjgerversiondb/checkversion.php?gameid=ballerburgeneditor&amp;format=XML" />
+
+</settings>
