@@ -11,7 +11,7 @@ if exist "C:\cygwin64\bin\bash.exe" (
 )
 
 pushd "%~dp0"
-"%CYGWIN_BASH%" -c "PATH=/usr/bin:/bin:$PATH m68k-atari-mintelf-gcc -O2 -g -Wall -Wextra -std=c99 -o ballered.prg src/main.c -lgem"
+"%CYGWIN_BASH%" -c "PATH=/usr/bin:/bin:$PATH m68k-atari-mintelf-gcc -O2 -g -Wall -Wextra -std=c99 -o ballered.prg src/main.c src/menu.c src/about_dialog.c -lgem"
 set "BUILD_RESULT=%ERRORLEVEL%"
 popd
 exit /b %BUILD_RESULT%
