@@ -1,86 +1,86 @@
-# Architektur des Ballerburgen-Editors
+# Architecture of the Ballerburg Editor
 
-## Überblick
+## Overview
 
-Der Ballerburgen-Editor ist eine Java-Swing-Desktopanwendung, die Burgsammlungen im textbasierten Originalformat `BALLER.DAT` bearbeitet. Die Anwendung verwendet HGBase für Hauptfenster, Menüs, Dateidialoge, Statusleiste, Konfiguration und Lokalisierung. Der Editor selbst ist in die Pakete `io`, `model` und `ui` aufgeteilt; die Oberfläche und die Bearbeitungslogik sind dabei enger gekoppelt als Modell und Dateiformat.
+The Ballerburg Editor is a Java Swing desktop application for editing castle collections in the original text-based `BALLER.DAT` format. It uses HGBase for the main frame, menus, file dialogs, status bar, configuration, and localization. The editor itself is divided into the `io`, `model`, and `ui` packages; the UI and editing logic are more closely coupled than the model and file format.
 
-Der Anwendungseinstieg ist `at.josefjordan.ballerburg.editor.ui.MainFrame`. Die JAR-Manifestdatei `src/META-INF/MANIFEST.MF` verweist auf diese Klasse. Der Quellcode verwendet Records, sealed Interfaces, Record-Patterns und `Math.clamp()` und setzt damit Java 21 oder neuer voraus. Das IntelliJ-Modul `ballerburgeneditor.iml` bindet `ballerburgeneditor/src` als Quellwurzel ein und hängt vom separaten `HGBase`-Modul ab. Im Editor-Unterverzeichnis liegt kein eigener Maven-, Gradle- oder Ant-Build und kein separater Testquellbaum.
+The application entry point is `at.josefjordan.ballerburg.editor.ui.MainFrame`. The JAR manifest at `src/META-INF/MANIFEST.MF` points to this class. The source uses records, sealed interfaces, record patterns, and `Math.clamp()`, and therefore requires Java 21 or later. The IntelliJ module `ballerburgeneditor.iml` configures `ballerburgeneditor/src` as its source root and depends on the separate `HGBase` module. There is no Maven, Gradle, or Ant build file and no separate test source tree in the editor subdirectory.
 
-## Paket- und Dateiverantwortlichkeiten
+## Package and File Responsibilities
 
-| Bereich | Zentrale Klassen/Dateien | Verantwortung |
+| Area | Key classes/files | Responsibility |
 |---|---|---|
-| Einstieg und Hauptfenster | `ui/MainFrame.java` | Initialisiert Fenster, Editor, Menü und Statusleiste; koordiniert Dateilebenszyklus, Undo/Redo, Navigation, Zoomanzeige und UI-Callbacks |
-| Menüs und Status | `ui/MainMenu.java`, `ui/StatusBar.java`, `src/xml/menu.xml` | Verknüpft Menüs/Toolbar mit Editoraktionen, steuert Aktivierungszustände und zeigt Status bzw. Zoom |
-| Dokumentmodell | `model/CastleDocument.java`, `model/CastleFileFormat.java` | Unveränderliche Dokument-, Burg-, Geometrie-, Ressourcen- und Zeichenbefehlsdaten sowie Konstanten des `BALLER.DAT`-Formats |
-| Datei-I/O | `io/CastleReader.java`, `io/CastleWriter.java` | Liest und schreibt `BALLER.DAT` unabhängig von Swing |
-| Dokument- und Auswahlsteuerung | `ui/editor/EditorPanel.java`, `EditorDocumentController.java`, `EditorSelectionController.java`, `CastleCollectionEditor.java` | Hält aktuelles Dokument und Auswahl, wendet Änderungen an und benachrichtigt abhängige Ansichten |
-| Bearbeitungsaktionen | `ui/editor/EditorCastleActions.java` | Erzeugt, verschiebt und ändert Burgelemente und Zeichenpolygone |
-| Zeichenfläche und Interaktion | `ui/editor/castle/` | Rendert Burgdaten und implementiert Auswahl, Hit-Tests, Polygonbearbeitung, Verschieben, Größenänderung, Zoom und Scrollen |
-| Validierung | `ui/editor/castle/CastleValidator.java`, `ui/editor/problems/ProblemsPanel.java` | Prüft Burgdaten und zeigt lokalisierte Fehler/Warnungen |
-| Eigenschaften | `ui/editor/properties/PropertyPalettePanel.java` | Bearbeitet Startwerte für Geld, Pulver, Kugeln und Bevölkerung |
-| Verlauf | `ui/DocumentHistory.java` | Speichert unveränderliche Dokument-Snapshots für Undo/Redo und fasst zusammengehörige Gesten zusammen |
-| Konfiguration und Texte | `src/xml/settings.xml`, `src/xml/messages.xml`, `src/xml/menu.xml` | HGBase-Einstellungen, deutsche/englische Beschriftungen, Menüs und Toolbars |
-| Grafiken und Credits | `src/gfx/`, `src/html/de/`, `src/html/en/` | Anwendungs-, Status- und Menügrafiken sowie lokalisierte Credit-Seiten |
+| Entry point and main frame | `ui/MainFrame.java` | Initializes the frame, editor, menu, and status bar; coordinates the file lifecycle, undo/redo, navigation, zoom display, and UI callbacks |
+| Menus and status | `ui/MainMenu.java`, `ui/StatusBar.java`, `src/xml/menu.xml` | Connects menus/toolbars to editor actions, controls enabled states, and displays status and zoom |
+| Document model | `model/CastleDocument.java`, `model/CastleFileFormat.java` | Immutable document, castle, geometry, resource, and drawing-command data, plus `BALLER.DAT` format constants |
+| File I/O | `io/CastleReader.java`, `io/CastleWriter.java` | Reads and writes `BALLER.DAT` independently of Swing |
+| Document and selection coordination | `ui/editor/EditorPanel.java`, `EditorDocumentController.java`, `EditorSelectionController.java`, `CastleCollectionEditor.java` | Holds the current document and selection, applies changes, and notifies dependent views |
+| Editing actions | `ui/editor/EditorCastleActions.java` | Creates, moves, and modifies castle elements and drawing polygons |
+| Canvas and interaction | `ui/editor/castle/` | Renders castle data and implements selection, hit testing, polygon editing, moving, resizing, zoom, and scrolling |
+| Validation | `ui/editor/castle/CastleValidator.java`, `ui/editor/problems/ProblemsPanel.java` | Checks castle data and displays localized errors and warnings |
+| Properties | `ui/editor/properties/PropertyPalettePanel.java` | Edits starting values for money, powder, cannonballs, and population |
+| History | `ui/DocumentHistory.java` | Stores immutable document snapshots for undo/redo and groups related gestures |
+| Configuration and messages | `src/xml/settings.xml`, `src/xml/messages.xml`, `src/xml/menu.xml` | HGBase settings, German/English labels, menus, and toolbars |
+| Graphics and credits | `src/gfx/`, `src/html/de/`, `src/html/en/` | Application, status, and menu graphics, plus localized credits pages |
 
-## Start- und Dokumentlebenszyklus
+## Startup and Document Lifecycle
 
-1. `MainFrame.main()` erzeugt das Hauptfenster mit `/xml/settings.xml`, setzt `MainMenu` und `StatusBar`, initialisiert `EditorPanel` und übergibt anschließend Kommandozeilenargumente an HGBase.
-2. `MainFrame.initializeEditor()` verbindet Dokument-, Auswahl-, Verlaufs-, Zoom- und Statusmeldungen zwischen Fenster und Editor. Die Rastereinstellung wird aus der HGBase-Konfiguration übernommen.
-3. Bei „Neu“ wird ein leeres `CastleDocument` erstellt und eine leere Burg hinzugefügt. Bei „Öffnen“ liest `CastleReader` die Datei, setzt das Dokument und setzt den Undo/Redo-Verlauf auf einen neuen Ausgangszustand zurück.
-4. `EditorDocumentController` hält die aktuelle Dokumentreferenz und den Index der ausgewählten Burg. Änderungen an einer Burg ersetzen diese in einer neuen `CastleDocument`-Instanz; die jeweiligen Callbacks aktualisieren Zeichenfläche, Eigenschaften, Problemliste, Auswahlstatus und Verlauf.
-5. „Speichern“ validiert das Dokument für die Bestätigungsabfrage, schreibt es über `CastleWriter` und lässt den Nutzer bei offenen Problemen ausdrücklich bestätigen, dass trotzdem gespeichert werden soll.
-6. Schließen entfernt das Dokument und setzt den Verlauf zurück. `DocumentHistory` bewahrt vorherige und rückgängig gemachte Snapshots einschließlich ausgewähltem Burgindex auf.
+1. `MainFrame.main()` creates the main frame using `/xml/settings.xml`, sets `MainMenu` and `StatusBar`, initializes `EditorPanel`, and then passes command-line arguments to HGBase.
+2. `MainFrame.initializeEditor()` connects document, selection, history, zoom, and status notifications between the frame and editor. The grid setting is loaded from HGBase configuration.
+3. “New” creates an empty `CastleDocument` and adds an empty castle. “Open” reads a file through `CastleReader`, installs the document, and resets undo/redo history to a new baseline.
+4. `EditorDocumentController` holds the current document reference and selected-castle index. Changes replace a castle with a new `CastleDocument` instance; callbacks update the canvas, properties, problems list, selection status, and history.
+5. “Save” validates the document for the confirmation prompt, writes it through `CastleWriter`, and explicitly asks the user to confirm saving despite unresolved problems.
+6. Closing clears the document and resets history. `DocumentHistory` retains previous and undone snapshots together with the selected castle index.
 
-Die Datei-I/O-Schicht wirft `IOException` bei ungültigen oder nicht lesbaren Daten; `MainFrame` zeigt Lese-/Schreibfehler mit HGBase-Fehlerdialogen an. Ungültige Eingabedaten beim Öffnen werden ebenfalls als Fehler angezeigt. Der Writer bricht mit `IOException` ab, wenn Polygonkoordinaten nach der Normalisierung negativ wären.
+The file-I/O layer throws `IOException` for invalid or unreadable data; `MainFrame` displays read/write errors using HGBase error dialogs. Invalid input data encountered while opening is also shown as an error. The writer throws `IOException` if polygon coordinates remain negative after normalization.
 
-## Datenmodell und Bearbeitungsfluss
+## Data Model and Editing Flow
 
-`CastleDocument` und seine verschachtelten Records (`Castle`, `Point`, `Size`, `Resources`, `FillStyle`, `Polygon`) bilden eine immutable Momentaufnahme. Listen werden bei der Konstruktion mit `List.copyOf()` kopiert. Ein `Castle` enthält die nominale Breite, bis zu zehn Kanonenpositionen, optionale Positionen für Thron, Windfahne und drei Vorratskammern, Kammergrößen, Startressourcen, vier reservierte Formatwerte und eine geordnete Liste von Zeichenbefehlen.
+`CastleDocument` and its nested records (`Castle`, `Point`, `Size`, `Resources`, `FillStyle`, `Polygon`) form an immutable snapshot. Lists are copied with `List.copyOf()` when constructed. A `Castle` contains its nominal width, up to ten cannon positions, optional positions for the throne, wind vane, and three storage areas, storage-area dimensions, starting resources, four reserved format values, and an ordered list of drawing commands.
 
-Eine nicht gesetzte Modellposition wird als `Point.unset()` mit `Integer.MIN_VALUE` in beiden Koordinaten dargestellt. Das Dateiformat hat dagegen eigene Sentinel-Werte, insbesondere `-1,-1` für ungenutzte Positionen. Die Modellgrenzen erzwingen höchstens zehn Kanonenpositionen, genau vier reservierte Werte und mindestens einen Punkt pro Polygon.
+An unset model position is represented by `Point.unset()` with `Integer.MIN_VALUE` on both axes. The file format has its own sentinels, notably `-1,-1` for unused positions. The model enforces at most ten cannon positions, exactly four reserved values, and at least one point per polygon.
 
-`EditorPanel` ist der UI-Kompositionspunkt. Es enthält die scrollbare `CastleViewPanel`, eine Eigenschaftspalette und die Problemliste. Es delegiert Modell-/Auswahländerungen an `EditorDocumentController` und `EditorSelectionController`; `EditorCastleActions` kapselt konkrete Bearbeitungsoperationen.
+`EditorPanel` is the UI composition point. It contains the scrollable `CastleViewPanel`, a property palette, and the problems list. It delegates model/selection changes to `EditorDocumentController` and `EditorSelectionController`; `EditorCastleActions` encapsulates concrete editing operations.
 
-Die Zeichenfläche rendert den aktuellen Burg-Snapshot mit `CastleRenderer` und besitzt den flüchtigen Ansichtszustand: Auswahl, ausgewählten Polygonpunkt, Zoom, Scrollposition, Raster und laufende Polygonerstellung. `CastleViewTransformController` rechnet zwischen Burg- und Bildschirmkoordinaten um. `CastleMouseHandler` verteilt Maus- und Tastaturgesten an spezialisierte Helfer:
+The canvas renders the current castle snapshot through `CastleRenderer` and owns transient view state: selection, selected polygon vertex, zoom, scroll position, grid, and in-progress polygon creation. `CastleViewTransformController` converts between castle and screen coordinates. `CastleMouseHandler` dispatches mouse and keyboard gestures to specialized helpers:
 
-- `CastleHitTester` erkennt getroffene Objekte, Flächen und Polygonkanten.
-- `CastlePolygonCreationHandler` und `CastlePolygonCreation` verwalten das Erstellen von Mauer- und Dachpolygonen.
-- `CastlePolygonDragHandler` verschiebt Polygone und Punkte; `CastlePolygonEditor` transformiert deren immutable Zeichenbefehle.
-- `CastleObjectDragHandler` bearbeitet Kanonen, Thron und Windfahne.
-- `CastleResourceAreaDragHandler`, `ResourceAreaEditor` und `ResourceAreaResizer` wählen, verschieben und skalieren Vorratsbereiche.
-- `CastleDragAutoScroller` scrollt während einer Ziehbewegung am Rand des Viewports.
+- `CastleHitTester` detects hit objects, areas, and polygon edges.
+- `CastlePolygonCreationHandler` and `CastlePolygonCreation` manage wall and roof polygon creation.
+- `CastlePolygonDragHandler` moves polygons and vertices; `CastlePolygonEditor` transforms their immutable drawing commands.
+- `CastleObjectDragHandler` edits cannons, the throne, and the wind vane.
+- `CastleResourceAreaDragHandler`, `ResourceAreaEditor`, and `ResourceAreaResizer` select, move, and resize storage areas.
+- `CastleDragAutoScroller` scrolls the viewport when a drag reaches its edge.
 
-Änderungen werden als neue `Castle`- und `CastleDocument`-Snapshots an den Dokumentcontroller zurückgegeben. `DocumentHistory` vergleicht Dokumentwerte, speichert den Zustand vor einer Änderung und leert den Redo-Verlauf bei neuen Bearbeitungen. Durch `beginGroup()`/`endGroup()` kann eine fortlaufende Geste als einzelner Verlaufsschritt gruppiert werden. Beim Wiederherstellen eines Snapshots werden Dokument und Burgindex gemeinsam restauriert.
+Changes are returned to the document controller as new `Castle` and `CastleDocument` snapshots. `DocumentHistory` compares document values, stores the state preceding an edit, and clears redo history when new edits are made. `beginGroup()`/`endGroup()` can group a continuous gesture into one history step. Restoring a snapshot restores the document and castle index together.
 
-## Darstellung und Validierung
+## Rendering and Validation
 
-`CastleRenderer` zeichnet Raster, Burgpolygone, Objekte und Auswahl-/Vorschau-Markierungen in fester Reihenfolge auf Swing-`Graphics2D`. Die Mauer- und Dachfüllungen werden aus den Format-Füllbefehlen interpretiert; `Sprites` stellt die grafischen Spielobjekte bereit. `CastleBoundsCalculator` bestimmt die Zeichenflächengrenzen. Ein Transformationscontroller verwaltet Zoom, Scrollen und Koordinatenabbildung.
+`CastleRenderer` draws the grid, castle polygons, objects, and selection/preview markers in a fixed order using Swing `Graphics2D`. Wall and roof fills are interpreted from the format's fill commands; `Sprites` provides the game-object graphics. `CastleBoundsCalculator` determines the canvas bounds. A transform controller manages zoom, scrolling, and coordinate conversion.
 
-`CastleValidator` prüft die für das Spiel erwarteten Bestandteile und Beziehungen: notwendige Burgmauer, Thron, Windfahne und Vorratsbereiche; Breite; Lage innerhalb der Mauer; Überlappungen von Kanonen, Objekten und Polygonen sowie leere Startressourcen. Fehlende Kanonen und Nullwerte werden als Warnungen dargestellt; andere Bedingungen können Fehler liefern. `ProblemsPanel` stellt die lokalisierten Befunde dar. Bei vorhandenen Problemen blockiert das Speichern nicht automatisch, sondern `MainFrame.onFileSave()` verlangt eine ausdrückliche Bestätigung.
+`CastleValidator` checks the components and relationships expected by the game: required castle wall, throne, wind vane, and storage areas; width; placement inside the wall; overlaps among cannons, objects, and polygons; and empty starting resources. Missing cannons and zero values are shown as warnings; other conditions may be errors. `ProblemsPanel` displays localized findings. Existing problems do not automatically block saving; `MainFrame.onFileSave()` asks for explicit confirmation instead.
 
-## `BALLER.DAT`-Format und I/O
+## `BALLER.DAT` Format and I/O
 
-`CastleReader` dekodiert die Datei mit IBM437/CP437, entfernt Kommentare zwischen `*`-Zeichen und liest daraus vorzeichenbehaftete Dezimalzahlen. Kommas und Leerraum dienen als Trennzeichen. Der Parser erwartet die feste Feldreihenfolge des Originalformats und übersetzt Sentinel-Werte in Modellrepräsentationen. `-999` beendet die Datei, `-1` beendet die Zeichenbefehle einer Burg, `-2` führt einen Füllstil mit zwei Argumenten ein und `-9` beendet ein Polygon.
+`CastleReader` decodes files as IBM437/CP437, removes comments enclosed by `*`, and parses signed decimal integers. Commas and whitespace are separators. The parser expects the original format's fixed field order and maps sentinels to model representations. `-999` ends the file, `-1` ends a castle's drawing commands, `-2` introduces a fill style and two arguments, and `-9` ends a polygon.
 
-Der Burgdatensatz enthält die Breite, zehn feste Kanonenpaare, Positionen der übrigen Spielelemente, drei Vorratskammergrößen, Startressourcen, vier reservierte Werte und Zeichenbefehle. Die Zeichenbefehle sind geordnet: ein `FillStyle` ändert die Füllung für nachfolgende Polygone. `CastleFileFormat` hält die Marker und Spielkoordinatenmaße zentral fest.
+A castle record contains its width, ten fixed cannon pairs, positions for the other game elements, three storage-area dimensions, starting resources, four reserved values, and drawing commands. Drawing commands are ordered: a `FillStyle` changes the fill used for subsequent polygons. `CastleFileFormat` centralizes markers and game-coordinate dimensions.
 
-`CastleWriter` schreibt eine kanonische Datei in CP437 mit CRLF-Zeilenenden und Kommentaren zu Burgen. Vor dem Schreiben verschiebt er alle gesetzten Koordinaten so, dass ihr minimaler Ursprung bei `(0,0)` liegt. Es werden höchstens zehn Kanonenplätze serialisiert; freie Plätze werden mit `-1,-1` aufgefüllt. Die nominale Burgbreite wird aus der größten Polygon-X-Koordinate bestimmt. Kommentare des Quelldokuments und dessen ursprüngliche Formatierung werden nicht als Dokumentdaten bewahrt.
+`CastleWriter` writes a canonical CP437 file with CRLF line endings and comments for each castle. Before writing, it translates all set coordinates so their minimum origin is `(0,0)`. Up to ten cannon slots are serialized; unused slots are padded with `-1,-1`. The nominal castle width is calculated from the greatest polygon X coordinate. Source comments and original formatting are not preserved as document data.
 
-Das Modell deckt den für den Editor relevanten `BALLER.DAT`-Inhalt ab, nicht die GEM-Ressourcen oder die separate Ergebnistabelle `BALLER.TAB` des Spiels.
+The model covers the `BALLER.DAT` content relevant to the editor, not GEM resources or the game's separate `BALLER.TAB` results table.
 
-## Bedien- und Konfigurationsoberfläche
+## Menus and Configuration
 
-`src/xml/menu.xml` deklariert Datei-, Bearbeiten-, Ansicht-, Einstellungen- und Hilfemenüs sowie Toolbar-Inhalte. `MainMenu` registriert die konkreten Swing-Actions und aktualisiert Menü-/Toolbarzustände abhängig davon, ob eine Datei, Burg oder bearbeitbare Auswahl existiert. Die einzeln in `ui/menu/` liegenden Actions delegieren an `MainFrame`.
+`src/xml/menu.xml` declares the File, Edit, View, Settings, and Help menus, as well as toolbar contents. `MainMenu` registers the concrete Swing actions and updates menu/toolbar states depending on whether a file, castle, or editable selection exists. Individual actions in `ui/menu/` delegate to `MainFrame`.
 
-`src/xml/messages.xml` enthält deutsche und englische Nachrichtenschlüssel, einschließlich Validierungsbefunden und Interaktionshinweisen. `settings.xml` bindet die Standard-HGBase-Einstellungen ein und konfiguriert Name/Version, Menü- und Nachrichtendatei, `.dat`-Dateityp, Fenstergröße sowie zuletzt verwendete Dateien. Damit werden Text und Menüstruktur überwiegend deklarativ gehalten; die Editoraktionen und dynamischen Aktivierungsregeln bleiben Java-Code.
+`src/xml/messages.xml` contains German and English message keys, including validation findings and interaction hints. `settings.xml` includes the standard HGBase settings and configures the application name/version, menu and message files, `.dat` file type, window size, and recent-file list. Text and menu structure are therefore mostly declarative; editor actions and dynamic enablement rules remain in Java code.
 
-## Wartungshinweise und Grenzen
+## Maintenance Notes and Limitations
 
-- `CastleDocument` ist unveränderlich, die Auswahl, Werkzeugmodi, Zoom- und Scrollwerte sind dagegen zustandsbehaftete UI-Daten. Modelländerungen sollten als neue Snapshots über Controller/Editorhelfer fließen, nicht direkt im Renderer oder in Maus-Listenern.
-- UI-Aktionen durchlaufen eine Callback-Kette von `MainMenu`/`MainFrame` zu `EditorPanel`, Aktionen/Controllern und zurück zu Dokumentverlauf und Anzeigen. Bei neuen Aktionen müssen auch Menü-/Toolbar-Aktivierung und Auswahlbenachrichtigungen berücksichtigt werden.
-- Das Originalformat ist ein positionsabhängiger Zahlenstrom ohne Versionsfeld. Parser und Writer müssen dieselben Feldanzahlen, Marker, CP437-Kodierung und Koordinatenkonventionen einhalten.
-- Der Writer erzeugt eine kanonische Ausgabe und normalisiert Koordinaten. Ein Öffnen/Speichern erhält deshalb nicht zwangsläufig ursprüngliche Formatierung oder Kommentaranordnung.
-- `MainFrame` und `CastleValidator` verwenden HGBase-Texte/Dialoge; der Editor kann nicht ohne Weiteres als eigenständiges Swing-Modul kompiliert oder gestartet werden, solange HGBase nicht auf dem Klassenpfad liegt.
-- Die Oberfläche ist Swing-basiert und muss auf dem Swing-UI-Thread aktualisiert werden. Die Klassenstruktur trennt Rendering und Gestenlogik, ist aber keine vollständige MVC- oder Plugin-Architektur.
-- Als offener Bedienungspunkt nennt `TODO.md` das präzisere Scrollen beim Ziehen nahe den Zeichenflächenrändern.
+- `CastleDocument` is immutable, whereas selection, tool modes, zoom, and scroll values are stateful UI data. Model changes should flow as new snapshots through controllers/editor helpers, not be made directly in the renderer or mouse listeners.
+- UI actions pass through a callback chain from `MainMenu`/`MainFrame` to `EditorPanel`, actions/controllers, and back to history and views. New actions must also account for menu/toolbar enablement and selection notifications.
+- The original format is a positional numeric stream without a version field. The parser and writer must preserve the same field counts, markers, CP437 encoding, and coordinate conventions.
+- The writer produces canonical output and normalizes coordinates. Opening and saving therefore does not necessarily preserve the original formatting or comment arrangement.
+- `MainFrame` and `CastleValidator` use HGBase messages/dialogs; the editor cannot readily be compiled or launched as a standalone Swing module unless HGBase is on the classpath.
+- The UI is Swing-based and must be updated on the Swing event dispatch thread. The class structure separates rendering from gesture logic, but is not a complete MVC or plugin architecture.
+- `TODO.md` identifies more precise scrolling while dragging near the canvas edges as an outstanding usability issue.
