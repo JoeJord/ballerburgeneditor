@@ -1,0 +1,17 @@
+@echo off
+setlocal
+
+if exist "C:\cygwin64\bin\bash.exe" (
+    set "CYGWIN_BASH=C:\cygwin64\bin\bash.exe"
+) else if exist "C:\cygwin\bin\bash.exe" (
+    set "CYGWIN_BASH=C:\cygwin\bin\bash.exe"
+) else (
+    echo Cygwin bash.exe was not found in a standard Cygwin installation. 1>&2
+    exit /b 1
+)
+
+pushd "%~dp0"
+"%CYGWIN_BASH%" -c "PATH=/usr/bin:/bin:$PATH m68k-atari-mintelf-gcc -O2 -g -Wall -Wextra -std=c99 -o ballered.prg src/main.c -lgem"
+set "BUILD_RESULT=%ERRORLEVEL%"
+popd
+exit /b %BUILD_RESULT%
