@@ -41,4 +41,6 @@ routing.
 
 From the workspace root, run `.\ballerburgeneditor\atari-st\build.bat`.
 The script compiles all three C implementation files and links against GEMlib.
-The Makefile maintains the same source list for environments with GNU Make.
+Both it and the Makefile create `out\artifacts` under the Atari editor project
+and write the resulting `ballered.prg` there, keeping generated binaries out of
+the source directory.
