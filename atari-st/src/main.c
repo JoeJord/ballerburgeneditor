@@ -1,7 +1,29 @@
 #include <gem.h>
+#include <osbind.h>
 
 #include "about_dialog.h"
 #include "menu.h"
+
+/**
+ * Verifies that the Atari ST is running in its high-resolution monochrome mode.
+ *
+ * @return Non-zero if the current resolution is supported; otherwise displays
+ *         an alert and returns zero.
+ */
+static int check_display_mode(void)
+{
+    if (Getrez() >= 2)
+    {
+        return 1;
+    }
+
+    form_alert(
+        1,
+        "[1][Ballerburgen Editor benoetigt|"
+        "ST-Monochrom (640x400).][Beenden]"
+    );
+    return 0;
+}
 
 /**
  * Initializes GEM and coordinates the application's event loop.
@@ -23,6 +45,12 @@ int main(void)
     application_id = appl_init();
     if (application_id < 0)
     {
+        return 1;
+    }
+
+    if (!check_display_mode())
+    {
+        appl_exit();
         return 1;
     }
 

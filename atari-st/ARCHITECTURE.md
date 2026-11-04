@@ -23,15 +23,18 @@ then invokes the corresponding feature module.
 ## Startup and Event Flow
 
 1. `main()` initializes AES with `appl_init()`.
-2. `menu_show()` constructs the menu tree and installs it with `menu_bar()`.
+2. `main()` checks `Getrez()` and requires the Atari ST high-resolution
+   monochrome mode (resolution code 2, 640x400). Unsupported modes receive an
+   AES alert and the application exits cleanly.
+3. `menu_show()` constructs the menu tree and installs it with `menu_bar()`.
    `main()` then restores the standard arrow cursor with `graf_mouse()`, since
    the application cursor is startup state rather than menu behavior.
-3. `evnt_mesag()` waits for AES messages. `menu_handle_message()` ignores
+4. `evnt_mesag()` waits for AES messages. `menu_handle_message()` ignores
    non-selection messages; for `MN_SELECTED`, it normalizes the selected title
    and returns an application-level `MenuAction`.
-4. `main()` dispatches the About action to `about_dialog_show()` or exits its
+5. `main()` dispatches the About action to `about_dialog_show()` or exits its
    event loop for the quit action.
-5. `menu_hide()` removes the menu bar, then `main()` calls `appl_exit()`.
+6. `menu_hide()` removes the menu bar, then `main()` calls `appl_exit()`.
 
 The About dialog is deliberately a separate feature module so its alert content
 and presentation can evolve without changing menu-tree construction or event
