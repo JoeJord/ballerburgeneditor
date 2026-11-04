@@ -13,10 +13,10 @@ provides the menu's `OBJECT` tree and handles the resulting AES messages.
 | `src/main.c` | Initializes AES, runs the message loop, routes menu actions, and shuts down the application. |
 | `src/menu.c` | Loads and installs the `MAIN` menu tree from `BALLERED.RSC`, translates AES selection messages into application actions, and releases the resource. |
 | `src/menu.h` | Declares the menu action contract used by the application event loop. |
-| `src/about_dialog.c` | Owns the About alert text and displays the application information dialog. |
+| `src/about_dialog.c` | Retrieves and displays the `DLG_ABOUT` dialog tree from the loaded resource. |
 | `src/about_dialog.h` | Declares the About dialog entry point. |
-| `src/BALLERED.RSC` | GEM resource containing the menu object tree, object layout, flags, and labels. |
-| `src/BALLERED.h` | Generated resource-tree IDs included by C code (`MAIN`). |
+| `src/BALLERED.RSC` | GEM resource containing the menu and About dialog trees, object layouts, flags, and labels. |
+| `src/BALLERED.h` | Generated resource IDs included by C code (`MAIN`, `DLG_ABOUT`, and dialog object IDs). |
 | `src/BALLERED.HRD` | Resource-editor hierarchy metadata; not loaded by the application at runtime. |
 
 `main.c` does not know menu object indices or dialog text. The menu module does
@@ -42,9 +42,10 @@ then invokes the corresponding feature module.
 6. `menu_hide()` removes the menu bar and frees the loaded resource, then
    `main()` calls `appl_exit()`.
 
-The About dialog is deliberately a separate feature module so its alert content
-and presentation can evolve without changing menu-tree construction or event
-routing.
+The About dialog is deliberately a separate feature module so its presentation
+can evolve without changing menu-tree construction or event routing. It uses
+the already-loaded resource (tree `DLG_ABOUT`, OK button `BTN_ABOUT_OK`) and
+does not load or release the resource itself.
 
 The resource currently marks the Info and Quit entries as non-selectable (the
 Quit entry only carries `OF_LASTOB`). `menu.c` adds `OF_SELECTABLE` to those two

@@ -18,7 +18,9 @@ The C sources are split by responsibility:
 - `src\main.c` coordinates AES startup, event handling, and shutdown.
 - `src\menu.c` and `src\menu.h` implement the GEM menu tree and translate menu
   selections into application actions.
-- `src\about_dialog.c` and `src\about_dialog.h` display the About dialog.
-- `src\BALLERED.RSC` defines the menu tree and is loaded by GEM/AES at startup.
-- `src\BALLERED.h` provides the resource tree ID used by C; `BALLERED.HRD` is
+- `src\about_dialog.c` and `src\about_dialog.h` display the About dialog from
+  the loaded GEM resource.
+- `src\BALLERED.RSC` defines the menu and About dialog trees and is loaded by
+  GEM/AES at startup.
+- `src\BALLERED.h` provides the resource IDs used by C; `BALLERED.HRD` is
   resource-editor metadata.
