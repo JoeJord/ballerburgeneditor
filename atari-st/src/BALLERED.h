@@ -4,7 +4,12 @@
 #define MENU_DESK 3   /* TITLE in the MAIN tree */
 #define MENU_FILE 4   /* TITLE in the MAIN tree */
 #define MENU_ABOUT 7   /* STRING in the MAIN tree */
-#define MENU_QUIT 16  /* STRING in the MAIN tree */
+#define MENU_FILE_NEW 16  /* STRING in the MAIN tree */
+#define MENU_FILE_OPEN 17  /* STRING in the MAIN tree */
+#define MENU_FILE_CLOSE 18  /* STRING in the MAIN tree */
+#define MENU_FILE_SAVE 20  /* STRING in the MAIN tree */
+#define MENU_FILE_SAVEAS 21  /* STRING in the MAIN tree */
+#define MENU_QUIT 23  /* STRING in the MAIN tree */
 
 #define DLG_ABOUT 1   /* Form/dialog tree */
 #define MSG_ABOUT_VERS 1   /* STRING in the DLG_ABOUT tree */

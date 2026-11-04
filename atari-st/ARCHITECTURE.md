@@ -51,9 +51,9 @@ the already-loaded resource tree through `app_resources_get_about_dialog()`
 
 The resource currently marks the Info and Quit entries as non-selectable (the
 Quit entry only carries `OF_LASTOB`). `menu.c` adds `OF_SELECTABLE` to those two
-resource objects after loading the tree. The object indices are 7 and 16 in the
-current resource; keep these constants synchronized if the menu tree is
-reordered in the resource editor.
+resource objects after loading the tree. It uses the generated IDs from
+`BALLERED.h` instead of duplicating object indices, so menu item reordering
+must be reflected by regenerating that header.
 
 ## Build
 

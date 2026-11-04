@@ -1,18 +1,8 @@
 #include <gem.h>
 
+#include "BALLERED.h"
 #include "app_resources.h"
 #include "menu.h"
-
-/**
- * Resource object index of the Desk information item.
- */
-enum
-{
-    /** Resource object index of the Desk information item. */
-    MENU_OBJECT_INFO = 7,
-    /** Resource object index of the File menu's quit item. */
-    MENU_OBJECT_QUIT = 16
-};
 
 /** Loaded menu tree owned by the resource system. */
 static OBJECT *menu_tree;
@@ -40,8 +30,8 @@ short menu_show(void)
         return 0;
     }
 
-    menu_tree[MENU_OBJECT_INFO].ob_flags |= OF_SELECTABLE;
-    menu_tree[MENU_OBJECT_QUIT].ob_flags |= OF_SELECTABLE;
+    menu_tree[MENU_ABOUT].ob_flags |= OF_SELECTABLE;
+    menu_tree[MENU_QUIT].ob_flags |= OF_SELECTABLE;
 
     if (!menu_bar(menu_tree, 1))
     {
@@ -88,11 +78,11 @@ MenuAction menu_handle_message(const short message[8])
 
     switch (message[4])
     {
-        case MENU_OBJECT_INFO:
+        case MENU_ABOUT:
             action = MENU_ACTION_ABOUT;
             break;
 
-        case MENU_OBJECT_QUIT:
+        case MENU_QUIT:
             action = MENU_ACTION_QUIT;
             break;
 
