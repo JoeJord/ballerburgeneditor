@@ -17,9 +17,11 @@ typedef enum
 } MenuAction;
 
 /**
- * Builds and displays the application's GEM menu bar.
+ * Loads and displays the application's resource-defined GEM menu bar.
+ *
+ * @return Non-zero if the resource and menu bar were loaded successfully.
  */
-void menu_show(void);
+short menu_show(void);
 
 /**
  * Hides the application's GEM menu bar.

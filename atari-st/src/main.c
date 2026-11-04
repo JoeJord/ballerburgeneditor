@@ -54,7 +54,11 @@ int main(void)
         return 1;
     }
 
-    menu_show();
+    if (!menu_show())
+    {
+        appl_exit();
+        return 1;
+    }
     /* Restore the standard application cursor after AES startup. */
     graf_mouse(ARROW, 0);
     running = 1;

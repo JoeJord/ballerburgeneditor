@@ -9,7 +9,9 @@ GEMlib. From the workspace root, run:
 
 The resulting `ballered.prg` is written to
 `ballerburgeneditor\out\artifacts\ballered.prg`, outside the source directory.
-The build preserves debug information for Hatari (`-g`, without stripping).
+The build also copies the required `BALLERED.RSC` beside the PRG. Keep both
+files together when running the application in Hatari. Debug information is
+preserved for Hatari (`-g`, without stripping).
 
 The C sources are split by responsibility:
 
@@ -17,3 +19,6 @@ The C sources are split by responsibility:
 - `src\menu.c` and `src\menu.h` implement the GEM menu tree and translate menu
   selections into application actions.
 - `src\about_dialog.c` and `src\about_dialog.h` display the About dialog.
+- `src\BALLERED.RSC` defines the menu tree and is loaded by GEM/AES at startup.
+- `src\BALLERED.h` provides the resource tree ID used by C; `BALLERED.HRD` is
+  resource-editor metadata.
