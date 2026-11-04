@@ -1,6 +1,7 @@
 #include <gem.h>
 
 #include "BALLERED.h"
+#include "app_resources.h"
 #include "about_dialog.h"
 
 /**
@@ -18,9 +19,10 @@ void about_dialog_show(void)
     /** Object returned by form_do() when the dialog is dismissed. */
     short exit_object;
 
-    if (!rsrc_gaddr(R_TREE, DLG_ABOUT, &about_tree))
+    about_tree = app_resources_get_about_dialog();
+    if (!about_tree)
     {
-        form_alert(1, "[1][About-Dialog fehlt in BALLERED.RSC.][OK]");
+        form_alert(1, "[1][About dialog is missing from the resources.][OK]");
         return;
     }
 

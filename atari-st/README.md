@@ -20,6 +20,8 @@ The C sources are split by responsibility:
   selections into application actions.
 - `src\about_dialog.c` and `src\about_dialog.h` display the About dialog from
   the loaded GEM resource.
+- `src\app_resources.c` and `src\app_resources.h` own resource loading and
+  provide accessors for the menu and About dialog trees.
 - `src\BALLERED.RSC` defines the menu and About dialog trees and is loaded by
   GEM/AES at startup.
 - `src\BALLERED.h` provides the resource IDs used by C; `BALLERED.HRD` is

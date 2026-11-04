@@ -19,8 +19,8 @@ static int check_display_mode(void)
 
     form_alert(
         1,
-        "[1][Ballerburgen Editor benoetigt|"
-        "ST-Monochrom (640x400).][Beenden]"
+        "[1][Ballerburgen Editor requires|"
+        "ST monochrome (640x400).][Quit]"
     );
     return 0;
 }

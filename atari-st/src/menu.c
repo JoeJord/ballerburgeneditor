@@ -1,6 +1,6 @@
 #include <gem.h>
 
-#include "BALLERED.h"
+#include "app_resources.h"
 #include "menu.h"
 
 /**
@@ -16,23 +16,8 @@ enum
 
 /** Loaded menu tree owned by the resource system. */
 static OBJECT *menu_tree;
-/** Whether the menu resource is currently loaded. */
-static short resource_loaded;
 /** Whether the resource menu is currently installed. */
 static short menu_installed;
-
-/**
- * Releases the menu resource if it has been loaded.
- */
-static void release_menu_resource(void)
-{
-    if (resource_loaded)
-    {
-        rsrc_free();
-        resource_loaded = 0;
-        menu_tree = 0;
-    }
-}
 
 /**
  * Loads the menu resource and installs its MAIN tree with AES.
@@ -41,17 +26,17 @@ static void release_menu_resource(void)
  */
 short menu_show(void)
 {
-    if (!rsrc_load("BALLERED.RSC"))
+    if (!app_resources_load())
     {
-        form_alert(1, "[1][Kann BALLERED.RSC nicht laden.][Beenden]");
+        form_alert(1, "[1][Unable to load application resources.][Quit]");
         return 0;
     }
-    resource_loaded = 1;
 
-    if (!rsrc_gaddr(R_TREE, MAIN, &menu_tree))
+    menu_tree = app_resources_get_main_menu();
+    if (!menu_tree)
     {
-        form_alert(1, "[1][Menuebaum MAIN fehlt in BALLERED.RSC.][Beenden]");
-        release_menu_resource();
+        form_alert(1, "[1][Main menu tree is missing from the resources.][Quit]");
+        app_resources_release();
         return 0;
     }
 
@@ -60,8 +45,9 @@ short menu_show(void)
 
     if (!menu_bar(menu_tree, 1))
     {
-        form_alert(1, "[1][AES kann das GEM-Menue nicht installieren.][Beenden]");
-        release_menu_resource();
+        form_alert(1, "[1][AES could not install the GEM menu.][Quit]");
+        app_resources_release();
+        menu_tree = 0;
         return 0;
     }
 
@@ -80,7 +66,8 @@ void menu_hide(void)
         menu_installed = 0;
     }
 
-    release_menu_resource();
+    app_resources_release();
+    menu_tree = 0;
 }
 
 /**
