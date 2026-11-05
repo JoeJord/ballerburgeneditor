@@ -4,6 +4,7 @@
 
 #include "BALLERED.h"
 #include "app_resources.h"
+#include "app_alerts.h"
 #include "file_open.h"
 
 /** Maximum path length supported by the GEM file selector and document API. */
@@ -32,7 +33,7 @@ static short build_initial_path(char path[OPEN_PATH_LENGTH])
     if (drive < 0 || drive >= 26
         || Dgetpath(directory, (short)(drive + 1)) < 0)
     {
-        form_alert(1, "[1][Unable to determine the current directory.][OK]");
+        app_alerts_show(APP_ALERT_CURRENT_DIRECTORY_FAILED);
         return 0;
     }
 
@@ -52,7 +53,7 @@ static short build_initial_path(char path[OPEN_PATH_LENGTH])
     {
         if (position + directory_length + 1 + 6 > OPEN_PATH_LENGTH)
         {
-            form_alert(1, "[1][Current directory path is too long.][OK]");
+            app_alerts_show(APP_ALERT_FILE_PATH_TOO_LONG);
             return 0;
         }
         memcpy(&path[position], directory_path, (size_t)directory_length);
@@ -61,7 +62,7 @@ static short build_initial_path(char path[OPEN_PATH_LENGTH])
     }
     else if (position + 6 > OPEN_PATH_LENGTH)
     {
-        form_alert(1, "[1][Current directory path is too long.][OK]");
+        app_alerts_show(APP_ALERT_FILE_PATH_TOO_LONG);
         return 0;
     }
 
@@ -143,7 +144,7 @@ static short combine_selected_path(
 
     if (directory_length + add_separator + file_length + 1 > OPEN_PATH_LENGTH)
     {
-        form_alert(1, "[1][Selected file path is too long.][OK]");
+        app_alerts_show(APP_ALERT_FILE_PATH_TOO_LONG);
         return 0;
     }
 
@@ -176,7 +177,7 @@ short file_open_select(const char **selected_path)
 
     if (!selected_path)
     {
-        form_alert(1, "[1][Invalid selected path result.][OK]");
+        app_alerts_show(APP_ALERT_SELECTED_PATH_INVALID);
         return -1;
     }
     *selected_path = 0;
@@ -190,7 +191,7 @@ short file_open_select(const char **selected_path)
     dialog_title = app_resources_get_string(MSG_FILE_OPEN);
     if (!dialog_title)
     {
-        form_alert(1, "[1][Open dialog title is missing from the resources.][OK]");
+        app_alerts_show(APP_ALERT_FILE_SELECTOR_TITLE_MISSING);
         return -1;
     }
 
@@ -198,7 +199,7 @@ short file_open_select(const char **selected_path)
     exit_button = FSEL_CANCEL;
     if (!fsel_exinput(path, file, &exit_button, dialog_title))
     {
-        form_alert(1, "[1][The GEM file selector could not be opened.][OK]");
+        app_alerts_show(APP_ALERT_FILE_SELECTOR_FAILED);
         return -1;
     }
     if (exit_button != FSEL_OK)
@@ -211,7 +212,7 @@ short file_open_select(const char **selected_path)
     }
     if (!has_dat_extension(file))
     {
-        form_alert(1, "[1][Please select a .DAT file.][OK]");
+        app_alerts_show(APP_ALERT_DAT_FILE_REQUIRED);
         return -1;
     }
     if (!combine_selected_path(path, file))

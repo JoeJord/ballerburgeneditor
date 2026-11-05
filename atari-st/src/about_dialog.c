@@ -2,6 +2,7 @@
 
 #include "BALLERED.h"
 #include "app_resources.h"
+#include "app_alerts.h"
 #include "about_dialog.h"
 
 /**
@@ -22,7 +23,7 @@ void about_dialog_show(void)
     about_tree = app_resources_get_about_dialog();
     if (!about_tree)
     {
-        form_alert(1, "[1][About dialog is missing from the resources.][OK]");
+        app_alerts_show(APP_ALERT_ABOUT_RESOURCE_MISSING);
         return;
     }
 

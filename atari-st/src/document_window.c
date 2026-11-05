@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "app_alerts.h"
 #include "document_window.h"
 
 /** Maximum number of document windows this module can manage simultaneously. */
@@ -55,7 +56,7 @@ static short open_virtual_workstation(void)
 
     if (vdi_handle == 0)
     {
-        form_alert(1, "[1][Unable to open the VDI workstation.][OK]");
+        app_alerts_show(APP_ALERT_VDI_OPEN_FAILED);
         return 0;
     }
 
@@ -210,12 +211,12 @@ static short close_window(short slot)
     handle = window_handles[slot];
     if (!wind_close(handle))
     {
-        form_alert(1, "[1][Unable to close the document window.][OK]");
+        app_alerts_show(APP_ALERT_DOCUMENT_WINDOW_CLOSE_FAILED);
         return 0;
     }
     if (!wind_delete(handle))
     {
-        form_alert(1, "[1][Unable to delete the document window.][OK]");
+        app_alerts_show(APP_ALERT_DOCUMENT_WINDOW_DELETE_FAILED);
         return 0;
     }
 
@@ -246,7 +247,7 @@ static short create_document_window(const char *title)
     slot = find_free_window_slot();
     if (slot < 0)
     {
-        form_alert(1, "[1][Window limit reached.][OK]");
+        app_alerts_show(APP_ALERT_DOCUMENT_WINDOW_LIMIT_REACHED);
         return 0;
     }
     if (!open_virtual_workstation())
@@ -255,7 +256,7 @@ static short create_document_window(const char *title)
     }
     if (!wind_get(0, WF_WORKXYWH, &desktop_x, &desktop_y, &desktop_width, &desktop_height))
     {
-        form_alert(1, "[1][Unable to determine the desktop size.][OK]");
+        app_alerts_show(APP_ALERT_DESKTOP_SIZE_FAILED);
         return 0;
     }
 
@@ -282,20 +283,20 @@ static short create_document_window(const char *title)
     );
     if (handle <= 0)
     {
-        form_alert(1, "[1][Window creation failed.][OK]");
+        app_alerts_show(APP_ALERT_DOCUMENT_WINDOW_CREATE_FAILED);
         return 0;
     }
 
     if (!wind_set_str(handle, WF_NAME, title))
     {
         wind_delete(handle);
-        form_alert(1, "[1][Unable to set the document window title.][OK]");
+        app_alerts_show(APP_ALERT_DOCUMENT_WINDOW_TITLE_FAILED);
         return 0;
     }
     if (!wind_open(handle, x, y, width, height))
     {
         wind_delete(handle);
-        form_alert(1, "[1][Unable to open the document window.][OK]");
+        app_alerts_show(APP_ALERT_DOCUMENT_WINDOW_OPEN_FAILED);
         return 0;
     }
 
@@ -332,12 +333,12 @@ short document_window_open_file(const char *path)
     input = fopen(path, "rb");
     if (!input)
     {
-        form_alert(1, "[1][Unable to open the selected DAT file.][OK]");
+        app_alerts_show(APP_ALERT_SELECTED_FILE_OPEN_FAILED);
         return 0;
     }
     if (fclose(input) != 0)
     {
-        form_alert(1, "[1][Unable to close the selected DAT file.][OK]");
+        app_alerts_show(APP_ALERT_SELECTED_FILE_CLOSE_FAILED);
         return 0;
     }
 
@@ -372,7 +373,7 @@ short document_window_close_top(void)
         &unused_3
     ))
     {
-        form_alert(1, "[1][Unable to find the top document window.][OK]");
+        app_alerts_show(APP_ALERT_TOP_DOCUMENT_WINDOW_MISSING);
         return 0;
     }
 
@@ -448,7 +449,7 @@ void document_window_handle_message(const short message[8])
                     &restore_bounds[slot]
                 ))
                 {
-                    form_alert(1, "[1][Unable to restore the window size.][OK]");
+                    app_alerts_show(APP_ALERT_DOCUMENT_WINDOW_RESTORE_FAILED);
                 }
                 else
                 {
@@ -471,7 +472,7 @@ void document_window_handle_message(const short message[8])
                         &full_bounds
                     ))
                 {
-                    form_alert(1, "[1][Unable to maximize the window.][OK]");
+                    app_alerts_show(APP_ALERT_DOCUMENT_WINDOW_MAXIMIZE_FAILED);
                 }
                 else if (!wind_set_grect(
                     window_handles[slot],
@@ -479,7 +480,7 @@ void document_window_handle_message(const short message[8])
                     &full_bounds
                 ))
                 {
-                    form_alert(1, "[1][Unable to maximize the window.][OK]");
+                    app_alerts_show(APP_ALERT_DOCUMENT_WINDOW_MAXIMIZE_FAILED);
                 }
                 else
                 {

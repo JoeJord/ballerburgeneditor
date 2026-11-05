@@ -21,6 +21,8 @@ provides the menu's `OBJECT` tree and handles the resulting AES messages.
 | `src/document_window.h` | Declares document-window creation, message handling, and shutdown. |
 | `src/app_resources.c` | Owns the resource filename and load lifecycle, and provides access to resource trees and strings. |
 | `src/app_resources.h` | Declares resource loading, release, and resource-access functions. |
+| `src/app_alerts.c` | Defines shared fixed English alert strings and displays them through AES. |
+| `src/app_alerts.h` | Declares the alert-string constants and alert display function. |
 | `src/BALLERED.RSC` | GEM resource containing the menu and About dialog trees, object layouts, flags, and labels. |
 | `src/BALLERED.h` | Generated resource IDs included by C code (`MAIN`, `DLG_ABOUT`, and dialog object IDs). |
 | `src/BALLERED.HRD` | Resource-editor hierarchy metadata; not loaded by the application at runtime. |
@@ -84,7 +86,7 @@ must be reflected by regenerating that header.
 ## Build
 
 From the workspace root, run `.\ballerburgeneditor\atari-st\build.bat`.
-The script compiles all six C implementation files, links against GEMlib,
+The script compiles all seven C implementation files, links against GEMlib,
 and copies `BALLERED.RSC` beside the executable. Both it and the Makefile create
 `out\artifacts` under the Atari editor project and place both
 `ballered.prg` and `BALLERED.RSC` there. TOS must be able to find the resource

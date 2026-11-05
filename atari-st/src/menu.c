@@ -2,6 +2,7 @@
 
 #include "BALLERED.h"
 #include "app_resources.h"
+#include "app_alerts.h"
 #include "menu.h"
 
 /** Loaded menu tree owned by the resource system. */
@@ -20,14 +21,14 @@ short menu_show(void)
 {
     if (!app_resources_load())
     {
-        form_alert(1, "[1][Unable to load application resources.][Quit]");
+        app_alerts_show(APP_ALERT_RESOURCES_LOAD_FAILED);
         return 0;
     }
 
     menu_tree = app_resources_get_main_menu();
     if (!menu_tree)
     {
-        form_alert(1, "[1][Main menu tree is missing from the resources.][Quit]");
+        app_alerts_show(APP_ALERT_MAIN_MENU_MISSING);
         app_resources_release();
         return 0;
     }
@@ -40,7 +41,7 @@ short menu_show(void)
 
     if (!menu_ienable(menu_tree, MENU_FILE_CLOSE, 0))
     {
-        form_alert(1, "[1][AES could not disable the Close menu item.][Quit]");
+        app_alerts_show(APP_ALERT_CLOSE_MENU_DISABLE_FAILED);
         app_resources_release();
         menu_tree = 0;
         return 0;
@@ -49,7 +50,7 @@ short menu_show(void)
 
     if (!menu_bar(menu_tree, 1))
     {
-        form_alert(1, "[1][AES could not install the GEM menu.][Quit]");
+        app_alerts_show(APP_ALERT_GEM_MENU_INSTALL_FAILED);
         app_resources_release();
         menu_tree = 0;
         return 0;

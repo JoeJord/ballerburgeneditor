@@ -2,6 +2,7 @@
 #include <osbind.h>
 
 #include "about_dialog.h"
+#include "app_alerts.h"
 #include "document_window.h"
 #include "file_open.h"
 #include "menu.h"
@@ -19,11 +20,7 @@ static int check_display_mode(void)
         return 1;
     }
 
-    form_alert(
-        1,
-        "[1][Ballerburgen Editor requires|"
-        "ST monochrome (640x400).][Quit]"
-    );
+    app_alerts_show(APP_ALERT_DISPLAY_MODE_UNSUPPORTED);
     return 0;
 }
 
@@ -108,7 +105,7 @@ int main(void)
 
         if (!menu_set_close_enabled(document_window_has_open_windows()))
         {
-            form_alert(1, "[1][AES could not update the Close menu item.][OK]");
+            app_alerts_show(APP_ALERT_CLOSE_MENU_UPDATE_FAILED);
         }
     }
 
