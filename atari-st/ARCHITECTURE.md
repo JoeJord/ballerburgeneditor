@@ -13,13 +13,15 @@ provides the menu's `OBJECT` tree and handles the resulting AES messages.
 | `src/main.c` | Initializes AES, runs the message loop, routes menu actions, and shuts down the application. |
 | `src/io/file_open.c` | Shows the GEM file selector for DAT files and returns the selected path. |
 | `src/io/file_open.h` | Declares the DAT file selection entry point. |
+| `src/io/castle_data.c` | Parses and validates BALLER.DAT numeric castle records and drawing commands. |
+| `src/io/castle_data.h` | Defines the owned castle model and parser interface. |
 | `src/ui/menu.c` | Gets and installs the `MAIN` menu tree, translates AES selections into application actions, updates the Close item state, and releases the resource. |
 | `src/ui/menu.h` | Declares the menu action contract used by the application event loop. |
 | `src/ui/toolbar.c` | Displays the fixed toolbar below the menu using its RSC free images, and maps clicks to application actions. |
 | `src/ui/toolbar.h` | Declares toolbar lifecycle, input, and layout functions. |
 | `src/ui/about_dialog.c` | Retrieves and displays the `DLG_ABOUT` dialog tree. |
 | `src/ui/about_dialog.h` | Declares the About dialog entry point. |
-| `src/ui/document_window.c` | Creates blank document windows, redraws their work areas, and handles close/top messages. |
+| `src/ui/document_window.c` | Owns parsed castle documents, creates document windows, and redraws their work areas. |
 | `src/ui/document_window.h` | Declares document-window creation, message handling, and shutdown. |
 | `src/ui/app_resources.c` | Owns the resource filename and load lifecycle, and provides access to resource trees and strings. |
 | `src/ui/app_resources.h` | Declares resource loading, release, and resource-access functions. |
@@ -74,7 +76,9 @@ Selecting File > New creates a blank, white document window titled using the
 `MSG_DOC_UNTITLED` string from the loaded resource.
 Multiple windows can be opened (up to the module's fixed capacity of eight),
 and each can be moved, resized, maximized/restored with the Fuller box, and
-closed independently. The toolbar is a fixed, borderless GEM window immediately
+closed independently. Open DAT documents retain their parsed castle models for
+the lifetime of their windows; their work areas show the number of loaded
+castles. The toolbar is a fixed, borderless GEM window immediately
 below the menu bar, with buttons for Quit, New, Open, and Info. File > Close is
 available only from the menu. The toolbar gets its icons from the `IC_QUIT`,
 `IC_FILE_NEW`, `IC_FILE_OPEN`, and `IC_ABOUT` free-image resources. Document
@@ -85,10 +89,13 @@ one-pixel margin above and below each button area.
 
 Selecting File > Open invokes `fsel_exinput()` with a `*.DAT` filter, starting
 in the current drive and directory. Its title comes from resource string
-`MSG_FILE_OPEN`. A selected path is checked for readability and opened in a
-document window titled with its filename. The Atari window currently provides
-the blank editing surface; parsing and rendering the selected castle data is
-not yet implemented.
+`MSG_FILE_OPEN`. `castle_data_read()` parses the file's signed decimal values,
+asterisk-delimited comments, fixed castle fields, and ordered drawing commands.
+It requires the `-999` file terminator, `-1` castle terminators, and `-9`
+polygon terminators; `-2` fill-style changes and `-4` filled/outline toggles
+are retained in the model. A malformed file is rejected before a document
+window is opened. Drawing geometry remains loaded but is not yet rendered in
+the Atari editor window.
 
 The About dialog is deliberately a separate feature module so its presentation
 can evolve without changing menu-tree construction or event routing. It gets
@@ -104,7 +111,7 @@ must be reflected by regenerating that header.
 ## Build
 
 From the workspace root, run `.\ballerburgeneditor\atari-st\build.bat`.
-The script compiles all nine C implementation files, links against GEMlib,
+The script compiles all ten C implementation files, links against GEMlib,
 and copies `BALLERED.RSC` beside the executable. Both it and the Makefile create
 `out\artifacts` under the Atari editor project and place both
 `ballered.prg` and `BALLERED.RSC` there. TOS must be able to find the resource

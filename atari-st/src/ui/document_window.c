@@ -6,6 +6,7 @@
 #include "app_alerts.h"
 #include "app_logger.h"
 #include "app_resources.h"
+#include "castle_data.h"
 #include "document_window.h"
 #include "toolbar.h"
 
@@ -14,6 +15,10 @@
 
 /** Open AES window handles; zero marks an unused slot. */
 static short window_handles[MAX_DOCUMENT_WINDOWS];
+/** Parsed castle data owned by each open document window. */
+static CastleDataDocument window_documents[MAX_DOCUMENT_WINDOWS];
+/** Whether a document was loaded from a castle data file. */
+static short window_has_castle_document[MAX_DOCUMENT_WINDOWS];
 /** Normal window bounds restored after unmaximizing each document window. */
 static GRECT restore_bounds[MAX_DOCUMENT_WINDOWS];
 /** Whether each document window is currently maximized. */
@@ -118,6 +123,7 @@ static short find_window_slot(short handle)
  */
 static void redraw_window(short handle, const GRECT *redraw_area)
 {
+    short slot;
     short work_x;
     short work_y;
     short work_width;
@@ -132,6 +138,9 @@ static void redraw_window(short handle, const GRECT *redraw_area)
     short bottom;
     short clip[4];
     short fill[4];
+    char status_text[40];
+
+    slot = find_window_slot(handle);
 
     if (!wind_update(BEG_UPDATE))
     {
@@ -183,6 +192,23 @@ static void redraw_window(short handle, const GRECT *redraw_area)
                 fill[3] = work_y + work_height - 1;
                 vs_clip(vdi_handle, 1, clip);
                 vr_recfl(vdi_handle, fill);
+                if (slot >= 0 && window_has_castle_document[slot])
+                {
+                    if (window_documents[slot].castle_count == 0)
+                    {
+                        strcpy(status_text, "No castles in this file.");
+                    }
+                    else
+                    {
+                        sprintf(
+                            status_text,
+                            "Castles loaded: %lu",
+                            (unsigned long)window_documents[slot].castle_count
+                        );
+                    }
+                    vst_color(vdi_handle, 1);
+                    v_gtext(vdi_handle, work_x + 8, work_y + 16, status_text);
+                }
             }
 
             if (!wind_get(
@@ -225,6 +251,8 @@ static short close_window(short slot)
     }
 
     window_handles[slot] = 0;
+    castle_data_document_destroy(&window_documents[slot]);
+    window_has_castle_document[slot] = 0;
     window_maximized[slot] = 0;
     app_logger_write("Document window closed.");
     return 1;
@@ -236,7 +264,10 @@ static short close_window(short slot)
  * @param title Window title.
  * @return Non-zero if the window was created and opened successfully.
  */
-static short create_document_window(const char *title)
+static short create_document_window(
+    const char *title,
+    CastleDataDocument *document
+)
 {
     short slot;
     short desktop_x;
@@ -314,6 +345,17 @@ static short create_document_window(const char *title)
     }
 
     window_handles[slot] = handle;
+    if (document)
+    {
+        window_documents[slot] = *document;
+        document->castles = 0;
+        document->castle_count = 0;
+        window_has_castle_document[slot] = 1;
+    }
+    else
+    {
+        window_has_castle_document[slot] = 0;
+    }
     restore_bounds[slot].g_x = x;
     restore_bounds[slot].g_y = y;
     restore_bounds[slot].g_w = width;
@@ -340,30 +382,57 @@ short document_window_create(void)
         return 0;
     }
 
-    return create_document_window(title);
+    return create_document_window(title, 0);
 }
 
 /**
- * Opens a readable DAT file in a document window.
+ * Parses a DAT file and opens its castle collection in a document window.
  *
  * @param path Full path to the selected file.
  * @return Non-zero if the document window was created successfully.
  */
 short document_window_open_file(const char *path)
 {
-    FILE *input;
+    CastleDataDocument document;
+    CastleDataReadResult read_result;
+    size_t error_token;
     const char *title;
+    char log_message[96];
 
     app_logger_write("Opening selected DAT file.");
-    input = fopen(path, "rb");
-    if (!input)
+    if (!path)
     {
-        app_alerts_show(APP_ALERT_SELECTED_FILE_OPEN_FAILED);
+        app_logger_write("Selected DAT file path is null.");
+        app_alerts_show(APP_ALERT_SELECTED_PATH_INVALID);
         return 0;
     }
-    if (fclose(input) != 0)
+
+    document.castles = 0;
+    document.castle_count = 0;
+    error_token = 0;
+    read_result = castle_data_read(path, &document, &error_token);
+    if (read_result != CASTLE_DATA_READ_OK)
     {
-        app_alerts_show(APP_ALERT_SELECTED_FILE_CLOSE_FAILED);
+        if (read_result == CASTLE_DATA_READ_FORMAT_ERROR)
+        {
+            sprintf(
+                log_message,
+                "Invalid castle data at numeric value %lu.",
+                (unsigned long)error_token
+            );
+            app_logger_write(log_message);
+            app_alerts_show(APP_ALERT_DAT_FORMAT_INVALID);
+        }
+        else if (read_result == CASTLE_DATA_READ_OUT_OF_MEMORY)
+        {
+            app_logger_write("Not enough memory to load castle data.");
+            app_alerts_show(APP_ALERT_DAT_MEMORY_EXHAUSTED);
+        }
+        else
+        {
+            app_logger_write("Unable to read the selected castle data file.");
+            app_alerts_show(APP_ALERT_SELECTED_FILE_OPEN_FAILED);
+        }
         return 0;
     }
 
@@ -373,8 +442,18 @@ short document_window_open_file(const char *path)
         title = strrchr(path, '/');
     }
     title = title ? title + 1 : path;
-    app_logger_write("Selected DAT file passed the readability check.");
-    return create_document_window(title);
+    sprintf(
+        log_message,
+        "Loaded %lu castles from the selected DAT file.",
+        (unsigned long)document.castle_count
+    );
+    app_logger_write(log_message);
+    if (!create_document_window(title, &document))
+    {
+        castle_data_document_destroy(&document);
+        return 0;
+    }
+    return 1;
 }
 
 /**
@@ -557,6 +636,8 @@ void document_window_shutdown(void)
         {
             close_window(index);
         }
+        castle_data_document_destroy(&window_documents[index]);
+        window_has_castle_document[index] = 0;
     }
 
     if (vdi_handle != 0)

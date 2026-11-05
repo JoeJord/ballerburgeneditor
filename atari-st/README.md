@@ -18,6 +18,8 @@ The C sources are grouped by responsibility:
 - `src\main.c` coordinates AES startup, event handling, and shutdown.
 - `src\io\file_open.c` and `src\io\file_open.h` provide the GEM DAT-file
   selector used by File > Open.
+- `src\io\castle_data.c` and `src\io\castle_data.h` parse and validate castle
+  records, coordinates, resources, and drawing commands from `BALLER.DAT`.
 - `src\ui\` contains the menu, toolbar, About dialog, document window,
   application alerts, and GEM resource-loading modules.
 - `src\util\app_logger.c` and `src\util\app_logger.h` append application
@@ -26,3 +28,6 @@ The C sources are grouped by responsibility:
 - `src\BALLERED.RSC` defines the menu and About dialog trees and is loaded by
   GEM/AES at startup. `src\BALLERED.h` provides the resource IDs used by C;
   `src\BALLERED.HRD` is resource-editor metadata.
+
+Run `make test` from this directory to test the castle-data parser against the
+original sample and valid/invalid format fixtures using the host C compiler.

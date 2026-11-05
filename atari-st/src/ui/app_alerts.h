@@ -25,14 +25,16 @@ extern const char APP_ALERT_CURRENT_DIRECTORY_FAILED[];
 extern const char APP_ALERT_FILE_PATH_TOO_LONG[];
 /** Alert shown when the file selector title is missing from the resources. */
 extern const char APP_ALERT_FILE_SELECTOR_TITLE_MISSING[];
-/** Alert shown when the selected DAT file cannot be closed after checking. */
-extern const char APP_ALERT_SELECTED_FILE_CLOSE_FAILED[];
 /** Alert shown when the selected DAT file cannot be opened. */
 extern const char APP_ALERT_SELECTED_FILE_OPEN_FAILED[];
 /** Alert shown when the file selector result pointer is invalid. */
 extern const char APP_ALERT_SELECTED_PATH_INVALID[];
 /** Alert shown when the selected filename does not have a DAT extension. */
 extern const char APP_ALERT_DAT_FILE_REQUIRED[];
+/** Alert shown when a selected castle data file is malformed. */
+extern const char APP_ALERT_DAT_FORMAT_INVALID[];
+/** Alert shown when there is not enough memory to load castle data. */
+extern const char APP_ALERT_DAT_MEMORY_EXHAUSTED[];
 /** Alert shown when the VDI virtual workstation cannot be opened. */
 extern const char APP_ALERT_VDI_OPEN_FAILED[];
 /** Alert shown when a document window cannot be created. */

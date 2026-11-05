@@ -11,7 +11,7 @@
 short document_window_create(void);
 
 /**
- * Opens a readable DAT file in a document window.
+ * Parses a DAT file and opens its castle collection in a document window.
  *
  * @param path Full path to the selected file.
  * @return Non-zero if the document window was created successfully.

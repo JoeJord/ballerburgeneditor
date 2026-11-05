@@ -40,14 +40,16 @@ const char APP_ALERT_FILE_PATH_TOO_LONG[] =
     "[1][Selected file path is too long.][OK]";
 const char APP_ALERT_FILE_SELECTOR_TITLE_MISSING[] =
     "[1][Open dialog title is missing from the resources.][OK]";
-const char APP_ALERT_SELECTED_FILE_CLOSE_FAILED[] =
-    "[1][Unable to close the selected DAT file.][OK]";
 const char APP_ALERT_SELECTED_FILE_OPEN_FAILED[] =
     "[1][Unable to open the selected DAT file.][OK]";
 const char APP_ALERT_SELECTED_PATH_INVALID[] =
     "[1][Invalid selected path result.][OK]";
 const char APP_ALERT_DAT_FILE_REQUIRED[] =
     "[1][Please select a .DAT file.][OK]";
+const char APP_ALERT_DAT_FORMAT_INVALID[] =
+    "[1][The selected castle data file is invalid.][OK]";
+const char APP_ALERT_DAT_MEMORY_EXHAUSTED[] =
+    "[1][Not enough memory to load castle data.][OK]";
 const char APP_ALERT_VDI_OPEN_FAILED[] =
     "[1][Unable to open the VDI workstation.][OK]";
 const char APP_ALERT_DOCUMENT_WINDOW_CREATE_FAILED[] =
