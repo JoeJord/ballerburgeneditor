@@ -33,6 +33,14 @@ OBJECT *app_resources_get_about_dialog(void);
 char *app_resources_get_string(short string_index);
 
 /**
+ * Returns an icon block from the loaded resource file.
+ *
+ * @param icon_index Resource icon index.
+ * @return The requested icon block, or 0 if it is unavailable.
+ */
+ICONBLK *app_resources_get_icon_block(short icon_index);
+
+/**
  * Releases the application's GEM resource file if it is loaded.
  */
 void app_resources_release(void);

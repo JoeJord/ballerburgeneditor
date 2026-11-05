@@ -6,6 +6,7 @@
 #include "app_alerts.h"
 #include "app_resources.h"
 #include "document_window.h"
+#include "toolbar.h"
 
 /** Maximum number of document windows this module can manage simultaneously. */
 #define MAX_DOCUMENT_WINDOWS 8
@@ -257,6 +258,14 @@ static short create_document_window(const char *title)
         return 0;
     }
     if (!wind_get(0, WF_WORKXYWH, &desktop_x, &desktop_y, &desktop_width, &desktop_height))
+    {
+        app_alerts_show(APP_ALERT_DESKTOP_SIZE_FAILED);
+        return 0;
+    }
+
+    desktop_y += toolbar_get_height();
+    desktop_height -= toolbar_get_height();
+    if (desktop_height <= 0)
     {
         app_alerts_show(APP_ALERT_DESKTOP_SIZE_FAILED);
         return 0;

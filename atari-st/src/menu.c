@@ -4,6 +4,7 @@
 #include "app_resources.h"
 #include "app_alerts.h"
 #include "menu.h"
+#include "toolbar.h"
 
 /** Loaded menu tree owned by the resource system. */
 static OBJECT *menu_tree;
@@ -98,6 +99,7 @@ short menu_set_close_enabled(short enabled)
     }
 
     close_enabled = new_state;
+    toolbar_set_close_enabled(new_state);
     return 1;
 }
 

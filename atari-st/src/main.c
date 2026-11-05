@@ -6,6 +6,7 @@
 #include "document_window.h"
 #include "file_open.h"
 #include "menu.h"
+#include "toolbar.h"
 
 /**
  * Verifies that the Atari ST is running in its high-resolution monochrome mode.
@@ -34,7 +35,7 @@ int main(void)
 {
     /** AES application identifier returned by appl_init(). */
     short application_id;
-    /** Eight-word buffer filled by evnt_mesag(). */
+    /** Eight-word buffer filled by evnt_multi(). */
     short message[8];
     /** Full path returned by the GEM file selector. */
     const char *selected_path;
@@ -42,6 +43,15 @@ int main(void)
     MenuAction action;
     /** Whether the application should continue waiting for messages. */
     int running;
+    /** Events returned by evnt_multi(). */
+    short event_flags;
+    /** Mouse position and state returned by evnt_multi(). */
+    short mouse_x;
+    short mouse_y;
+    short mouse_button;
+    short key_state;
+    short key;
+    short clicks;
 
     application_id = appl_init();
     if (application_id < 0)
@@ -60,14 +70,52 @@ int main(void)
         appl_exit();
         return 1;
     }
+    if (!toolbar_show())
+    {
+        menu_hide();
+        appl_exit();
+        return 1;
+    }
     /* Restore the standard application cursor after AES startup. */
     graf_mouse(ARROW, 0);
     running = 1;
     while (running)
     {
-        evnt_mesag(message);
-        action = menu_handle_message(message);
-        document_window_handle_message(message);
+        event_flags = evnt_multi(
+            MU_MESAG | MU_BUTTON,
+            1,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            message,
+            0L,
+            &mouse_x,
+            &mouse_y,
+            &mouse_button,
+            &key_state,
+            &key,
+            &clicks
+        );
+        action = MENU_ACTION_NONE;
+        if (event_flags & MU_MESAG)
+        {
+            action = menu_handle_message(message);
+            document_window_handle_message(message);
+            toolbar_handle_message(message);
+        }
+        if ((event_flags & MU_BUTTON) && action == MENU_ACTION_NONE)
+        {
+            action = toolbar_handle_click(mouse_x, mouse_y);
+        }
 
         switch (action)
         {
@@ -110,6 +158,7 @@ int main(void)
     }
 
     document_window_shutdown();
+    toolbar_hide();
     menu_hide();
     appl_exit();
     return 0;

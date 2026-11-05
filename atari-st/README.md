@@ -18,6 +18,9 @@ The C sources are split by responsibility:
 - `src\main.c` coordinates AES startup, event handling, and shutdown.
 - `src\menu.c` and `src\menu.h` implement the GEM menu tree and translate menu
   selections into application actions.
+- `src\toolbar.c` and `src\toolbar.h` draw the fixed toolbar below the menu and
+  route its Quit, New, Open, Close, and Info buttons to those same actions.
+  Toolbar graphics come from the corresponding `IC_*` icons in `BALLERED.RSC`.
 - `src\about_dialog.c` and `src\about_dialog.h` display the About dialog from
   the loaded GEM resource.
 - `src\document_window.c` and `src\document_window.h` create and manage blank

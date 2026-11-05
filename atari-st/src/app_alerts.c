@@ -66,3 +66,15 @@ const char APP_ALERT_DISPLAY_MODE_UNSUPPORTED[] =
     "[1][Ballerburgen Editor requires|ST monochrome (640x400).][Quit]";
 const char APP_ALERT_CLOSE_MENU_DISABLE_FAILED[] =
     "[1][AES could not disable the Close menu item.][Quit]";
+const char APP_ALERT_TOOLBAR_VDI_OPEN_FAILED[] =
+    "[1][Unable to open the toolbar VDI workstation.][Quit]";
+const char APP_ALERT_TOOLBAR_ICON_MISSING[] =
+    "[1][A toolbar icon is missing from the resources.][Quit]";
+const char APP_ALERT_TOOLBAR_WINDOW_CREATE_FAILED[] =
+    "[1][Unable to create the toolbar.][Quit]";
+const char APP_ALERT_TOOLBAR_WINDOW_OPEN_FAILED[] =
+    "[1][Unable to open the toolbar.][Quit]";
+const char APP_ALERT_TOOLBAR_WINDOW_CLOSE_FAILED[] =
+    "[1][Unable to close the toolbar.][OK]";
+const char APP_ALERT_TOOLBAR_WINDOW_DELETE_FAILED[] =
+    "[1][Unable to delete the toolbar.][OK]";

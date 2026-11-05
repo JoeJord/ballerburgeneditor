@@ -81,6 +81,25 @@ char *app_resources_get_string(short string_index)
 }
 
 /**
+ * Returns an icon block from the loaded resource file.
+ *
+ * @param icon_index Resource icon index.
+ * @return The requested icon block, or 0 if it is unavailable.
+ */
+ICONBLK *app_resources_get_icon_block(short icon_index)
+{
+    ICONBLK *icon_block;
+
+    if (!resource_loaded
+        || !rsrc_gaddr(R_ICONBLK, icon_index, &icon_block))
+    {
+        return 0;
+    }
+
+    return icon_block;
+}
+
+/**
  * Releases the application's GEM resource file if it is loaded.
  */
 void app_resources_release(void)

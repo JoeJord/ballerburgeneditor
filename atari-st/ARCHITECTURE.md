@@ -13,6 +13,8 @@ provides the menu's `OBJECT` tree and handles the resulting AES messages.
 | `src/main.c` | Initializes AES, runs the message loop, routes menu actions, and shuts down the application. |
 | `src/menu.c` | Gets and installs the `MAIN` menu tree, translates AES selections into application actions, updates the Close item state, and releases the resource. |
 | `src/menu.h` | Declares the menu action contract used by the application event loop. |
+| `src/toolbar.c` | Displays the fixed toolbar below the menu using its RSC icon blocks, and maps clicks to application actions. |
+| `src/toolbar.h` | Declares toolbar lifecycle, input, and layout functions. |
 | `src/file_open.c` | Shows the GEM file selector for DAT files and returns the selected path. |
 | `src/file_open.h` | Declares the DAT file selection entry point. |
 | `src/about_dialog.c` | Retrieves and displays the `DLG_ABOUT` dialog tree. |
@@ -41,12 +43,15 @@ then invokes the corresponding feature module.
    `MAIN` tree through `app_resources_get_main_menu()`, ensures the Info and
    File actions and Quit objects are selectable, and installs the tree with
    `menu_bar()`.
-   `main()` then restores the standard arrow cursor with `graf_mouse()`, since
-   the application cursor is startup state rather than menu behavior.
-4. `evnt_mesag()` waits for AES messages. `menu_handle_message()` ignores
-   non-selection messages; for `MN_SELECTED`, it normalizes the selected title
-   and returns an application-level `MenuAction`. The window module processes
-   AES redraw, close, and top messages in the same event loop.
+   `toolbar_show()` then opens a fixed toolbar directly below the menu bar.
+   `main()` restores the standard arrow cursor with `graf_mouse()`, since the
+   application cursor is startup state rather than menu behavior.
+4. `evnt_multi()` waits for AES messages and toolbar mouse clicks.
+   `menu_handle_message()` ignores non-selection messages; for `MN_SELECTED`,
+   it normalizes the selected title and returns an application-level
+   `MenuAction`. The toolbar handles redraw messages and maps button clicks to
+   the same actions. The document-window module processes redraw, close, and
+   top messages in the same event loop.
 5. `main()` dispatches New to `document_window_create()`, Open through the GEM
    file selector and `document_window_open_file()`, Close to
    `document_window_close_top()`, About to `about_dialog_show()`, or exits its
@@ -54,17 +59,20 @@ then invokes the corresponding feature module.
    are open to `menu_set_close_enabled()`; `menu.c` owns the enabled-state flag
    and updates the item only when that state changes.
 6. On shutdown, `document_window_shutdown()` closes all remaining document
-   windows and the VDI virtual workstation. Then `menu_hide()` removes the
-   menu bar and releases the loaded resource through `app_resources_release()`,
-   and `main()` calls `appl_exit()`.
+   windows and its VDI virtual workstation. Then `toolbar_hide()` closes the
+   toolbar and its VDI workstation, `menu_hide()` removes the menu bar and
+   releases the resource through `app_resources_release()`, and `main()` calls
+   `appl_exit()`.
 
 Selecting File > New creates a blank, white document window titled using the
 `MSG_DOC_UNTITLED` string from the loaded resource.
 Multiple windows can be opened (up to the module's fixed capacity of eight),
 and each can be moved, resized, maximized/restored with the Fuller box, and
-closed independently. The AES window is created with the full desktop work
-area as its maximum bounds; its initial open size is smaller, allowing the
-Fuller box to use all available space.
+closed independently. The toolbar is a fixed, borderless GEM window immediately
+below the menu bar, with buttons for Quit, New, Open, Close, and Info. It gets
+the icons from the `IC_QUIT`, `IC_FILE_NEW`, `IC_FILE_OPEN`, `IC_FILE_CLOSE`,
+and `IC_ABOUT` resource blocks. Document windows are confined to the desktop
+below the toolbar, including their maximize bounds.
 
 Selecting File > Open invokes `fsel_exinput()` with a `*.DAT` filter, starting
 in the current drive and directory. Its title comes from resource string
@@ -87,7 +95,7 @@ must be reflected by regenerating that header.
 ## Build
 
 From the workspace root, run `.\ballerburgeneditor\atari-st\build.bat`.
-The script compiles all seven C implementation files, links against GEMlib,
+The script compiles all eight C implementation files, links against GEMlib,
 and copies `BALLERED.RSC` beside the executable. Both it and the Makefile create
 `out\artifacts` under the Atari editor project and place both
 `ballered.prg` and `BALLERED.RSC` there. TOS must be able to find the resource
