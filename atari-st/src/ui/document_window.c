@@ -16,6 +16,41 @@
 #define MAX_DOCUMENT_WINDOWS 8
 /** Maximum formatted window-title length, including the terminating NUL. */
 #define CASTLE_TITLE_BUFFER_SIZE 128
+/** Bounds resource rendering for malformed or unusually large DAT values. */
+#define MAX_RESOURCE_SPRITES_PER_STORE 8192
+
+/** Original king sprite drawing stream from BALLER2.C. */
+static const short king_sprite[] = {
+    -2, 2, 2, 8, 3, 5, 12, 8, 12, 12, 16, 12, 17, 14, 15, 15, 15, 17,
+    17, 17, 16, 21, 11, 24, 11, 21, 3, -9,
+    -4, 3, 0, 5, 2, 24, 2, 26, 0, -9,
+    19, 4, 18, 9, -9, 10, 4, 11, 9, -9, 14, 4, 15, 4, -9,
+    8, 10, 11, 11, -9, 21, 10, 18, 11, -9, 14, 17, 15, 17, -9,
+    13, 19, 13, 19, -9, 16, 19, 16, 19, -9,
+    12, 22, 12, 21, 15, 21, 14, 22, 17, 21, 17, 22, -9,
+    6, 13, 6, 17, 5, 16, 5, 17, 7, 17, 7, 16, -9, -1
+};
+/** Original cannon sprite drawing stream from BALLER2.C. */
+static const short cannon_sprite[] = {
+    -2, 1, 1, 1, 0, 3, 3, 5, 0, 3, 3, 3, 11, 2, 11, 2, 9, 4, 9, 4,
+    11, 3, 11, 3, 8, 0, 5, 3, 8, 6, 5, 3, 8, 3, 3, -9,
+    11, 0, 13, 2, 15, 0, 16, 0, 17, 1, 17, 2, 15, 4, 19, 8, 16, 11,
+    8, 3, -9, -1
+};
+/** Original money sack sprite drawing stream from BALLER2.C. */
+static const short money_sprite[] = {
+    -4, 1, 1, 1, 4, 2, 5, 2, 0, 3, 0, 3, 8, 2, 8, 4, 8, 3, 8, 3,
+    6, 4, 6, 4, 0, 5, 0, 5, 6, 6, 5, 6, 1, -9, -1
+};
+/** Original powder barrel sprite drawing stream from BALLER2.C. */
+static const short powder_sprite[] = {
+    -4, 2, 0, 6, 0, 8, 3, 8, 5, 6, 8, 2, 8, 0, 5, 0, 3, 2, 0, 3, 0,
+    3, 3, 2, 4, 3, 5, 3, 8, 5, 8, 5, 5, 6, 4, 5, 3, 5, 1, -9, -1
+};
+/** Original cannonball sprite drawing stream from BALLER2.C. */
+static const short cannonball_sprite[] = {
+    -2, 1, 1, 1, 0, 0, 1, 0, 3, 1, 4, 3, 4, 4, 3, 4, 1, 3, 0, -9, -1
+};
 
 /** Open AES window handles; zero marks an unused slot. */
 static short window_handles[MAX_DOCUMENT_WINDOWS];
@@ -47,6 +82,18 @@ static short active_document_handle;
  * @return The matching slot index, or -1 if the window is not managed here.
  */
 static short find_window_slot(short handle);
+static void draw_sprite(long long origin_x, long long baseline_y, const short *drawing);
+static void draw_white_rectangle(
+    long long left,
+    long long top,
+    long long width,
+    long long height
+);
+static void draw_castle_objects(
+    const CastleDataCastle *castle,
+    long long origin_x,
+    long long baseline_y
+);
 
 /**
  * Appends text to a bounded output buffer.
@@ -240,6 +287,322 @@ static short find_window_slot(short handle)
 }
 
 /**
+ * Draws one original-game sprite stream at the supplied local origin.
+ *
+ * @param origin_x Screen X coordinate of the sprite's local origin.
+ * @param baseline_y Screen Y coordinate of its local baseline.
+ * @param drawing Ordered sprite commands terminated by -1.
+ */
+static void draw_sprite(
+    long long origin_x,
+    long long baseline_y,
+    const short *drawing
+)
+{
+    short points[128];
+    short fill_mode;
+    short point_count;
+    short local_x;
+    short local_y;
+    short valid_polygon;
+    short *point;
+    long long screen_x;
+    long long screen_y;
+
+    fill_mode = 1;
+    vswr_mode(vdi_handle, MD_REPLACE);
+    vsf_color(vdi_handle, 1);
+    vsl_color(vdi_handle, 1);
+    vsf_interior(vdi_handle, FIS_PATTERN);
+    vsf_style(vdi_handle, 9);
+
+    while (*drawing != CASTLE_DATA_RECORD_TERMINATOR)
+    {
+        if (*drawing == CASTLE_DATA_FILL_STYLE_MARKER)
+        {
+            drawing++;
+            vsf_interior(vdi_handle, *drawing++);
+            vsf_style(vdi_handle, *drawing++);
+            continue;
+        }
+        if (*drawing == CASTLE_DATA_DRAW_MODE_MARKER)
+        {
+            fill_mode = !fill_mode;
+            drawing++;
+            continue;
+        }
+
+        point_count = 0;
+        valid_polygon = 1;
+        point = points;
+        while (*drawing != CASTLE_DATA_POLYGON_TERMINATOR
+            && *drawing != CASTLE_DATA_RECORD_TERMINATOR)
+        {
+            if (*drawing < 0 || point_count >= 63)
+            {
+                valid_polygon = 0;
+                break;
+            }
+            local_x = *drawing++;
+            if (*drawing < 0)
+            {
+                valid_polygon = 0;
+                break;
+            }
+            local_y = *drawing++;
+            screen_x = origin_x + local_x;
+            screen_y = baseline_y - local_y;
+            if (screen_x < SHRT_MIN || screen_x > SHRT_MAX
+                || screen_y < SHRT_MIN || screen_y > SHRT_MAX)
+            {
+                valid_polygon = 0;
+            }
+            *point++ = screen_x >= SHRT_MIN && screen_x <= SHRT_MAX
+                ? (short)screen_x
+                : 0;
+            *point++ = screen_y >= SHRT_MIN && screen_y <= SHRT_MAX
+                ? (short)screen_y
+                : 0;
+            point_count++;
+        }
+
+        if (*drawing == CASTLE_DATA_POLYGON_TERMINATOR)
+        {
+            drawing++;
+        }
+        else
+        {
+            valid_polygon = 0;
+        }
+
+        if (!valid_polygon || point_count < (fill_mode ? 3 : 2))
+        {
+            app_logger_write("Invalid original-game sprite polygon ignored.");
+            if (*drawing == CASTLE_DATA_RECORD_TERMINATOR)
+            {
+                break;
+            }
+            continue;
+        }
+
+        if (fill_mode)
+        {
+            points[point_count * 2] = points[0];
+            points[point_count * 2 + 1] = points[1];
+            v_fillarea(vdi_handle, point_count + 1, points);
+        }
+        else
+        {
+            v_pline(vdi_handle, point_count, points);
+        }
+    }
+
+    vswr_mode(vdi_handle, MD_REPLACE);
+    vsf_interior(vdi_handle, FIS_SOLID);
+    vsf_color(vdi_handle, 0);
+}
+
+/**
+ * Paints a bounded white rectangle behind a castle object.
+ *
+ * @param left Screen X coordinate of the rectangle's left edge.
+ * @param top Screen Y coordinate of its top edge.
+ * @param width Rectangle width in pixels.
+ * @param height Rectangle height in pixels.
+ */
+static void draw_white_rectangle(
+    long long left,
+    long long top,
+    long long width,
+    long long height
+)
+{
+    long long right;
+    long long bottom;
+    short rectangle[4];
+
+    if (width <= 0 || height <= 0)
+    {
+        return;
+    }
+
+    right = left + width - 1;
+    bottom = top + height - 1;
+    if (left < SHRT_MIN || left > SHRT_MAX
+        || top < SHRT_MIN || top > SHRT_MAX
+        || right < SHRT_MIN || right > SHRT_MAX
+        || bottom < SHRT_MIN || bottom > SHRT_MAX)
+    {
+        return;
+    }
+
+    rectangle[0] = (short)left;
+    rectangle[1] = (short)top;
+    rectangle[2] = (short)right;
+    rectangle[3] = (short)bottom;
+    vswr_mode(vdi_handle, MD_REPLACE);
+    vsf_interior(vdi_handle, FIS_SOLID);
+    vsf_color(vdi_handle, 0);
+    vr_recfl(vdi_handle, rectangle);
+}
+
+/**
+ * Converts a resource amount to the number of sprites used by the game.
+ *
+ * @param amount Initial amount from the castle record.
+ * @param units_per_sprite Resource units represented by one sprite.
+ * @return Number of sprites, rounded up as in the original game.
+ */
+static unsigned long resource_sprite_count(int amount, unsigned long units_per_sprite)
+{
+    if (amount <= 0)
+    {
+        return 0;
+    }
+
+    return ((unsigned long)amount - 1) / units_per_sprite + 1;
+}
+
+/**
+ * Draws an inventory stack using the castle's original storage grid.
+ *
+ * @param position Storage grid's lower-left origin.
+ * @param storage Storage grid dimensions in pixels.
+ * @param item_count Number of inventory sprites to draw.
+ * @param step_x Horizontal spacing between sprites.
+ * @param step_y Vertical spacing between sprite rows.
+ * @param sprite Original-game sprite command stream.
+ * @param origin_x Screen X coordinate of the castle origin.
+ * @param baseline_y Screen Y coordinate of the castle baseline.
+ */
+static void draw_resource_stack(
+    CastleDataPoint position,
+    CastleDataSize storage,
+    unsigned long item_count,
+    short step_x,
+    short step_y,
+    const short *sprite,
+    long long origin_x,
+    long long baseline_y
+)
+{
+    unsigned long columns;
+    unsigned long rows;
+    unsigned long column;
+    unsigned long row;
+    unsigned long drawn;
+
+    if (storage.width <= 0 || storage.height <= 0)
+    {
+        return;
+    }
+
+    draw_white_rectangle(
+        origin_x + position.x,
+        baseline_y - position.y - storage.height + 1,
+        (long long)storage.width + 1,
+        (long long)storage.height + 1
+    );
+
+    if (item_count == 0)
+    {
+        return;
+    }
+
+    columns = ((unsigned long)storage.width - 1) / (unsigned short)step_x + 1;
+    rows = ((unsigned long)storage.height - 1) / (unsigned short)step_y + 1;
+    if (item_count > MAX_RESOURCE_SPRITES_PER_STORE)
+    {
+        item_count = MAX_RESOURCE_SPRITES_PER_STORE;
+    }
+
+    drawn = 0;
+    for (row = 0; row < rows && drawn < item_count; row++)
+    {
+        for (column = 0; column < columns && drawn < item_count; column++)
+        {
+            draw_sprite(
+                origin_x + position.x + (long long)column * step_x,
+                baseline_y - position.y - (long long)row * step_y,
+                sprite
+            );
+            drawn++;
+        }
+    }
+}
+
+/**
+ * Draws the king, all configured cannons, and starting resource sprites.
+ *
+ * @param castle Castle whose objects are drawn.
+ * @param origin_x Screen X coordinate of the castle origin.
+ * @param baseline_y Screen Y coordinate of the castle baseline.
+ */
+static void draw_castle_objects(
+    const CastleDataCastle *castle,
+    long long origin_x,
+    long long baseline_y
+)
+{
+    size_t index;
+
+    draw_white_rectangle(
+        origin_x + castle->throne.x,
+        baseline_y - castle->throne.y - 25,
+        30,
+        25
+    );
+    draw_sprite(
+        origin_x + castle->throne.x,
+        baseline_y - castle->throne.y,
+        king_sprite
+    );
+    for (index = 0; index < castle->cannon_count; index++)
+    {
+        if (castle->cannons[index].x < 0 || castle->cannons[index].y < 0)
+        {
+            continue;
+        }
+        draw_sprite(
+            origin_x + castle->cannons[index].x,
+            baseline_y - castle->cannons[index].y,
+            cannon_sprite
+        );
+    }
+
+    draw_resource_stack(
+        castle->money,
+        castle->money_storage,
+        resource_sprite_count(castle->resources.money, 150),
+        7,
+        10,
+        money_sprite,
+        origin_x,
+        baseline_y
+    );
+    draw_resource_stack(
+        castle->powder,
+        castle->powder_storage,
+        resource_sprite_count(castle->resources.powder, 30),
+        9,
+        9,
+        powder_sprite,
+        origin_x,
+        baseline_y
+    );
+    draw_resource_stack(
+        castle->cannonballs,
+        castle->cannonball_storage,
+        resource_sprite_count(castle->resources.cannonballs, 1),
+        6,
+        6,
+        cannonball_sprite,
+        origin_x,
+        baseline_y
+    );
+}
+
+/**
  * Draws a castle's ordered VDI drawing commands at one-to-one scale.
  *
  * @param castle Castle geometry to draw.
@@ -368,7 +731,7 @@ static void draw_castle(
 }
 
 /**
- * Draws a document work area and its first castle, if one is loaded.
+ * Draws a document work area and its selected castle, if one is loaded.
  *
  * @param handle AES window handle.
  * @param redraw_area Area requested by the AES redraw message.
@@ -390,6 +753,9 @@ static void redraw_window(short handle, const GRECT *redraw_area)
     short bottom;
     short clip[4];
     short fill[4];
+    long long castle_origin_x;
+    long long castle_baseline_y;
+    const CastleDataCastle *castle;
     char status_text[40];
 
     slot = find_window_slot(handle);
@@ -454,14 +820,24 @@ static void redraw_window(short handle, const GRECT *redraw_area)
                     }
                     else
                     {
+                        castle = &window_documents[slot].castles[
+                            window_selected_castles[slot]
+                        ];
+                        castle_origin_x = (long long)work_x
+                            + ((long long)work_width - castle->width) / 2;
+                        castle_baseline_y = (long long)work_y
+                            + work_height - 12;
                         draw_castle(
-                            &window_documents[slot].castles[
-                                window_selected_castles[slot]
-                            ],
+                            castle,
                             work_x,
                             work_y,
                             work_width,
                             work_height
+                        );
+                        draw_castle_objects(
+                            castle,
+                            castle_origin_x,
+                            castle_baseline_y
                         );
                     }
                 }

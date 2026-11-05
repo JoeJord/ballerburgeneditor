@@ -98,18 +98,28 @@ asterisk-delimited comments, fixed castle fields, and ordered drawing commands.
 It requires the `-999` file terminator, `-1` castle terminators, and `-9`
 polygon terminators; `-2` fill-style changes and `-4` filled/outline toggles
 are retained in the model. A malformed file is rejected before a document
-window is opened. The first castle's polygon geometry is drawn in the document
-work area at one-to-one scale, horizontally centered with its baseline near
-the bottom of the work area. The toolbar's Previous Castle and Next Castle
-buttons select among all castles in the active DAT document. It applies
-fill-style changes and outline-mode toggles in order, using the original game's
-VDI writing mode for the castle patterns and restoring the work-area background
-fill state after drawing. DAT window titles come from the `MSG_CASTLE_NO`
-resource string with its `%1$d` current-castle and `%2$d` total-castle tokens
-expanded by the editor and prefixed by the DAT filename and ` - `. Each open
-window owns a stable title buffer, avoiding transient title-string lifetimes
-across AES calls. Placed game objects are retained in the model but are not yet
-rendered.
+window is opened. The selected castle's polygon geometry is drawn in the
+document work area at one-to-one scale, horizontally centered with its
+baseline near the bottom of the work area. The renderer also draws the castle's
+king, cannon positions, and starting money, powder, and cannonball inventories
+using the original game's sprite command streams and resource-grid spacing.
+The king and all three resource storage areas are cleared to solid white before
+their sprites are drawn, matching the original game's object-background
+clearing behavior. These clear rectangles preserve the original inclusive VDI
+coordinates: the king area begins 25 pixels above its baseline and is 30x25;
+each resource area starts one pixel left of its DAT position and extends through
+the storage area's far edge. In the editor, these white backgrounds are offset
+one pixel right and one pixel up from that original clear rectangle.
+Inventory amounts are converted to sprite counts as in the game and limited by
+each store's configured dimensions. The toolbar's Previous Castle and Next
+Castle buttons select among all castles in the active DAT document. Geometry
+and sprite patterns use the original game's VDI writing modes, and rendering
+restores the work-area background fill state. DAT window titles come from the
+`MSG_CASTLE_NO` resource string with its `%1$d` current-castle and `%2$d`
+total-castle tokens expanded by the editor and prefixed by the DAT filename
+and ` - `. Each open window owns a stable title buffer, avoiding transient
+title-string lifetimes across AES calls. The wind vane and other game-state
+objects are retained in the model but are not yet rendered.
 
 The About dialog is deliberately a separate feature module so its presentation
 can evolve without changing menu-tree construction or event routing. It gets

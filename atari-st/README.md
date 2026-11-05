@@ -20,8 +20,9 @@ The C sources are grouped by responsibility:
   selector used by File > Open.
 - `src\io\castle_data.c` and `src\io\castle_data.h` parse and validate castle
   records, coordinates, resources, and drawing commands from `BALLER.DAT`.
-  The selected castle's polygon geometry is rendered in its document window;
-  the Previous/Next toolbar buttons navigate the active DAT document.
+  The selected castle's polygon geometry, king, cannons, and starting resource
+  sprites are rendered in its document window; the Previous/Next toolbar
+  buttons navigate the active DAT document.
 - `src\ui\` contains the menu, toolbar, About dialog, document window,
   application alerts, and GEM resource-loading modules.
 - `src\util\app_logger.c` and `src\util\app_logger.h` append application
