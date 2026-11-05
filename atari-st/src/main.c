@@ -2,6 +2,7 @@
 #include <osbind.h>
 
 #include "about_dialog.h"
+#include "document_window.h"
 #include "menu.h"
 
 /**
@@ -66,9 +67,18 @@ int main(void)
     {
         evnt_mesag(message);
         action = menu_handle_message(message);
+        document_window_handle_message(message);
 
         switch (action)
         {
+            case MENU_ACTION_NEW:
+                document_window_create();
+                break;
+
+            case MENU_ACTION_CLOSE:
+                document_window_close_top();
+                break;
+
             case MENU_ACTION_ABOUT:
                 about_dialog_show();
                 break;
@@ -80,8 +90,14 @@ int main(void)
             case MENU_ACTION_NONE:
                 break;
         }
+
+        if (!menu_set_close_enabled(document_window_has_open_windows()))
+        {
+            form_alert(1, "[1][AES could not update the Close menu item.][OK]");
+        }
     }
 
+    document_window_shutdown();
     menu_hide();
     appl_exit();
     return 0;

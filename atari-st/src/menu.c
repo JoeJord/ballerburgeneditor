@@ -8,6 +8,8 @@
 static OBJECT *menu_tree;
 /** Whether the resource menu is currently installed. */
 static short menu_installed;
+/** Current enabled state of the File > Close menu item. */
+static short close_enabled;
 
 /**
  * Loads the menu resource and installs its MAIN tree with AES.
@@ -31,7 +33,18 @@ short menu_show(void)
     }
 
     menu_tree[MENU_ABOUT].ob_flags |= OF_SELECTABLE;
+    menu_tree[MENU_FILE_NEW].ob_flags |= OF_SELECTABLE;
+    menu_tree[MENU_FILE_CLOSE].ob_flags |= OF_SELECTABLE;
     menu_tree[MENU_QUIT].ob_flags |= OF_SELECTABLE;
+
+    if (!menu_ienable(menu_tree, MENU_FILE_CLOSE, 0))
+    {
+        form_alert(1, "[1][AES could not disable the Close menu item.][Quit]");
+        app_resources_release();
+        menu_tree = 0;
+        return 0;
+    }
+    close_enabled = 0;
 
     if (!menu_bar(menu_tree, 1))
     {
@@ -58,6 +71,32 @@ void menu_hide(void)
 
     app_resources_release();
     menu_tree = 0;
+    close_enabled = 0;
+}
+
+/**
+ * Enables or disables the File > Close menu item.
+ *
+ * @param enabled Non-zero to enable the item.
+ * @return Non-zero if AES updated the menu item successfully.
+ */
+short menu_set_close_enabled(short enabled)
+{
+    short new_state;
+
+    new_state = enabled != 0;
+    if (new_state == close_enabled)
+    {
+        return 1;
+    }
+
+    if (!menu_ienable(menu_tree, MENU_FILE_CLOSE, new_state))
+    {
+        return 0;
+    }
+
+    close_enabled = new_state;
+    return 1;
 }
 
 /**
@@ -78,6 +117,14 @@ MenuAction menu_handle_message(const short message[8])
 
     switch (message[4])
     {
+        case MENU_FILE_NEW:
+            action = MENU_ACTION_NEW;
+            break;
+
+        case MENU_FILE_CLOSE:
+            action = MENU_ACTION_CLOSE;
+            break;
+
         case MENU_ABOUT:
             action = MENU_ACTION_ABOUT;
             break;

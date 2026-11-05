@@ -11,10 +11,12 @@ provides the menu's `OBJECT` tree and handles the resulting AES messages.
 | File | Responsibility |
 |---|---|
 | `src/main.c` | Initializes AES, runs the message loop, routes menu actions, and shuts down the application. |
-| `src/menu.c` | Gets and installs the `MAIN` menu tree, translates AES selection messages into application actions, and releases the resource. |
+| `src/menu.c` | Gets and installs the `MAIN` menu tree, translates AES selections into application actions, updates the Close item state, and releases the resource. |
 | `src/menu.h` | Declares the menu action contract used by the application event loop. |
 | `src/about_dialog.c` | Retrieves and displays the `DLG_ABOUT` dialog tree. |
 | `src/about_dialog.h` | Declares the About dialog entry point. |
+| `src/document_window.c` | Creates blank document windows, redraws their work areas, and handles close/top messages. |
+| `src/document_window.h` | Declares document-window creation, message handling, and shutdown. |
 | `src/app_resources.c` | Owns the resource filename and load lifecycle, and provides access to resource trees. |
 | `src/app_resources.h` | Declares resource loading, release, and tree-access functions. |
 | `src/BALLERED.RSC` | GEM resource containing the menu and About dialog trees, object layouts, flags, and labels. |
@@ -38,27 +40,40 @@ then invokes the corresponding feature module.
    the application cursor is startup state rather than menu behavior.
 4. `evnt_mesag()` waits for AES messages. `menu_handle_message()` ignores
    non-selection messages; for `MN_SELECTED`, it normalizes the selected title
-   and returns an application-level `MenuAction`.
-5. `main()` dispatches the About action to `about_dialog_show()` or exits its
-   event loop for the quit action.
-6. `menu_hide()` removes the menu bar and releases the loaded resource through
-   `app_resources_release()`, then `main()` calls `appl_exit()`.
+   and returns an application-level `MenuAction`. The window module processes
+   AES redraw, close, and top messages in the same event loop.
+5. `main()` dispatches New to `document_window_create()`, Close to
+   `document_window_close_top()`, About to `about_dialog_show()`, or exits its
+   event loop for Quit. After each event it reports whether document windows
+   are open to `menu_set_close_enabled()`; `menu.c` owns the enabled-state flag
+   and updates the item only when that state changes.
+6. On shutdown, `document_window_shutdown()` closes all remaining document
+   windows and the VDI virtual workstation. Then `menu_hide()` removes the
+   menu bar and releases the loaded resource through `app_resources_release()`,
+   and `main()` calls `appl_exit()`.
+
+Selecting File > New creates a blank, white "Untitled" document window.
+Multiple windows can be opened (up to the module's fixed capacity of eight),
+and each can be moved, resized, maximized/restored with the Fuller box, and
+closed independently. The AES window is created with the full desktop work
+area as its maximum bounds; its initial open size is smaller, allowing the
+Fuller box to use all available space.
 
 The About dialog is deliberately a separate feature module so its presentation
 can evolve without changing menu-tree construction or event routing. It gets
 the already-loaded resource tree through `app_resources_get_about_dialog()`
 (OK button `BTN_ABOUT_OK`) and does not load or release the resource itself.
 
-The resource currently marks the Info and Quit entries as non-selectable (the
-Quit entry only carries `OF_LASTOB`). `menu.c` adds `OF_SELECTABLE` to those two
-resource objects after loading the tree. It uses the generated IDs from
+The resource currently marks the Info, New, and Quit entries as non-selectable
+(the Quit entry only carries `OF_LASTOB`). `menu.c` adds `OF_SELECTABLE` to
+those resource objects after loading the tree. It uses the generated IDs from
 `BALLERED.h` instead of duplicating object indices, so menu item reordering
 must be reflected by regenerating that header.
 
 ## Build
 
 From the workspace root, run `.\ballerburgeneditor\atari-st\build.bat`.
-The script compiles all four C implementation files, links against GEMlib,
+The script compiles all five C implementation files, links against GEMlib,
 and copies `BALLERED.RSC` beside the executable. Both it and the Makefile create
 `out\artifacts` under the Atari editor project and place both
 `ballered.prg` and `BALLERED.RSC` there. TOS must be able to find the resource

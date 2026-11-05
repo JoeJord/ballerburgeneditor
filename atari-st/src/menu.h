@@ -10,6 +10,10 @@ typedef enum
 {
     /** No actionable menu selection was present in the AES message. */
     MENU_ACTION_NONE,
+    /** The user selected the New document item. */
+    MENU_ACTION_NEW,
+    /** The user selected the Close document item. */
+    MENU_ACTION_CLOSE,
     /** The user selected the application information item. */
     MENU_ACTION_ABOUT,
     /** The user selected the quit item. */
@@ -27,6 +31,14 @@ short menu_show(void);
  * Hides the application's GEM menu bar.
  */
 void menu_hide(void);
+
+/**
+ * Enables or disables the File > Close menu item.
+ *
+ * @param enabled Non-zero to enable the item.
+ * @return Non-zero if AES updated the menu item successfully.
+ */
+short menu_set_close_enabled(short enabled);
 
 /**
  * Handles a message from the application's AES event loop.
