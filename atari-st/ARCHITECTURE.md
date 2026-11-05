@@ -11,22 +11,22 @@ provides the menu's `OBJECT` tree and handles the resulting AES messages.
 | File | Responsibility |
 |---|---|
 | `src/main.c` | Initializes AES, runs the message loop, routes menu actions, and shuts down the application. |
-| `src/menu.c` | Gets and installs the `MAIN` menu tree, translates AES selections into application actions, updates the Close item state, and releases the resource. |
-| `src/menu.h` | Declares the menu action contract used by the application event loop. |
-| `src/toolbar.c` | Displays the fixed toolbar below the menu using its RSC free images, and maps clicks to application actions. |
-| `src/toolbar.h` | Declares toolbar lifecycle, input, and layout functions. |
-| `src/file_open.c` | Shows the GEM file selector for DAT files and returns the selected path. |
-| `src/file_open.h` | Declares the DAT file selection entry point. |
-| `src/about_dialog.c` | Retrieves and displays the `DLG_ABOUT` dialog tree. |
-| `src/about_dialog.h` | Declares the About dialog entry point. |
-| `src/document_window.c` | Creates blank document windows, redraws their work areas, and handles close/top messages. |
-| `src/document_window.h` | Declares document-window creation, message handling, and shutdown. |
-| `src/app_resources.c` | Owns the resource filename and load lifecycle, and provides access to resource trees and strings. |
-| `src/app_resources.h` | Declares resource loading, release, and resource-access functions. |
-| `src/app_alerts.c` | Defines shared fixed English alert strings and displays them through AES. |
-| `src/app_alerts.h` | Declares the alert-string constants and alert display function. |
-| `src/app_logger.c` | Appends application events and alerts to `BALLERED.LOG`. |
-| `src/app_logger.h` | Declares application log lifecycle and write functions. |
+| `src/io/file_open.c` | Shows the GEM file selector for DAT files and returns the selected path. |
+| `src/io/file_open.h` | Declares the DAT file selection entry point. |
+| `src/ui/menu.c` | Gets and installs the `MAIN` menu tree, translates AES selections into application actions, updates the Close item state, and releases the resource. |
+| `src/ui/menu.h` | Declares the menu action contract used by the application event loop. |
+| `src/ui/toolbar.c` | Displays the fixed toolbar below the menu using its RSC free images, and maps clicks to application actions. |
+| `src/ui/toolbar.h` | Declares toolbar lifecycle, input, and layout functions. |
+| `src/ui/about_dialog.c` | Retrieves and displays the `DLG_ABOUT` dialog tree. |
+| `src/ui/about_dialog.h` | Declares the About dialog entry point. |
+| `src/ui/document_window.c` | Creates blank document windows, redraws their work areas, and handles close/top messages. |
+| `src/ui/document_window.h` | Declares document-window creation, message handling, and shutdown. |
+| `src/ui/app_resources.c` | Owns the resource filename and load lifecycle, and provides access to resource trees and strings. |
+| `src/ui/app_resources.h` | Declares resource loading, release, and resource-access functions. |
+| `src/ui/app_alerts.c` | Defines shared fixed English alert strings and displays them through AES. |
+| `src/ui/app_alerts.h` | Declares the alert-string constants and alert display function. |
+| `src/util/app_logger.c` | Appends application events and alerts to `BALLERED.LOG`. |
+| `src/util/app_logger.h` | Declares application log lifecycle and write functions. |
 | `src/BALLERED.RSC` | GEM resource containing the menu and About dialog trees, object layouts, flags, and labels. |
 | `src/BALLERED.h` | Generated resource IDs included by C code (`MAIN`, `DLG_ABOUT`, and dialog object IDs). |
 | `src/BALLERED.HRD` | Resource-editor hierarchy metadata; not loaded by the application at runtime. |
@@ -40,7 +40,7 @@ then invokes the corresponding feature module.
 1. `main()` opens `BALLERED.LOG` in the current directory, then initializes AES
    with `appl_init()`. The logger appends one event per line and flushes each
    event to disk. File logging can be disabled at compile time by setting
-   `APP_LOGGING_ENABLED` to `0` in `app_logger.c`.
+   `APP_LOGGING_ENABLED` to `0` in `src/util/app_logger.c`.
 2. `main()` checks `Getrez()` and requires the Atari ST high-resolution
    monochrome mode (resolution code 2, 640x400). Unsupported modes receive an
    AES alert and the application exits cleanly.
@@ -104,7 +104,7 @@ must be reflected by regenerating that header.
 ## Build
 
 From the workspace root, run `.\ballerburgeneditor\atari-st\build.bat`.
-The script compiles all eight C implementation files, links against GEMlib,
+The script compiles all nine C implementation files, links against GEMlib,
 and copies `BALLERED.RSC` beside the executable. Both it and the Makefile create
 `out\artifacts` under the Atari editor project and place both
 `ballered.prg` and `BALLERED.RSC` there. TOS must be able to find the resource
