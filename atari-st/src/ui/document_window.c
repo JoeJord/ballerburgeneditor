@@ -1,5 +1,7 @@
 #include <gem.h>
+#include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "BALLERED.h"
@@ -12,6 +14,8 @@
 
 /** Maximum number of document windows this module can manage simultaneously. */
 #define MAX_DOCUMENT_WINDOWS 8
+/** Maximum formatted window-title length, including the terminating NUL. */
+#define CASTLE_TITLE_BUFFER_SIZE 128
 
 /** Open AES window handles; zero marks an unused slot. */
 static short window_handles[MAX_DOCUMENT_WINDOWS];
@@ -19,6 +23,12 @@ static short window_handles[MAX_DOCUMENT_WINDOWS];
 static CastleDataDocument window_documents[MAX_DOCUMENT_WINDOWS];
 /** Whether a document was loaded from a castle data file. */
 static short window_has_castle_document[MAX_DOCUMENT_WINDOWS];
+/** Index of the castle currently shown in each document window. */
+static size_t window_selected_castles[MAX_DOCUMENT_WINDOWS];
+/** Stable, per-window title buffers passed to AES for WF_NAME. */
+static char window_titles[MAX_DOCUMENT_WINDOWS][CASTLE_TITLE_BUFFER_SIZE];
+/** Basename of the DAT file associated with each document window. */
+static char window_file_names[MAX_DOCUMENT_WINDOWS][CASTLE_TITLE_BUFFER_SIZE];
 /** Normal window bounds restored after unmaximizing each document window. */
 static GRECT restore_bounds[MAX_DOCUMENT_WINDOWS];
 /** Whether each document window is currently maximized. */
@@ -27,6 +37,118 @@ static short window_maximized[MAX_DOCUMENT_WINDOWS];
 static VdiHdl vdi_handle;
 /** Number used to cascade newly opened windows. */
 static short window_sequence;
+/** Most recently activated document window, excluding the toolbar window. */
+static short active_document_handle;
+
+/**
+ * Finds the slot associated with an AES window handle.
+ *
+ * @param handle AES window handle.
+ * @return The matching slot index, or -1 if the window is not managed here.
+ */
+static short find_window_slot(short handle);
+
+/**
+ * Appends text to a bounded output buffer.
+ *
+ * @param output Destination buffer.
+ * @param capacity Destination capacity including the terminating NUL.
+ * @param length Current output length; updated on success.
+ * @param text Text to append.
+ * @return Non-zero if the complete text was appended.
+ */
+static short append_title_text(
+    char *output,
+    size_t capacity,
+    size_t *length,
+    const char *text
+)
+{
+    size_t text_length;
+
+    text_length = strlen(text);
+    if (text_length >= capacity - *length)
+    {
+        return 0;
+    }
+
+    memcpy(output + *length, text, text_length);
+    *length += text_length;
+    output[*length] = '\0';
+    return 1;
+}
+
+/**
+ * Formats the castle title resource's positional placeholders.
+ *
+ * @param file_name Basename of the DAT file.
+ * @param castle_number One-based current castle number, or zero for no castles.
+ * @param castle_count Number of castles in the document.
+ * @param output Receives the formatted title.
+ * @param output_capacity Capacity of the output buffer.
+ * @return Non-zero if the resource string was available and fit in the buffer.
+ */
+static short format_castle_title(
+    const char *file_name,
+    size_t castle_number,
+    size_t castle_count,
+    char *output,
+    size_t output_capacity
+)
+{
+    const char *template_text;
+    size_t output_length;
+    char number[12];
+
+    template_text = app_resources_get_string(MSG_CASTLE_NO);
+    if (!template_text || output_capacity == 0)
+    {
+        return 0;
+    }
+
+    output[0] = '\0';
+    output_length = 0;
+    if (!append_title_text(output, output_capacity, &output_length, file_name)
+        || !append_title_text(output, output_capacity, &output_length, " - "))
+    {
+        return 0;
+    }
+
+    while (*template_text)
+    {
+        if (strncmp(template_text, "%1$d", 4) == 0)
+        {
+            sprintf(number, "%lu", (unsigned long)castle_number);
+            if (!append_title_text(output, output_capacity, &output_length, number))
+            {
+                return 0;
+            }
+            template_text += 4;
+        }
+        else if (strncmp(template_text, "%2$d", 4) == 0)
+        {
+            sprintf(number, "%lu", (unsigned long)castle_count);
+            if (!append_title_text(output, output_capacity, &output_length, number))
+            {
+                return 0;
+            }
+            template_text += 4;
+        }
+        else
+        {
+            char character[2];
+
+            character[0] = *template_text++;
+            character[1] = '\0';
+            if (!append_title_text(output, output_capacity, &output_length, character))
+            {
+                return 0;
+            }
+        }
+    }
+
+    return 1;
+}
 
 /**
  * Opens a VDI virtual workstation for document rendering.
@@ -71,6 +193,8 @@ static short open_virtual_workstation(void)
 
     vsf_interior(vdi_handle, FIS_SOLID);
     vsf_color(vdi_handle, 0);
+    vsl_color(vdi_handle, 1);
+    vsl_type(vdi_handle, 1);
     return 1;
 }
 
@@ -116,7 +240,135 @@ static short find_window_slot(short handle)
 }
 
 /**
- * Draws the blank white work area in the portions currently visible.
+ * Draws a castle's ordered VDI drawing commands at one-to-one scale.
+ *
+ * @param castle Castle geometry to draw.
+ * @param work_x Work-area left coordinate.
+ * @param work_y Work-area top coordinate.
+ * @param work_width Work-area width.
+ * @param work_height Work-area height.
+ */
+static void draw_castle(
+    const CastleDataCastle *castle,
+    short work_x,
+    short work_y,
+    short work_width,
+    short work_height
+)
+{
+    size_t index;
+    size_t point_index;
+    size_t point_count;
+    long long origin_x;
+    long long baseline_y;
+    long long screen_x;
+    long long screen_y;
+    short fill_mode;
+    short *points;
+    short vdi_point_count;
+
+    if (!castle || castle->drawing_count == 0)
+    {
+        return;
+    }
+
+    origin_x = (long long)work_x
+        + ((long long)work_width - castle->width) / 2;
+    baseline_y = (long long)work_y + work_height - 12;
+    fill_mode = 1;
+    vswr_mode(vdi_handle, MD_ERASE);
+    vsf_color(vdi_handle, 1);
+    vsl_color(vdi_handle, 1);
+    vsf_interior(vdi_handle, FIS_PATTERN);
+    vsf_style(vdi_handle, 9);
+
+    for (index = 0; index < castle->drawing_count; index++)
+    {
+        const CastleDataDrawing *drawing;
+
+        drawing = &castle->drawing[index];
+        if (drawing->type == CASTLE_DATA_DRAW_FILL_STYLE)
+        {
+            if (drawing->value.fill_style.style < SHRT_MIN
+                || drawing->value.fill_style.style > SHRT_MAX
+                || drawing->value.fill_style.index < SHRT_MIN
+                || drawing->value.fill_style.index > SHRT_MAX)
+            {
+                app_logger_write("Castle fill style exceeds VDI limits.");
+                continue;
+            }
+            vsf_interior(vdi_handle, (short)drawing->value.fill_style.style);
+            vsf_style(vdi_handle, (short)drawing->value.fill_style.index);
+            continue;
+        }
+        if (drawing->type == CASTLE_DATA_DRAW_TOGGLE_MODE)
+        {
+            fill_mode = !fill_mode;
+            continue;
+        }
+        if (drawing->type != CASTLE_DATA_DRAW_POLYGON)
+        {
+            app_logger_write("Unsupported castle drawing command ignored.");
+            continue;
+        }
+
+        point_count = drawing->value.polygon.point_count;
+        if (point_count < (fill_mode ? 3U : 2U)
+            || point_count >= (size_t)SHRT_MAX
+            || point_count > ((size_t)-1 / sizeof(*points)) / 2 - 1)
+        {
+            app_logger_write("Castle polygon exceeds VDI drawing limits.");
+            continue;
+        }
+
+        points = (short *)malloc((point_count + 1) * 2 * sizeof(*points));
+        if (!points)
+        {
+            app_logger_write("Unable to allocate VDI polygon coordinates.");
+            break;
+        }
+        for (point_index = 0; point_index < point_count; point_index++)
+        {
+            screen_x = origin_x
+                + drawing->value.polygon.points[point_index].x;
+            screen_y = baseline_y
+                - drawing->value.polygon.points[point_index].y;
+            if (screen_x < SHRT_MIN || screen_x > SHRT_MAX
+                || screen_y < SHRT_MIN || screen_y > SHRT_MAX)
+            {
+                break;
+            }
+            points[point_index * 2] = (short)screen_x;
+            points[point_index * 2 + 1] = (short)screen_y;
+        }
+        if (point_index != point_count)
+        {
+            free(points);
+            app_logger_write("Castle polygon coordinates exceed VDI limits.");
+            continue;
+        }
+
+        points[point_count * 2] = points[0];
+        points[point_count * 2 + 1] = points[1];
+        vdi_point_count = (short)(point_count + 1);
+        if (fill_mode)
+        {
+            v_fillarea(vdi_handle, vdi_point_count, points);
+        }
+        else
+        {
+            v_pline(vdi_handle, vdi_point_count, points);
+        }
+        free(points);
+    }
+
+    vswr_mode(vdi_handle, MD_REPLACE);
+    vsf_interior(vdi_handle, FIS_SOLID);
+    vsf_color(vdi_handle, 0);
+}
+
+/**
+ * Draws a document work area and its first castle, if one is loaded.
  *
  * @param handle AES window handle.
  * @param redraw_area Area requested by the AES redraw message.
@@ -197,17 +449,21 @@ static void redraw_window(short handle, const GRECT *redraw_area)
                     if (window_documents[slot].castle_count == 0)
                     {
                         strcpy(status_text, "No castles in this file.");
+                        vst_color(vdi_handle, 1);
+                        v_gtext(vdi_handle, work_x + 8, work_y + 16, status_text);
                     }
                     else
                     {
-                        sprintf(
-                            status_text,
-                            "Castles loaded: %lu",
-                            (unsigned long)window_documents[slot].castle_count
+                        draw_castle(
+                            &window_documents[slot].castles[
+                                window_selected_castles[slot]
+                            ],
+                            work_x,
+                            work_y,
+                            work_width,
+                            work_height
                         );
                     }
-                    vst_color(vdi_handle, 1);
-                    v_gtext(vdi_handle, work_x + 8, work_y + 16, status_text);
                 }
             }
 
@@ -251,21 +507,32 @@ static short close_window(short slot)
     }
 
     window_handles[slot] = 0;
+    window_titles[slot][0] = '\0';
+    window_file_names[slot][0] = '\0';
+    if (active_document_handle == handle)
+    {
+        active_document_handle = 0;
+    }
     castle_data_document_destroy(&window_documents[slot]);
     window_has_castle_document[slot] = 0;
+    window_selected_castles[slot] = 0;
     window_maximized[slot] = 0;
     app_logger_write("Document window closed.");
     return 1;
 }
 
 /**
- * Creates a document window with the supplied title.
+ * Creates a document window with a stable, per-window title.
  *
- * @param title Window title.
+ * @param title Title for a new, untitled document.
+ * @param file_name DAT basename for a castle document.
+ * @param document Castle data to transfer to the window, or null for a new
+ *                 document.
  * @return Non-zero if the window was created and opened successfully.
  */
 static short create_document_window(
     const char *title,
+    const char *file_name,
     CastleDataDocument *document
 )
 {
@@ -279,6 +546,8 @@ static short create_document_window(
     short width;
     short height;
     short handle;
+    size_t title_length;
+    const char *window_title;
 
     slot = find_free_window_slot();
     if (slot < 0)
@@ -290,6 +559,55 @@ static short create_document_window(
     {
         return 0;
     }
+    window_title = title;
+    if (document)
+    {
+        if (!file_name)
+        {
+            app_logger_write("Missing filename for castle document title.");
+            app_alerts_show(APP_ALERT_DOCUMENT_WINDOW_TITLE_MISSING);
+            return 0;
+        }
+        window_file_names[slot][0] = '\0';
+        title_length = 0;
+        if (!append_title_text(
+            window_file_names[slot],
+            sizeof(window_file_names[slot]),
+            &title_length,
+            file_name
+        )
+            || !format_castle_title(
+            window_file_names[slot],
+            document->castle_count > 0 ? 1 : 0,
+            document->castle_count,
+            window_titles[slot],
+            sizeof(window_titles[slot])
+        ))
+        {
+            app_logger_write("Unable to format the castle window title.");
+            app_alerts_show(APP_ALERT_DOCUMENT_WINDOW_TITLE_MISSING);
+            return 0;
+        }
+        window_title = window_titles[slot];
+    }
+    else
+    {
+        window_titles[slot][0] = '\0';
+        title_length = 0;
+        if (!title || !append_title_text(
+            window_titles[slot],
+            sizeof(window_titles[slot]),
+            &title_length,
+            title
+        ))
+        {
+            app_logger_write("Unable to store the document window title.");
+            app_alerts_show(APP_ALERT_DOCUMENT_WINDOW_TITLE_MISSING);
+            return 0;
+        }
+        window_title = window_titles[slot];
+    }
+
     if (!wind_get(0, WF_WORKXYWH, &desktop_x, &desktop_y, &desktop_width, &desktop_height))
     {
         app_alerts_show(APP_ALERT_DESKTOP_SIZE_FAILED);
@@ -331,7 +649,7 @@ static short create_document_window(
         return 0;
     }
 
-    if (!wind_set_str(handle, WF_NAME, title))
+    if (!wind_set_str(handle, WF_NAME, window_title))
     {
         wind_delete(handle);
         app_alerts_show(APP_ALERT_DOCUMENT_WINDOW_TITLE_FAILED);
@@ -345,16 +663,19 @@ static short create_document_window(
     }
 
     window_handles[slot] = handle;
+    active_document_handle = handle;
     if (document)
     {
         window_documents[slot] = *document;
         document->castles = 0;
         document->castle_count = 0;
         window_has_castle_document[slot] = 1;
+        window_selected_castles[slot] = 0;
     }
     else
     {
         window_has_castle_document[slot] = 0;
+        window_selected_castles[slot] = 0;
     }
     restore_bounds[slot].g_x = x;
     restore_bounds[slot].g_y = y;
@@ -382,7 +703,7 @@ short document_window_create(void)
         return 0;
     }
 
-    return create_document_window(title, 0);
+    return create_document_window(title, 0, 0);
 }
 
 /**
@@ -396,7 +717,7 @@ short document_window_open_file(const char *path)
     CastleDataDocument document;
     CastleDataReadResult read_result;
     size_t error_token;
-    const char *title;
+    const char *file_name;
     char log_message[96];
 
     app_logger_write("Opening selected DAT file.");
@@ -436,19 +757,19 @@ short document_window_open_file(const char *path)
         return 0;
     }
 
-    title = strrchr(path, '\\');
-    if (!title)
-    {
-        title = strrchr(path, '/');
-    }
-    title = title ? title + 1 : path;
     sprintf(
         log_message,
         "Loaded %lu castles from the selected DAT file.",
         (unsigned long)document.castle_count
     );
     app_logger_write(log_message);
-    if (!create_document_window(title, &document))
+    file_name = strrchr(path, '\\');
+    if (!file_name)
+    {
+        file_name = strrchr(path, '/');
+    }
+    file_name = file_name ? file_name + 1 : path;
+    if (!create_document_window(0, file_name, &document))
     {
         castle_data_document_destroy(&document);
         return 0;
@@ -489,6 +810,118 @@ short document_window_close_top(void)
     }
 
     return close_window(slot);
+}
+
+/**
+ * Selects an adjacent castle in the active document and redraws its work area.
+ *
+ * @param direction Previous or next castle.
+ * @return Non-zero if a different castle was selected.
+ */
+short document_window_navigate_castles(DocumentCastleNavigation direction)
+{
+    short top_handle;
+    short unused_1;
+    short unused_2;
+    short unused_3;
+    short work_x;
+    short work_y;
+    short work_width;
+    short work_height;
+    short slot;
+    size_t selected_castle;
+    GRECT redraw_area;
+
+    if (direction != DOCUMENT_CASTLE_PREVIOUS
+        && direction != DOCUMENT_CASTLE_NEXT)
+    {
+        app_logger_write("Invalid castle navigation direction.");
+        return 0;
+    }
+
+    slot = -1;
+    if (wind_get(0, WF_TOP, &top_handle, &unused_1, &unused_2, &unused_3))
+    {
+        slot = find_window_slot(top_handle);
+    }
+    if (slot < 0)
+    {
+        top_handle = active_document_handle;
+        slot = find_window_slot(top_handle);
+    }
+    if (slot < 0)
+    {
+        app_logger_write("Castle navigation ignored without an active document window.");
+        return 0;
+    }
+
+    if (!window_has_castle_document[slot])
+    {
+        app_logger_write("Castle navigation ignored without an active DAT document.");
+        return 0;
+    }
+
+    if (!wind_get(
+        top_handle,
+        WF_WORKXYWH,
+        &work_x,
+        &work_y,
+        &work_width,
+        &work_height
+    ))
+    {
+        app_alerts_show(APP_ALERT_DESKTOP_SIZE_FAILED);
+        return 0;
+    }
+
+    if (direction == DOCUMENT_CASTLE_PREVIOUS)
+    {
+        if (window_selected_castles[slot] == 0)
+        {
+            return 0;
+        }
+        selected_castle = window_selected_castles[slot] - 1;
+    }
+    else
+    {
+        if (window_selected_castles[slot] + 1
+            >= window_documents[slot].castle_count)
+        {
+            return 0;
+        }
+        selected_castle = window_selected_castles[slot] + 1;
+    }
+
+    if (!format_castle_title(
+        window_file_names[slot],
+        selected_castle + 1,
+        window_documents[slot].castle_count,
+        window_titles[slot],
+        sizeof(window_titles[slot])
+    ))
+    {
+        app_logger_write("Unable to format the castle window title.");
+        app_alerts_show(APP_ALERT_DOCUMENT_WINDOW_TITLE_MISSING);
+        return 0;
+    }
+    if (!wind_set_str(top_handle, WF_NAME, window_titles[slot]))
+    {
+        app_alerts_show(APP_ALERT_DOCUMENT_WINDOW_TITLE_FAILED);
+        return 0;
+    }
+
+    window_selected_castles[slot] = selected_castle;
+    redraw_area.g_x = work_x;
+    redraw_area.g_y = work_y;
+    redraw_area.g_w = work_width;
+    redraw_area.g_h = work_height;
+    redraw_window(top_handle, &redraw_area);
+    app_logger_write(
+        direction == DOCUMENT_CASTLE_PREVIOUS
+            ? "Selected previous castle."
+            : "Selected next castle."
+    );
+    return 1;
 }
 
 /**
@@ -543,6 +976,7 @@ void document_window_handle_message(const short message[8])
 
         case WM_TOPPED:
             wind_set(window_handles[slot], WF_TOP, 0, 0, 0, 0);
+            active_document_handle = window_handles[slot];
             app_logger_write("Document window brought to front.");
             break;
 

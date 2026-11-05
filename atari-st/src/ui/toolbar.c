@@ -28,6 +28,8 @@ static ToolbarButton toolbar_buttons[] = {
     { MENU_ACTION_QUIT, IC_QUIT, 0, 0 },
     { MENU_ACTION_NEW, IC_FILE_NEW, 0, 0 },
     { MENU_ACTION_OPEN, IC_FILE_OPEN, 0, 0 },
+    { MENU_ACTION_PREVIOUS_CASTLE, IC_PREV_CASTLE, 0, 0 },
+    { MENU_ACTION_NEXT_CASTLE, IC_NEXT_CASTLE, 0, 0 },
     { MENU_ACTION_ABOUT, IC_ABOUT, 0, 0 }
 };
 /** AES handle for the fixed, borderless toolbar window. */
@@ -77,6 +79,14 @@ static short load_toolbar_icons(void)
 
             case MENU_ACTION_ABOUT:
                 app_logger_write("Loading toolbar icon IC_ABOUT.");
+                break;
+
+            case MENU_ACTION_PREVIOUS_CASTLE:
+                app_logger_write("Loading toolbar icon IC_PREV_CASTLE.");
+                break;
+
+            case MENU_ACTION_NEXT_CASTLE:
+                app_logger_write("Loading toolbar icon IC_NEXT_CASTLE.");
                 break;
 
             case MENU_ACTION_NONE:
@@ -480,6 +490,14 @@ MenuAction toolbar_handle_click(short x, short y)
 
                 case MENU_ACTION_ABOUT:
                     app_logger_write("Toolbar: Info button clicked.");
+                    break;
+
+                case MENU_ACTION_PREVIOUS_CASTLE:
+                    app_logger_write("Toolbar: Previous castle button clicked.");
+                    break;
+
+                case MENU_ACTION_NEXT_CASTLE:
+                    app_logger_write("Toolbar: Next castle button clicked.");
                     break;
 
                 case MENU_ACTION_NONE:

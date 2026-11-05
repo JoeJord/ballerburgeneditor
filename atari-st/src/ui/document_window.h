@@ -4,6 +4,17 @@
 #include <gem.h>
 
 /**
+ * Direction used to navigate the active document's castle collection.
+ */
+typedef enum
+{
+    /** Select the castle before the currently displayed castle. */
+    DOCUMENT_CASTLE_PREVIOUS = -1,
+    /** Select the castle after the currently displayed castle. */
+    DOCUMENT_CASTLE_NEXT = 1
+} DocumentCastleNavigation;
+
+/**
  * Creates and opens a new blank document window.
  *
  * @return Non-zero if the window was created and opened successfully.
@@ -24,6 +35,14 @@ short document_window_open_file(const char *path);
  * @return Non-zero if a document window was closed.
  */
 short document_window_close_top(void);
+
+/**
+ * Selects an adjacent castle in the active document and redraws its work area.
+ *
+ * @param direction Previous or next castle.
+ * @return Non-zero if a different castle was selected.
+ */
+short document_window_navigate_castles(DocumentCastleNavigation direction);
 
 /**
  * Checks whether at least one document window is open.

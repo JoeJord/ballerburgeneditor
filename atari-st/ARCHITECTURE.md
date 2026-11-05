@@ -84,8 +84,12 @@ available only from the menu. The toolbar gets its icons from the `IC_QUIT`,
 `IC_FILE_NEW`, `IC_FILE_OPEN`, and `IC_ABOUT` free-image resources. Document
 windows are confined to the desktop below the toolbar, including their maximize
 bounds. Toolbar icons have no individual frames; each 16x16 image is centered
-within a 20x20 button area. The toolbar window is 22 pixels high, leaving a
-one-pixel margin above and below each button area.
+within a 20x20 button area. The toolbar provides Quit, New, Open, Previous
+Castle, Next Castle, and Info actions, in that order. Castle navigation applies
+to the most recently activated document window and stops at the first and last
+castle; blank documents and documents without additional castles are unchanged.
+The toolbar window is 22 pixels high, leaving a one-pixel margin above and
+below each button area.
 
 Selecting File > Open invokes `fsel_exinput()` with a `*.DAT` filter, starting
 in the current drive and directory. Its title comes from resource string
@@ -94,8 +98,18 @@ asterisk-delimited comments, fixed castle fields, and ordered drawing commands.
 It requires the `-999` file terminator, `-1` castle terminators, and `-9`
 polygon terminators; `-2` fill-style changes and `-4` filled/outline toggles
 are retained in the model. A malformed file is rejected before a document
-window is opened. Drawing geometry remains loaded but is not yet rendered in
-the Atari editor window.
+window is opened. The first castle's polygon geometry is drawn in the document
+work area at one-to-one scale, horizontally centered with its baseline near
+the bottom of the work area. The toolbar's Previous Castle and Next Castle
+buttons select among all castles in the active DAT document. It applies
+fill-style changes and outline-mode toggles in order, using the original game's
+VDI writing mode for the castle patterns and restoring the work-area background
+fill state after drawing. DAT window titles come from the `MSG_CASTLE_NO`
+resource string with its `%1$d` current-castle and `%2$d` total-castle tokens
+expanded by the editor and prefixed by the DAT filename and ` - `. Each open
+window owns a stable title buffer, avoiding transient title-string lifetimes
+across AES calls. Placed game objects are retained in the model but are not yet
+rendered.
 
 The About dialog is deliberately a separate feature module so its presentation
 can evolve without changing menu-tree construction or event routing. It gets

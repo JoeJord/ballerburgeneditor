@@ -4,7 +4,7 @@
 #include <gem.h>
 
 /**
- * Actions reported by the GEM menu event handler.
+ * Actions reported by the GEM menu and toolbar event handlers.
  */
 typedef enum
 {
@@ -19,7 +19,11 @@ typedef enum
     /** The user selected the application information item. */
     MENU_ACTION_ABOUT,
     /** The user selected the quit item. */
-    MENU_ACTION_QUIT
+    MENU_ACTION_QUIT,
+    /** The user requested the previous castle in the active document. */
+    MENU_ACTION_PREVIOUS_CASTLE,
+    /** The user requested the next castle in the active document. */
+    MENU_ACTION_NEXT_CASTLE
 } MenuAction;
 
 /**

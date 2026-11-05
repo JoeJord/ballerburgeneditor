@@ -176,6 +176,14 @@ int main(void)
                 about_dialog_show();
                 break;
 
+            case MENU_ACTION_PREVIOUS_CASTLE:
+                document_window_navigate_castles(DOCUMENT_CASTLE_PREVIOUS);
+                break;
+
+            case MENU_ACTION_NEXT_CASTLE:
+                document_window_navigate_castles(DOCUMENT_CASTLE_NEXT);
+                break;
+
             case MENU_ACTION_QUIT:
                 app_logger_write("Action: Quit.");
                 running = 0;

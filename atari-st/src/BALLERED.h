@@ -22,8 +22,11 @@
 
 #define MSG_FILE_OPEN 0   /* Free string in the resource */
 #define MSG_DOC_UNTITLED 1   /* Free string in the resource */
+#define MSG_CASTLE_NO 2   /* Free string in the resource */
 
 #define IC_QUIT  0   /* Icon for application exit */
 #define IC_FILE_NEW 1   /* Icon for new file */
 #define IC_FILE_OPEN 2   /* Icon for open file */
 #define IC_ABOUT 3   /* Icon for to show about dialog */
+#define IC_PREV_CASTLE 4   /* Icon to select previous castle */
+#define IC_NEXT_CASTLE 5   /* Icon to select next castle */
