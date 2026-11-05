@@ -13,7 +13,7 @@ provides the menu's `OBJECT` tree and handles the resulting AES messages.
 | `src/main.c` | Initializes AES, runs the message loop, routes menu actions, and shuts down the application. |
 | `src/menu.c` | Gets and installs the `MAIN` menu tree, translates AES selections into application actions, updates the Close item state, and releases the resource. |
 | `src/menu.h` | Declares the menu action contract used by the application event loop. |
-| `src/toolbar.c` | Displays the fixed toolbar below the menu using its RSC icon blocks, and maps clicks to application actions. |
+| `src/toolbar.c` | Displays the fixed toolbar below the menu using its RSC free images, and maps clicks to application actions. |
 | `src/toolbar.h` | Declares toolbar lifecycle, input, and layout functions. |
 | `src/file_open.c` | Shows the GEM file selector for DAT files and returns the selected path. |
 | `src/file_open.h` | Declares the DAT file selection entry point. |
@@ -55,18 +55,15 @@ then invokes the corresponding feature module.
    `menu_handle_message()` ignores non-selection messages; for `MN_SELECTED`,
    it normalizes the selected title and returns an application-level
    `MenuAction`. The toolbar handles redraw messages and maps button clicks to
-   the same actions. The document-window module processes redraw, close, and
-   top messages in the same event loop.
+   the same actions, logging each toolbar button click separately. The
+   document-window module processes redraw, close, and top messages in the same
+   event loop.
 5. `main()` dispatches New to `document_window_create()`, Open through the GEM
    file selector and `document_window_open_file()`, Close to
    `document_window_close_top()`, About to `about_dialog_show()`, or exits its
    event loop for Quit. After each event it reports whether document windows
    are open to `menu_set_close_enabled()`; `menu.c` owns the enabled-state flag
    and updates the item only when that state changes.
-6. On shutdown, `document_window_shutdown()` closes all remaining document
-   windows and the VDI virtual workstation. Then `menu_hide()` removes the
-   menu bar and releases the loaded resource through `app_resources_release()`.
-   `main()` calls `appl_exit()` and closes the log.
 6. On shutdown, `document_window_shutdown()` closes all remaining document
    windows and its VDI virtual workstation. Then `toolbar_hide()` closes the
    toolbar and its VDI workstation, `menu_hide()` removes the menu bar and
@@ -78,10 +75,13 @@ Selecting File > New creates a blank, white document window titled using the
 Multiple windows can be opened (up to the module's fixed capacity of eight),
 and each can be moved, resized, maximized/restored with the Fuller box, and
 closed independently. The toolbar is a fixed, borderless GEM window immediately
-below the menu bar, with buttons for Quit, New, Open, Close, and Info. It gets
-the icons from the `IC_QUIT`, `IC_FILE_NEW`, `IC_FILE_OPEN`, `IC_FILE_CLOSE`,
-and `IC_ABOUT` resource blocks. Document windows are confined to the desktop
-below the toolbar, including their maximize bounds.
+below the menu bar, with buttons for Quit, New, Open, and Info. File > Close is
+available only from the menu. The toolbar gets its icons from the `IC_QUIT`,
+`IC_FILE_NEW`, `IC_FILE_OPEN`, and `IC_ABOUT` free-image resources. Document
+windows are confined to the desktop below the toolbar, including their maximize
+bounds. Toolbar icons have no individual frames; each 16x16 image is centered
+within a 20x20 button area. The toolbar window is 22 pixels high, leaving a
+one-pixel margin above and below each button area.
 
 Selecting File > Open invokes `fsel_exinput()` with a `*.DAT` filter, starting
 in the current drive and directory. Its title comes from resource string

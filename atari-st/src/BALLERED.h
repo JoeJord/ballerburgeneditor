@@ -21,11 +21,9 @@
 #define MSG_ABOUT_KING3 13  /* STRING in the DLG_ABOUT tree */
 
 #define MSG_FILE_OPEN 0   /* Free string in the resource */
-
 #define MSG_DOC_UNTITLED 1   /* Free string in the resource */
 
 #define IC_QUIT  0   /* Icon for application exit */
 #define IC_FILE_NEW 1   /* Icon for new file */
 #define IC_FILE_OPEN 2   /* Icon for open file */
-#define IC_FILE_CLOSE 3   /* Icon for close file */
-#define IC_ABOUT 4   /* Icon for to show about dialog */
+#define IC_ABOUT 3   /* Icon for to show about dialog */

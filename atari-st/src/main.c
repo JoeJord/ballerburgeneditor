@@ -88,16 +88,19 @@ int main(void)
     {
         app_logger_write("Menu initialization failed; exiting.");
         appl_exit();
+        app_logger_close();
         return 1;
     }
+    app_logger_write("Starting toolbar initialization.");
     if (!toolbar_show())
     {
+        app_logger_write("Toolbar initialization failed; exiting.");
         menu_hide();
         appl_exit();
         app_logger_close();
         return 1;
     }
-    app_logger_write("Menu installed.");
+    app_logger_write("Toolbar initialization complete.");
     /* Restore the standard application cursor after AES startup. */
     graf_mouse(ARROW, 0);
     running = 1;

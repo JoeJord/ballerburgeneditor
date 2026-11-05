@@ -23,13 +23,6 @@ void toolbar_hide(void);
 short toolbar_get_height(void);
 
 /**
- * Updates whether the Close toolbar button is enabled.
- *
- * @param enabled Non-zero if a document window is open.
- */
-void toolbar_set_close_enabled(short enabled);
-
-/**
  * Handles toolbar redraw messages.
  *
  * @param message Eight-word AES message buffer.

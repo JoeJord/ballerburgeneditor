@@ -2,24 +2,25 @@
 
 #include "BALLERED.h"
 #include "app_alerts.h"
+#include "app_logger.h"
 #include "app_resources.h"
 #include "toolbar.h"
 
-/** Width of each temporary toolbar icon button. */
-#define TOOLBAR_BUTTON_WIDTH 32
+/** Width of each toolbar button's layout and hit area. */
+#define TOOLBAR_BUTTON_WIDTH 20
+/** Height of each toolbar button's layout and hit area. */
+#define TOOLBAR_BUTTON_HEIGHT 20
+/** Toolbar height leaves a one-pixel margin above and below button areas. */
+#define TOOLBAR_HEIGHT 22
 /** Horizontal spacing between adjacent toolbar buttons. */
 #define TOOLBAR_BUTTON_GAP 4
-/** Vertical padding above and below toolbar buttons. */
-#define TOOLBAR_BUTTON_VERTICAL_PADDING 3
-/** Width and height of toolbar icon slots, matching the planned RSC icons. */
-#define TOOLBAR_ICON_SIZE 16
 
 typedef struct
 {
     MenuAction action;
     short resource_index;
     short x;
-    ICONBLK *icon_block;
+    BITBLK *image_block;
 } ToolbarButton;
 
 /** Actions represented by their resource icons, in left-to-right order. */
@@ -27,7 +28,6 @@ static ToolbarButton toolbar_buttons[] = {
     { MENU_ACTION_QUIT, IC_QUIT, 0, 0 },
     { MENU_ACTION_NEW, IC_FILE_NEW, 0, 0 },
     { MENU_ACTION_OPEN, IC_FILE_OPEN, 0, 0 },
-    { MENU_ACTION_CLOSE, IC_FILE_CLOSE, 0, 0 },
     { MENU_ACTION_ABOUT, IC_ABOUT, 0, 0 }
 };
 /** AES handle for the fixed, borderless toolbar window. */
@@ -36,8 +36,6 @@ static short toolbar_handle;
 static VdiHdl toolbar_vdi_handle;
 /** Toolbar window screen bounds. */
 static GRECT toolbar_bounds;
-/** Whether the Close toolbar button is currently active. */
-static short close_button_enabled;
 
 /**
  * Returns the number of buttons defined for the toolbar.
@@ -50,9 +48,9 @@ static short toolbar_button_count(void)
 }
 
 /**
- * Loads all toolbar icons from the GEM resource file.
+ * Loads all toolbar images from the GEM resource file.
  *
- * @return Non-zero if every toolbar icon is available.
+ * @return Non-zero if every toolbar image is available.
  */
 static short load_toolbar_icons(void)
 {
@@ -60,14 +58,40 @@ static short load_toolbar_icons(void)
 
     for (index = 0; index < toolbar_button_count(); index++)
     {
-        toolbar_buttons[index].icon_block =
-            app_resources_get_icon_block(toolbar_buttons[index].resource_index);
-        if (!toolbar_buttons[index].icon_block)
+        switch (toolbar_buttons[index].action)
         {
+            case MENU_ACTION_QUIT:
+                app_logger_write("Loading toolbar icon IC_QUIT.");
+                break;
+
+            case MENU_ACTION_NEW:
+                app_logger_write("Loading toolbar icon IC_FILE_NEW.");
+                break;
+
+            case MENU_ACTION_OPEN:
+                app_logger_write("Loading toolbar icon IC_FILE_OPEN.");
+                break;
+
+            case MENU_ACTION_CLOSE:
+                break;
+
+            case MENU_ACTION_ABOUT:
+                app_logger_write("Loading toolbar icon IC_ABOUT.");
+                break;
+
+            case MENU_ACTION_NONE:
+                break;
+        }
+        toolbar_buttons[index].image_block =
+            app_resources_get_free_image(toolbar_buttons[index].resource_index);
+        if (!toolbar_buttons[index].image_block)
+        {
+            app_logger_write("Toolbar free-image resource lookup failed.");
             return 0;
         }
     }
 
+    app_logger_write("Toolbar free-image resources loaded.");
     return 1;
 }
 
@@ -84,79 +108,33 @@ static void draw_button(
     short clip_height
 )
 {
-    short button_bounds[4];
-    short line[4];
-    OBJECT icon_object;
+    OBJECT image_object;
     short button_y;
-    short icon_x;
-    short icon_y;
+    short image_x;
+    short image_y;
+    short image_width;
 
-    button_bounds[0] = button->x;
-    button_bounds[1] = toolbar_bounds.g_y + TOOLBAR_BUTTON_VERTICAL_PADDING;
-    button_bounds[2] = button->x + TOOLBAR_BUTTON_WIDTH - 1;
-    button_bounds[3] =
-        toolbar_bounds.g_y + toolbar_bounds.g_h
-        - TOOLBAR_BUTTON_VERTICAL_PADDING - 1;
+    button_y = toolbar_bounds.g_y
+        + (toolbar_bounds.g_h - TOOLBAR_BUTTON_HEIGHT) / 2;
 
-    vsf_color(toolbar_vdi_handle, 0);
-    vsf_interior(toolbar_vdi_handle, FIS_SOLID);
-    vr_recfl(toolbar_vdi_handle, button_bounds);
+    image_width = button->image_block->bi_wb * 8;
+    image_x = button->x + (TOOLBAR_BUTTON_WIDTH - image_width) / 2;
+    image_y = button_y
+        + (TOOLBAR_BUTTON_HEIGHT - button->image_block->bi_hl) / 2;
 
-    vsl_color(toolbar_vdi_handle, 1);
-    if (button->action == MENU_ACTION_CLOSE && !close_button_enabled)
-    {
-        vsl_type(toolbar_vdi_handle, 2);
-    }
-    else
-    {
-        vsl_type(toolbar_vdi_handle, 1);
-    }
-    line[0] = button_bounds[0];
-    line[1] = button_bounds[1];
-    line[2] = button_bounds[2];
-    line[3] = button_bounds[1];
-    v_pline(toolbar_vdi_handle, 2, line);
-    line[0] = button_bounds[2];
-    line[1] = button_bounds[1];
-    line[2] = button_bounds[2];
-    line[3] = button_bounds[3];
-    v_pline(toolbar_vdi_handle, 2, line);
-    line[0] = button_bounds[2];
-    line[1] = button_bounds[3];
-    line[2] = button_bounds[0];
-    line[3] = button_bounds[3];
-    v_pline(toolbar_vdi_handle, 2, line);
-    line[0] = button_bounds[0];
-    line[1] = button_bounds[3];
-    line[2] = button_bounds[0];
-    line[3] = button_bounds[1];
-    v_pline(toolbar_vdi_handle, 2, line);
-
-    button_y = toolbar_bounds.g_y + TOOLBAR_BUTTON_VERTICAL_PADDING;
-    icon_x = button->x
-        + (TOOLBAR_BUTTON_WIDTH - button->icon_block->ib_wicon) / 2
-        - button->icon_block->ib_xicon;
-    icon_y = button_y
-        + (TOOLBAR_ICON_SIZE - button->icon_block->ib_hicon) / 2
-        - button->icon_block->ib_yicon;
-
-    icon_object.ob_next = -1;
-    icon_object.ob_head = -1;
-    icon_object.ob_tail = -1;
-    icon_object.ob_type = G_ICON;
-    icon_object.ob_flags = 0;
-    icon_object.ob_state = 0;
-    if (button->action == MENU_ACTION_CLOSE && !close_button_enabled)
-    {
-        icon_object.ob_state |= OS_DISABLED;
-    }
-    icon_object.ob_spec.iconblk = button->icon_block;
-    icon_object.ob_x = icon_x;
-    icon_object.ob_y = icon_y;
-    icon_object.ob_width = button->icon_block->ib_wicon;
-    icon_object.ob_height = button->icon_block->ib_hicon;
+    image_object.ob_next = -1;
+    image_object.ob_head = -1;
+    image_object.ob_tail = -1;
+    image_object.ob_type = G_IMAGE;
+    image_object.ob_flags = 0;
+    image_object.ob_state = 0;
+    image_object.ob_spec.bitblk = button->image_block;
+    image_object.ob_x = image_x;
+    image_object.ob_y = image_y;
+    image_object.ob_width = image_width;
+    image_object.ob_height = button->image_block->bi_hl;
     objc_draw(
-        &icon_object,
+        &image_object,
         0,
         MAX_DEPTH,
         clip_x,
@@ -185,8 +163,10 @@ static void redraw_toolbar(const GRECT *redraw_area)
     short right;
     short bottom;
 
+    app_logger_write("Toolbar redraw started.");
     if (!wind_update(BEG_UPDATE))
     {
+        app_logger_write("Toolbar redraw could not lock window updates.");
         return;
     }
 
@@ -232,6 +212,7 @@ static void redraw_toolbar(const GRECT *redraw_area)
 
                 for (index = 0; index < toolbar_button_count(); index++)
                 {
+                    app_logger_write("Drawing a toolbar icon.");
                     draw_button(
                         &toolbar_buttons[index],
                         left,
@@ -239,6 +220,7 @@ static void redraw_toolbar(const GRECT *redraw_area)
                         right - left + 1,
                         bottom - top + 1
                     );
+                    app_logger_write("Toolbar icon drawing completed.");
                 }
 
                 vsl_color(toolbar_vdi_handle, 1);
@@ -266,6 +248,7 @@ static void redraw_toolbar(const GRECT *redraw_area)
 
     vs_clip(toolbar_vdi_handle, 0, clip);
     wind_update(END_UPDATE);
+    app_logger_write("Toolbar redraw completed.");
 }
 
 /**
@@ -293,6 +276,7 @@ short toolbar_show(void)
         return 1;
     }
 
+    app_logger_write("Opening toolbar VDI workstation.");
     physical_handle = graf_handle(
         &character_width,
         &character_height,
@@ -311,6 +295,7 @@ short toolbar_show(void)
         app_alerts_show(APP_ALERT_TOOLBAR_VDI_OPEN_FAILED);
         return 0;
     }
+    app_logger_write("Toolbar VDI workstation opened.");
 
     if (!load_toolbar_icons())
     {
@@ -320,6 +305,7 @@ short toolbar_show(void)
         return 0;
     }
 
+    app_logger_write("Getting desktop work area for toolbar.");
     if (!wind_get(
         0,
         WF_WORKXYWH,
@@ -338,8 +324,8 @@ short toolbar_show(void)
     toolbar_bounds.g_x = desktop_x;
     toolbar_bounds.g_y = desktop_y;
     toolbar_bounds.g_w = desktop_width;
-    toolbar_bounds.g_h =
-        TOOLBAR_ICON_SIZE + 2 * TOOLBAR_BUTTON_VERTICAL_PADDING;
+    toolbar_bounds.g_h = TOOLBAR_HEIGHT;
+    app_logger_write("Creating borderless toolbar window.");
 
     desktop_x += TOOLBAR_BUTTON_GAP;
     for (index = 0; index < toolbar_button_count(); index++)
@@ -363,6 +349,7 @@ short toolbar_show(void)
         toolbar_vdi_handle = 0;
         return 0;
     }
+    app_logger_write("Opening toolbar window.");
     if (!wind_open(
         toolbar_handle,
         toolbar_bounds.g_x,
@@ -379,7 +366,7 @@ short toolbar_show(void)
         return 0;
     }
 
-    close_button_enabled = 0;
+    app_logger_write("Toolbar displayed.");
     return 1;
 }
 
@@ -388,6 +375,9 @@ short toolbar_show(void)
  */
 void toolbar_hide(void)
 {
+    short toolbar_was_open;
+
+    toolbar_was_open = toolbar_handle != 0;
     if (toolbar_handle != 0)
     {
         if (!wind_close(toolbar_handle))
@@ -409,6 +399,10 @@ void toolbar_hide(void)
         toolbar_vdi_handle = 0;
     }
     toolbar_bounds.g_h = 0;
+    if (toolbar_was_open)
+    {
+        app_logger_write("Toolbar closed.");
+    }
 }
 
 /**
@@ -419,29 +413,6 @@ void toolbar_hide(void)
 short toolbar_get_height(void)
 {
     return toolbar_bounds.g_h;
-}
-
-/**
- * Updates whether the Close toolbar button is enabled.
- *
- * @param enabled Non-zero if a document window is open.
- */
-void toolbar_set_close_enabled(short enabled)
-{
-    GRECT redraw_area;
-
-    enabled = enabled != 0;
-    if (enabled == close_button_enabled)
-    {
-        return;
-    }
-
-    close_button_enabled = enabled;
-    if (toolbar_handle != 0)
-    {
-        redraw_area = toolbar_bounds;
-        redraw_toolbar(&redraw_area);
-    }
 }
 
 /**
@@ -479,9 +450,9 @@ MenuAction toolbar_handle_click(short x, short y)
     short button_top;
     short button_bottom;
 
-    button_top = toolbar_bounds.g_y + TOOLBAR_BUTTON_VERTICAL_PADDING;
-    button_bottom = toolbar_bounds.g_y + toolbar_bounds.g_h
-        - TOOLBAR_BUTTON_VERTICAL_PADDING;
+    button_top = toolbar_bounds.g_y
+        + (toolbar_bounds.g_h - TOOLBAR_BUTTON_HEIGHT) / 2;
+    button_bottom = button_top + TOOLBAR_BUTTON_HEIGHT;
 
     for (index = 0; index < toolbar_button_count(); index++)
     {
@@ -490,10 +461,29 @@ MenuAction toolbar_handle_click(short x, short y)
             && y >= button_top
             && y < button_bottom)
         {
-            if (toolbar_buttons[index].action == MENU_ACTION_CLOSE
-                && !close_button_enabled)
+            switch (toolbar_buttons[index].action)
             {
-                return MENU_ACTION_NONE;
+                case MENU_ACTION_QUIT:
+                    app_logger_write("Toolbar: Quit button clicked.");
+                    break;
+
+                case MENU_ACTION_NEW:
+                    app_logger_write("Toolbar: New button clicked.");
+                    break;
+
+                case MENU_ACTION_OPEN:
+                    app_logger_write("Toolbar: Open button clicked.");
+                    break;
+
+                case MENU_ACTION_CLOSE:
+                    break;
+
+                case MENU_ACTION_ABOUT:
+                    app_logger_write("Toolbar: Info button clicked.");
+                    break;
+
+                case MENU_ACTION_NONE:
+                    break;
             }
             return toolbar_buttons[index].action;
         }

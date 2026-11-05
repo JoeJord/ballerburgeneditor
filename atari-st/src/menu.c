@@ -5,7 +5,6 @@
 #include "app_alerts.h"
 #include "app_logger.h"
 #include "menu.h"
-#include "toolbar.h"
 
 /** Loaded menu tree owned by the resource system. */
 static OBJECT *menu_tree;
@@ -105,7 +104,6 @@ short menu_set_close_enabled(short enabled)
             ? "File > Close menu item enabled."
             : "File > Close menu item disabled."
     );
-    toolbar_set_close_enabled(new_state);
     return 1;
 }
 

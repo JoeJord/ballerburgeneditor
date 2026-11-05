@@ -81,22 +81,24 @@ char *app_resources_get_string(short string_index)
 }
 
 /**
- * Returns an icon block from the loaded resource file.
+ * Returns a free image from the loaded resource file.
  *
- * @param icon_index Resource icon index.
- * @return The requested icon block, or 0 if it is unavailable.
+ * @param image_index Free image resource index.
+ * @return The requested image block, or 0 if it is unavailable.
  */
-ICONBLK *app_resources_get_icon_block(short icon_index)
+BITBLK *app_resources_get_free_image(short image_index)
 {
-    ICONBLK *icon_block;
+    BITBLK **image_pointer;
 
     if (!resource_loaded
-        || !rsrc_gaddr(R_ICONBLK, icon_index, &icon_block))
+        || !rsrc_gaddr(R_FRIMG, image_index, &image_pointer)
+        || !image_pointer
+        || !*image_pointer)
     {
         return 0;
     }
 
-    return icon_block;
+    return *image_pointer;
 }
 
 /**
