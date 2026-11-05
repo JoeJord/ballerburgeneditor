@@ -25,6 +25,8 @@ provides the menu's `OBJECT` tree and handles the resulting AES messages.
 | `src/app_resources.h` | Declares resource loading, release, and resource-access functions. |
 | `src/app_alerts.c` | Defines shared fixed English alert strings and displays them through AES. |
 | `src/app_alerts.h` | Declares the alert-string constants and alert display function. |
+| `src/app_logger.c` | Appends application events and alerts to `BALLERED.LOG`. |
+| `src/app_logger.h` | Declares application log lifecycle and write functions. |
 | `src/BALLERED.RSC` | GEM resource containing the menu and About dialog trees, object layouts, flags, and labels. |
 | `src/BALLERED.h` | Generated resource IDs included by C code (`MAIN`, `DLG_ABOUT`, and dialog object IDs). |
 | `src/BALLERED.HRD` | Resource-editor hierarchy metadata; not loaded by the application at runtime. |
@@ -35,7 +37,10 @@ then invokes the corresponding feature module.
 
 ## Startup and Event Flow
 
-1. `main()` initializes AES with `appl_init()`.
+1. `main()` opens `BALLERED.LOG` in the current directory, then initializes AES
+   with `appl_init()`. The logger appends one event per line and flushes each
+   event to disk. File logging can be disabled at compile time by setting
+   `APP_LOGGING_ENABLED` to `0` in `app_logger.c`.
 2. `main()` checks `Getrez()` and requires the Atari ST high-resolution
    monochrome mode (resolution code 2, 640x400). Unsupported modes receive an
    AES alert and the application exits cleanly.
@@ -58,6 +63,10 @@ then invokes the corresponding feature module.
    event loop for Quit. After each event it reports whether document windows
    are open to `menu_set_close_enabled()`; `menu.c` owns the enabled-state flag
    and updates the item only when that state changes.
+6. On shutdown, `document_window_shutdown()` closes all remaining document
+   windows and the VDI virtual workstation. Then `menu_hide()` removes the
+   menu bar and releases the loaded resource through `app_resources_release()`.
+   `main()` calls `appl_exit()` and closes the log.
 6. On shutdown, `document_window_shutdown()` closes all remaining document
    windows and its VDI virtual workstation. Then `toolbar_hide()` closes the
    toolbar and its VDI workstation, `menu_hide()` removes the menu bar and

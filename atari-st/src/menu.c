@@ -3,6 +3,7 @@
 #include "BALLERED.h"
 #include "app_resources.h"
 #include "app_alerts.h"
+#include "app_logger.h"
 #include "menu.h"
 #include "toolbar.h"
 
@@ -99,6 +100,11 @@ short menu_set_close_enabled(short enabled)
     }
 
     close_enabled = new_state;
+    app_logger_write(
+        new_state
+            ? "File > Close menu item enabled."
+            : "File > Close menu item disabled."
+    );
     toolbar_set_close_enabled(new_state);
     return 1;
 }

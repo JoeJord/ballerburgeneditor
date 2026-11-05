@@ -4,6 +4,7 @@
 
 #include "BALLERED.h"
 #include "app_alerts.h"
+#include "app_logger.h"
 #include "app_resources.h"
 #include "document_window.h"
 #include "toolbar.h"
@@ -225,6 +226,7 @@ static short close_window(short slot)
 
     window_handles[slot] = 0;
     window_maximized[slot] = 0;
+    app_logger_write("Document window closed.");
     return 1;
 }
 
@@ -317,6 +319,7 @@ static short create_document_window(const char *title)
     restore_bounds[slot].g_w = width;
     restore_bounds[slot].g_h = height;
     window_maximized[slot] = 0;
+    app_logger_write("Document window created.");
     return 1;
 }
 
@@ -329,6 +332,7 @@ short document_window_create(void)
 {
     const char *title;
 
+    app_logger_write("Creating an untitled document window.");
     title = app_resources_get_string(MSG_DOC_UNTITLED);
     if (!title)
     {
@@ -350,6 +354,7 @@ short document_window_open_file(const char *path)
     FILE *input;
     const char *title;
 
+    app_logger_write("Opening selected DAT file.");
     input = fopen(path, "rb");
     if (!input)
     {
@@ -368,6 +373,7 @@ short document_window_open_file(const char *path)
         title = strrchr(path, '/');
     }
     title = title ? title + 1 : path;
+    app_logger_write("Selected DAT file passed the readability check.");
     return create_document_window(title);
 }
 
@@ -458,6 +464,7 @@ void document_window_handle_message(const short message[8])
 
         case WM_TOPPED:
             wind_set(window_handles[slot], WF_TOP, 0, 0, 0, 0);
+            app_logger_write("Document window brought to front.");
             break;
 
         case WM_FULLED:
@@ -474,6 +481,7 @@ void document_window_handle_message(const short message[8])
                 else
                 {
                     window_maximized[slot] = 0;
+                    app_logger_write("Document window restored.");
                 }
             }
             else
@@ -506,6 +514,7 @@ void document_window_handle_message(const short message[8])
                 {
                     restore_bounds[slot] = current_bounds;
                     window_maximized[slot] = 1;
+                    app_logger_write("Document window maximized.");
                 }
             }
             break;
@@ -525,6 +534,11 @@ void document_window_handle_message(const short message[8])
                 restore_bounds[slot].g_y = message[5];
                 restore_bounds[slot].g_w = message[6];
                 restore_bounds[slot].g_h = message[7];
+                app_logger_write(
+                    message[0] == WM_SIZED
+                        ? "Document window resized."
+                        : "Document window moved."
+                );
             }
             break;
     }

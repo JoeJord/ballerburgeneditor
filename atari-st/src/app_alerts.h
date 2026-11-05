@@ -55,6 +55,8 @@ extern const char APP_ALERT_DOCUMENT_WINDOW_RESTORE_FAILED[];
 extern const char APP_ALERT_DISPLAY_MODE_UNSUPPORTED[];
 /** Alert shown when the resource menu cannot disable its Close item. */
 extern const char APP_ALERT_CLOSE_MENU_DISABLE_FAILED[];
+/** Alert shown when the application log file cannot be opened. */
+extern const char APP_ALERT_LOG_OPEN_FAILED[];
 /** Alert shown when AES cannot open the toolbar VDI workstation. */
 extern const char APP_ALERT_TOOLBAR_VDI_OPEN_FAILED[];
 /** Alert shown when a toolbar icon is missing from the resources. */

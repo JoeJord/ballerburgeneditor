@@ -3,8 +3,8 @@ CFLAGS = -O2 -g -Wall -Wextra -std=c99
 LDFLAGS =
 LDLIBS = -lgem
 TARGET = ../out/artifacts/ballered.prg
-SOURCES = src/main.c src/menu.c src/about_dialog.c src/app_resources.c src/document_window.c src/file_open.c src/app_alerts.c src/toolbar.c
-HEADERS = src/menu.h src/about_dialog.h src/BALLERED.h src/app_resources.h src/document_window.h src/file_open.h src/app_alerts.h src/toolbar.h
+SOURCES = src/main.c src/menu.c src/about_dialog.c src/app_resources.c src/document_window.c src/file_open.c src/app_alerts.c src/app_logger.c src/toolbar.c
+HEADERS = src/menu.h src/about_dialog.h src/BALLERED.h src/app_resources.h src/document_window.h src/file_open.h src/app_alerts.h src/app_logger.h src/toolbar.h
 RESOURCE = src/BALLERED.RSC
 RESOURCE_TARGET = $(dir $(TARGET))BALLERED.RSC
 

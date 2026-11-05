@@ -5,6 +5,7 @@
 #include "BALLERED.h"
 #include "app_resources.h"
 #include "app_alerts.h"
+#include "app_logger.h"
 #include "file_open.h"
 
 /** Maximum path length supported by the GEM file selector and document API. */
@@ -177,6 +178,7 @@ short file_open_select(const char **selected_path)
 
     if (!selected_path)
     {
+        app_logger_write("File selector called with an invalid output pointer.");
         app_alerts_show(APP_ALERT_SELECTED_PATH_INVALID);
         return -1;
     }
@@ -185,12 +187,14 @@ short file_open_select(const char **selected_path)
 
     if (!build_initial_path(path))
     {
+        app_logger_write("Unable to prepare the initial file-selector path.");
         return -1;
     }
 
     dialog_title = app_resources_get_string(MSG_FILE_OPEN);
     if (!dialog_title)
     {
+        app_logger_write("File selector title is missing from the resources.");
         app_alerts_show(APP_ALERT_FILE_SELECTOR_TITLE_MISSING);
         return -1;
     }
@@ -199,27 +203,33 @@ short file_open_select(const char **selected_path)
     exit_button = FSEL_CANCEL;
     if (!fsel_exinput(path, file, &exit_button, dialog_title))
     {
+        app_logger_write("GEM file selector failed.");
         app_alerts_show(APP_ALERT_FILE_SELECTOR_FAILED);
         return -1;
     }
     if (exit_button != FSEL_OK)
     {
+        app_logger_write("File selection cancelled.");
         return 0;
     }
     if (!file[0])
     {
+        app_logger_write("File selector returned an empty filename.");
         return 0;
     }
     if (!has_dat_extension(file))
     {
+        app_logger_write("Selected file does not have a DAT extension.");
         app_alerts_show(APP_ALERT_DAT_FILE_REQUIRED);
         return -1;
     }
     if (!combine_selected_path(path, file))
     {
+        app_logger_write("Selected file path exceeds the supported length.");
         return -1;
     }
 
     *selected_path = selected_file_path;
+    app_logger_write("DAT file selected.");
     return 1;
 }

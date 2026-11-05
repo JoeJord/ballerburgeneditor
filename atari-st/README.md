@@ -31,6 +31,9 @@ The C sources are split by responsibility:
   provide accessors for the menu and About dialog trees.
 - `src\app_alerts.c` and `src\app_alerts.h` centralize the fixed English
   application alert strings.
+- `src\app_logger.c` and `src\app_logger.h` append application lifecycle,
+  action, file, window, and alert events to `BALLERED.LOG` in the current
+  working directory.
 - `src\BALLERED.RSC` defines the menu and About dialog trees and is loaded by
   GEM/AES at startup.
 - `src\BALLERED.h` provides the resource IDs used by C; `BALLERED.HRD` is
