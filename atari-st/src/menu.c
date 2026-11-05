@@ -3,6 +3,7 @@
 #include "BALLERED.h"
 #include "app_resources.h"
 #include "app_alerts.h"
+#include "app_logger.h"
 #include "menu.h"
 
 /** Loaded menu tree owned by the resource system. */
@@ -98,6 +99,11 @@ short menu_set_close_enabled(short enabled)
     }
 
     close_enabled = new_state;
+    app_logger_write(
+        new_state
+            ? "File > Close menu item enabled."
+            : "File > Close menu item disabled."
+    );
     return 1;
 }
 

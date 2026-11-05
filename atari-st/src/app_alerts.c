@@ -1,6 +1,7 @@
 #include <gem.h>
 
 #include "app_alerts.h"
+#include "app_logger.h"
 
 /**
  * Displays an AES alert with the standard alert icon.
@@ -9,9 +10,12 @@
  */
 void app_alerts_show(const char *text)
 {
+    app_logger_write(text);
     form_alert(1, text);
 }
 
+const char APP_ALERT_LOG_OPEN_FAILED[] =
+    "[1][Unable to open BALLERED.LOG.][Continue]";
 const char APP_ALERT_ABOUT_RESOURCE_MISSING[] =
     "[1][About dialog is missing from the resources.][OK]";
 const char APP_ALERT_CLOSE_MENU_UPDATE_FAILED[] =

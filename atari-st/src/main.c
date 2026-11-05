@@ -3,6 +3,7 @@
 
 #include "about_dialog.h"
 #include "app_alerts.h"
+#include "app_logger.h"
 #include "document_window.h"
 #include "file_open.h"
 #include "menu.h"
@@ -43,23 +44,44 @@ int main(void)
     /** Whether the application should continue waiting for messages. */
     int running;
 
+    if (!app_logger_open())
+    {
+        application_id = appl_init();
+        if (application_id >= 0)
+        {
+            app_alerts_show(APP_ALERT_LOG_OPEN_FAILED);
+            appl_exit();
+        }
+        return 1;
+    }
+    app_logger_write("Initializing AES.");
+
     application_id = appl_init();
     if (application_id < 0)
     {
+        app_logger_write("AES initialization failed.");
+        app_logger_close();
         return 1;
     }
+    app_logger_write("AES initialized.");
 
     if (!check_display_mode())
     {
+        app_logger_write("Unsupported display mode; exiting.");
         appl_exit();
+        app_logger_close();
         return 1;
     }
+    app_logger_write("Display mode accepted.");
 
     if (!menu_show())
     {
+        app_logger_write("Menu initialization failed; exiting.");
         appl_exit();
+        app_logger_close();
         return 1;
     }
+    app_logger_write("Menu installed.");
     /* Restore the standard application cursor after AES startup. */
     graf_mouse(ARROW, 0);
     running = 1;
@@ -72,6 +94,7 @@ int main(void)
         switch (action)
         {
             case MENU_ACTION_NEW:
+                app_logger_write("Action: New document.");
                 document_window_create();
                 break;
 
@@ -79,23 +102,31 @@ int main(void)
             {
                 short selection_result;
 
+                app_logger_write("Action: Open document.");
                 selection_result = file_open_select(&selected_path);
                 if (selection_result > 0)
                 {
                     document_window_open_file(selected_path);
                 }
+                else if (selection_result == 0)
+                {
+                    app_logger_write("File selection cancelled.");
+                }
                 break;
             }
 
             case MENU_ACTION_CLOSE:
+                app_logger_write("Action: Close document.");
                 document_window_close_top();
                 break;
 
             case MENU_ACTION_ABOUT:
+                app_logger_write("Action: About.");
                 about_dialog_show();
                 break;
 
             case MENU_ACTION_QUIT:
+                app_logger_write("Action: Quit.");
                 running = 0;
                 break;
 
@@ -110,7 +141,10 @@ int main(void)
     }
 
     document_window_shutdown();
+    app_logger_write("Document windows shut down.");
     menu_hide();
+    app_logger_write("Menu and resources released.");
     appl_exit();
+    app_logger_close();
     return 0;
 }
