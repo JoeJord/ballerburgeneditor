@@ -41,6 +41,8 @@ extern const char APP_ALERT_DOCUMENT_WINDOW_CREATE_FAILED[];
 extern const char APP_ALERT_DOCUMENT_WINDOW_OPEN_FAILED[];
 /** Alert shown when a document window title cannot be set. */
 extern const char APP_ALERT_DOCUMENT_WINDOW_TITLE_FAILED[];
+/** Alert shown when the untitled document name is missing from the resources. */
+extern const char APP_ALERT_DOCUMENT_WINDOW_TITLE_MISSING[];
 /** Alert shown when the document window limit has been reached. */
 extern const char APP_ALERT_DOCUMENT_WINDOW_LIMIT_REACHED[];
 /** Alert shown when there is no topmost document window to close. */

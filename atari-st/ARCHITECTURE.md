@@ -58,7 +58,8 @@ then invokes the corresponding feature module.
    menu bar and releases the loaded resource through `app_resources_release()`,
    and `main()` calls `appl_exit()`.
 
-Selecting File > New creates a blank, white "Untitled" document window.
+Selecting File > New creates a blank, white document window titled using the
+`MSG_DOC_UNTITLED` string from the loaded resource.
 Multiple windows can be opened (up to the module's fixed capacity of eight),
 and each can be moved, resized, maximized/restored with the Fuller box, and
 closed independently. The AES window is created with the full desktop work

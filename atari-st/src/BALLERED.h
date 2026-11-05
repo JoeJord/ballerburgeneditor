@@ -21,3 +21,5 @@
 #define MSG_ABOUT_KING3 13  /* STRING in the DLG_ABOUT tree */
 
 #define MSG_FILE_OPEN 0   /* Free string in the resource */
+
+#define MSG_DOC_UNTITLED 1   /* Free string in the resource */

@@ -2,7 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "BALLERED.h"
 #include "app_alerts.h"
+#include "app_resources.h"
 #include "document_window.h"
 
 /** Maximum number of document windows this module can manage simultaneously. */
@@ -316,7 +318,16 @@ static short create_document_window(const char *title)
  */
 short document_window_create(void)
 {
-    return create_document_window("Untitled");
+    const char *title;
+
+    title = app_resources_get_string(MSG_DOC_UNTITLED);
+    if (!title)
+    {
+        app_alerts_show(APP_ALERT_DOCUMENT_WINDOW_TITLE_MISSING);
+        return 0;
+    }
+
+    return create_document_window(title);
 }
 
 /**
