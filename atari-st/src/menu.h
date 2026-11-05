@@ -12,6 +12,8 @@ typedef enum
     MENU_ACTION_NONE,
     /** The user selected the New document item. */
     MENU_ACTION_NEW,
+    /** The user selected the Open document item. */
+    MENU_ACTION_OPEN,
     /** The user selected the Close document item. */
     MENU_ACTION_CLOSE,
     /** The user selected the application information item. */

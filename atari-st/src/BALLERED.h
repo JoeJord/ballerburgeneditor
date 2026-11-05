@@ -19,3 +19,5 @@
 #define MSG_ABOUT_KING1 10  /* STRING in the DLG_ABOUT tree */
 #define MSG_ABOUT_KING2 12  /* STRING in the DLG_ABOUT tree */
 #define MSG_ABOUT_KING3 13  /* STRING in the DLG_ABOUT tree */
+
+#define MSG_FILE_OPEN 0   /* Free string in the resource */

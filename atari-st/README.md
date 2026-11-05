@@ -22,6 +22,8 @@ The C sources are split by responsibility:
   the loaded GEM resource.
 - `src\document_window.c` and `src\document_window.h` create and manage blank
   document windows opened through File > New.
+- `src\file_open.c` and `src\file_open.h` provide the GEM DAT-file selector
+  used by File > Open.
 - `src\app_resources.c` and `src\app_resources.h` own resource loading and
   provide accessors for the menu and About dialog trees.
 - `src\BALLERED.RSC` defines the menu and About dialog trees and is loaded by

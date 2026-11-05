@@ -1,4 +1,6 @@
 #include <gem.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "document_window.h"
 
@@ -223,11 +225,12 @@ static short close_window(short slot)
 }
 
 /**
- * Creates and opens a new blank document window.
+ * Creates a document window with the supplied title.
  *
+ * @param title Window title.
  * @return Non-zero if the window was created and opened successfully.
  */
-short document_window_create(void)
+static short create_document_window(const char *title)
 {
     short slot;
     short desktop_x;
@@ -283,7 +286,7 @@ short document_window_create(void)
         return 0;
     }
 
-    if (!wind_set_str(handle, WF_NAME, "Untitled"))
+    if (!wind_set_str(handle, WF_NAME, title))
     {
         wind_delete(handle);
         form_alert(1, "[1][Unable to set the document window title.][OK]");
@@ -303,6 +306,48 @@ short document_window_create(void)
     restore_bounds[slot].g_h = height;
     window_maximized[slot] = 0;
     return 1;
+}
+
+/**
+ * Creates and opens a new blank document window.
+ *
+ * @return Non-zero if the window was created and opened successfully.
+ */
+short document_window_create(void)
+{
+    return create_document_window("Untitled");
+}
+
+/**
+ * Opens a readable DAT file in a document window.
+ *
+ * @param path Full path to the selected file.
+ * @return Non-zero if the document window was created successfully.
+ */
+short document_window_open_file(const char *path)
+{
+    FILE *input;
+    const char *title;
+
+    input = fopen(path, "rb");
+    if (!input)
+    {
+        form_alert(1, "[1][Unable to open the selected DAT file.][OK]");
+        return 0;
+    }
+    if (fclose(input) != 0)
+    {
+        form_alert(1, "[1][Unable to close the selected DAT file.][OK]");
+        return 0;
+    }
+
+    title = strrchr(path, '\\');
+    if (!title)
+    {
+        title = strrchr(path, '/');
+    }
+    title = title ? title + 1 : path;
+    return create_document_window(title);
 }
 
 /**

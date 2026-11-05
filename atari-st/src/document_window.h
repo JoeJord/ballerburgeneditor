@@ -11,6 +11,14 @@
 short document_window_create(void);
 
 /**
+ * Opens a readable DAT file in a document window.
+ *
+ * @param path Full path to the selected file.
+ * @return Non-zero if the document window was created successfully.
+ */
+short document_window_open_file(const char *path);
+
+/**
  * Closes the topmost document window.
  *
  * @return Non-zero if a document window was closed.

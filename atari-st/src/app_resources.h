@@ -25,6 +25,14 @@ OBJECT *app_resources_get_main_menu(void);
 OBJECT *app_resources_get_about_dialog(void);
 
 /**
+ * Returns a string from the loaded resource file.
+ *
+ * @param string_index Resource string index.
+ * @return The requested string, or 0 if it is unavailable.
+ */
+char *app_resources_get_string(short string_index);
+
+/**
  * Releases the application's GEM resource file if it is loaded.
  */
 void app_resources_release(void);

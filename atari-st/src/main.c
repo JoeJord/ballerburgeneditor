@@ -3,6 +3,7 @@
 
 #include "about_dialog.h"
 #include "document_window.h"
+#include "file_open.h"
 #include "menu.h"
 
 /**
@@ -38,6 +39,8 @@ int main(void)
     short application_id;
     /** Eight-word buffer filled by evnt_mesag(). */
     short message[8];
+    /** Full path returned by the GEM file selector. */
+    const char *selected_path;
     /** Action requested by a selected menu item. */
     MenuAction action;
     /** Whether the application should continue waiting for messages. */
@@ -74,6 +77,18 @@ int main(void)
             case MENU_ACTION_NEW:
                 document_window_create();
                 break;
+
+            case MENU_ACTION_OPEN:
+            {
+                short selection_result;
+
+                selection_result = file_open_select(&selected_path);
+                if (selection_result > 0)
+                {
+                    document_window_open_file(selected_path);
+                }
+                break;
+            }
 
             case MENU_ACTION_CLOSE:
                 document_window_close_top();

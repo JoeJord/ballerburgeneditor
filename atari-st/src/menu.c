@@ -34,6 +34,7 @@ short menu_show(void)
 
     menu_tree[MENU_ABOUT].ob_flags |= OF_SELECTABLE;
     menu_tree[MENU_FILE_NEW].ob_flags |= OF_SELECTABLE;
+    menu_tree[MENU_FILE_OPEN].ob_flags |= OF_SELECTABLE;
     menu_tree[MENU_FILE_CLOSE].ob_flags |= OF_SELECTABLE;
     menu_tree[MENU_QUIT].ob_flags |= OF_SELECTABLE;
 
@@ -119,6 +120,10 @@ MenuAction menu_handle_message(const short message[8])
     {
         case MENU_FILE_NEW:
             action = MENU_ACTION_NEW;
+            break;
+
+        case MENU_FILE_OPEN:
+            action = MENU_ACTION_OPEN;
             break;
 
         case MENU_FILE_CLOSE:
