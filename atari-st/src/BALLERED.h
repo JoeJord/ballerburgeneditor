@@ -1,4 +1,4 @@
-/* Resource indices for BALLERED */
+/* Resource indices for Ballerburgen Editor resources */
 
 #define MAIN     0   /* Menu tree */
 #define MENU_DESK 3   /* TITLE in the MAIN tree */
@@ -20,7 +20,7 @@
 #define MENU_POWDER_ADD 33  /* STRING in the MAIN tree */
 #define MENU_BALLS_ADD 34  /* STRING in the MAIN tree */
 #define MENU_CANNON_ADD 35  /* STRING in the MAIN tree */
-#define MENU_VANE_AD 36  /* STRING in the MAIN tree */
+#define MENU_VANE_ADD 36  /* STRING in the MAIN tree */
 #define MENU_WALL_ADD 37  /* STRING in the MAIN tree */
 #define MENU_ROOF_ADD 38  /* STRING in the MAIN tree */
 #define MENU_EDIT_DEL 39  /* STRING in the MAIN tree */
