@@ -71,6 +71,9 @@ then invokes the corresponding feature module.
    whether document windows are open to `menu_set_close_enabled()` and whether
    a window slot is available to `menu_set_document_creation_enabled()`;
    `menu.c` updates the relevant enabled states only when they change.
+   Previous Castle and Next Castle are enabled independently according to
+   whether the active document has an adjacent castle in that direction;
+   blank documents and boundary castles leave the corresponding item disabled.
 6. On shutdown, `document_window_shutdown()` closes all remaining document
    windows and its VDI virtual workstation. Then `toolbar_hide()` closes the
    toolbar and its VDI workstation, `menu_hide()` removes the menu bar and

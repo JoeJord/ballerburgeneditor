@@ -258,6 +258,13 @@ int main(void)
         {
             app_alerts_show(APP_ALERT_DOCUMENT_MENU_UPDATE_FAILED);
         }
+        if (!menu_set_castle_navigation_enabled(
+            document_window_can_navigate_castles(DOCUMENT_CASTLE_PREVIOUS),
+            document_window_can_navigate_castles(DOCUMENT_CASTLE_NEXT)
+        ))
+        {
+            app_logger_write("Unable to update castle navigation menu items.");
+        }
     }
 
     document_window_shutdown();

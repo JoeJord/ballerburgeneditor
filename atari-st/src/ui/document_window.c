@@ -100,6 +100,7 @@ static short active_document_handle;
  * @return The matching slot index, or -1 if the window is not managed here.
  */
 static short find_window_slot(short handle);
+static short find_active_document(short *handle);
 static void draw_sprite(
     long long origin_x,
     long long baseline_y,
@@ -1098,6 +1099,38 @@ static void redraw_window(short handle, const GRECT *redraw_area)
 }
 
 /**
+ * Finds the active managed document, preferring AES's top window.
+ *
+ * @param handle Receives the active AES window handle when found.
+ * @return The matching document slot, or -1 if no document is active.
+ */
+static short find_active_document(short *handle)
+{
+    short top_handle;
+    short unused_1;
+    short unused_2;
+    short unused_3;
+    short slot;
+
+    slot = -1;
+    if (wind_get(0, WF_TOP, &top_handle, &unused_1, &unused_2, &unused_3))
+    {
+        slot = find_window_slot(top_handle);
+    }
+    if (slot < 0)
+    {
+        top_handle = active_document_handle;
+        slot = find_window_slot(top_handle);
+    }
+    if (slot >= 0)
+    {
+        *handle = window_handles[slot];
+    }
+
+    return slot;
+}
+
+/**
  * Closes and deletes a managed window.
  *
  * @param slot Window handle slot.
@@ -1438,10 +1471,7 @@ short document_window_close_top(void)
  */
 short document_window_navigate_castles(DocumentCastleNavigation direction)
 {
-    short top_handle;
-    short unused_1;
-    short unused_2;
-    short unused_3;
+    short active_handle;
     short work_x;
     short work_y;
     short work_width;
@@ -1457,16 +1487,7 @@ short document_window_navigate_castles(DocumentCastleNavigation direction)
         return 0;
     }
 
-    slot = -1;
-    if (wind_get(0, WF_TOP, &top_handle, &unused_1, &unused_2, &unused_3))
-    {
-        slot = find_window_slot(top_handle);
-    }
-    if (slot < 0)
-    {
-        top_handle = active_document_handle;
-        slot = find_window_slot(top_handle);
-    }
+    slot = find_active_document(&active_handle);
     if (slot < 0)
     {
         app_logger_write("Castle navigation ignored without an active document window.");
@@ -1480,7 +1501,7 @@ short document_window_navigate_castles(DocumentCastleNavigation direction)
     }
 
     if (!wind_get(
-        top_handle,
+        active_handle,
         WF_WORKXYWH,
         &work_x,
         &work_y,
@@ -1522,7 +1543,7 @@ short document_window_navigate_castles(DocumentCastleNavigation direction)
         app_alerts_show(APP_ALERT_DOCUMENT_WINDOW_TITLE_MISSING);
         return 0;
     }
-    if (!wind_set_str(top_handle, WF_NAME, window_titles[slot]))
+    if (!wind_set_str(active_handle, WF_NAME, window_titles[slot]))
     {
         app_alerts_show(APP_ALERT_DOCUMENT_WINDOW_TITLE_FAILED);
         return 0;
@@ -1533,13 +1554,45 @@ short document_window_navigate_castles(DocumentCastleNavigation direction)
     redraw_area.g_y = work_y;
     redraw_area.g_w = work_width;
     redraw_area.g_h = work_height;
-    redraw_window(top_handle, &redraw_area);
+    redraw_window(active_handle, &redraw_area);
     app_logger_write(
         direction == DOCUMENT_CASTLE_PREVIOUS
             ? "Selected previous castle."
             : "Selected next castle."
     );
     return 1;
+}
+
+/**
+ * Checks whether the active document has a castle adjacent in the given direction.
+ *
+ * @param direction Previous or next castle.
+ * @return Non-zero if navigation in that direction is possible.
+ */
+short document_window_can_navigate_castles(DocumentCastleNavigation direction)
+{
+    short active_handle;
+    short slot;
+
+    if (direction != DOCUMENT_CASTLE_PREVIOUS
+        && direction != DOCUMENT_CASTLE_NEXT)
+    {
+        return 0;
+    }
+
+    slot = find_active_document(&active_handle);
+    if (slot < 0 || !window_has_castle_document[slot])
+    {
+        return 0;
+    }
+
+    if (direction == DOCUMENT_CASTLE_PREVIOUS)
+    {
+        return window_selected_castles[slot] > 0;
+    }
+
+    return window_selected_castles[slot] + 1
+        < window_documents[slot].castle_count;
 }
 
 /**

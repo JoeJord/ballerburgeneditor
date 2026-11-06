@@ -45,6 +45,14 @@ short document_window_close_top(void);
 short document_window_navigate_castles(DocumentCastleNavigation direction);
 
 /**
+ * Checks whether the active document can navigate in the requested direction.
+ *
+ * @param direction Previous or next castle.
+ * @return Non-zero if an adjacent castle exists in the active document.
+ */
+short document_window_can_navigate_castles(DocumentCastleNavigation direction);
+
+/**
  * Checks whether at least one document window is open.
  *
  * @return Non-zero if a document window is open.

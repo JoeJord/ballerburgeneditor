@@ -14,6 +14,10 @@ static short menu_installed;
 static short close_enabled;
 /** Current shared enabled state of File > New and File > Open. */
 static short document_creation_enabled;
+/** Current enabled state of the Previous Castle menu item. */
+static short previous_castle_enabled;
+/** Current enabled state of the Next Castle menu item. */
+static short next_castle_enabled;
 
 /**
  * Loads the menu resource and installs its MAIN tree with AES.
@@ -54,6 +58,16 @@ short menu_show(void)
     menu_tree[MENU_WALL_ADD].ob_flags |= OF_SELECTABLE;
     menu_tree[MENU_ROOF_ADD].ob_flags |= OF_SELECTABLE;
     menu_tree[MENU_EDIT_DEL].ob_flags |= OF_SELECTABLE;
+
+    previous_castle_enabled = -1;
+    next_castle_enabled = -1;
+    if (!menu_set_castle_navigation_enabled(0, 0))
+    {
+        app_logger_write("Unable to disable castle navigation menu items.");
+        app_resources_release();
+        menu_tree = 0;
+        return 0;
+    }
 
     if (!menu_ienable(menu_tree, MENU_FILE_CLOSE, 0))
     {
@@ -100,6 +114,8 @@ void menu_hide(void)
     menu_tree = 0;
     close_enabled = 0;
     document_creation_enabled = 0;
+    previous_castle_enabled = 0;
+    next_castle_enabled = 0;
 }
 
 /**
@@ -160,6 +176,55 @@ short menu_set_document_creation_enabled(short enabled)
             ? "File > New and File > Open menu items enabled."
             : "File > New and File > Open menu items disabled."
     );
+    return 1;
+}
+
+/**
+ * Enables or disables the Previous Castle and Next Castle menu items.
+ *
+ * @param previous_enabled Non-zero to enable Previous Castle.
+ * @param next_enabled Non-zero to enable Next Castle.
+ * @return Non-zero if AES updated the menu items successfully.
+ */
+short menu_set_castle_navigation_enabled(
+    short previous_enabled,
+    short next_enabled
+)
+{
+    short new_previous_state;
+    short new_next_state;
+
+    new_previous_state = previous_enabled != 0;
+    new_next_state = next_enabled != 0;
+
+    if (new_previous_state != previous_castle_enabled)
+    {
+        if (!menu_ienable(menu_tree, MENU_PREV_CASTLE, new_previous_state))
+        {
+            return 0;
+        }
+        previous_castle_enabled = new_previous_state;
+        app_logger_write(
+            new_previous_state
+                ? "Previous Castle menu item enabled."
+                : "Previous Castle menu item disabled."
+        );
+    }
+
+    if (new_next_state != next_castle_enabled)
+    {
+        if (!menu_ienable(menu_tree, MENU_NEXT_CASTLE, new_next_state))
+        {
+            return 0;
+        }
+        next_castle_enabled = new_next_state;
+        app_logger_write(
+            new_next_state
+                ? "Next Castle menu item enabled."
+                : "Next Castle menu item disabled."
+        );
+    }
+
     return 1;
 }
 

@@ -77,6 +77,18 @@ short menu_set_close_enabled(short enabled);
 short menu_set_document_creation_enabled(short enabled);
 
 /**
+ * Enables or disables the Previous Castle and Next Castle menu items.
+ *
+ * @param previous_enabled Non-zero to enable Previous Castle.
+ * @param next_enabled Non-zero to enable Next Castle.
+ * @return Non-zero if AES updated the menu items successfully.
+ */
+short menu_set_castle_navigation_enabled(
+    short previous_enabled,
+    short next_enabled
+);
+
+/**
  * Handles a message from the application's AES event loop.
  *
  * @param message Eight-word AES message buffer.
