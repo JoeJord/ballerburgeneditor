@@ -53,7 +53,12 @@ then invokes the corresponding feature module.
    `toolbar_show()` then opens a fixed toolbar directly below the menu bar.
    `main()` restores the standard arrow cursor with `graf_mouse()`, since the
    application cursor is startup state rather than menu behavior.
-4. `evnt_multi()` waits for AES messages and toolbar mouse clicks.
+4. `evnt_multi()` waits for AES messages, toolbar mouse clicks, and keyboard
+   events. `menu_handle_key()` maps Ctrl+N, Ctrl+O, Ctrl+W, Ctrl+S, and Ctrl+Q
+   to File-menu actions using Atari ST keyboard scan codes; Ctrl+S is recognized
+   and logged as not implemented until document saving is added. Ctrl+N/O/W
+   respect the enabled state of their menu items, and Alt-modified combinations
+   are ignored.
    `menu_handle_message()` ignores non-selection messages; for `MN_SELECTED`,
    it normalizes the selected title and returns an application-level
    `MenuAction`. The toolbar handles redraw messages and maps button clicks to

@@ -88,6 +88,9 @@ static short load_toolbar_icons(void)
             case MENU_ACTION_CLOSE:
                 break;
 
+            case MENU_ACTION_SAVE:
+                break;
+
             case MENU_ACTION_ABOUT:
                 app_logger_write("Loading toolbar icon IC_ABOUT.");
                 break;
@@ -541,6 +544,9 @@ MenuAction toolbar_handle_click(short x, short y)
                     break;
 
                 case MENU_ACTION_CLOSE:
+                    break;
+
+                case MENU_ACTION_SAVE:
                     break;
 
                 case MENU_ACTION_ABOUT:

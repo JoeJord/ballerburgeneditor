@@ -6,6 +6,17 @@
 #include "app_logger.h"
 #include "menu.h"
 
+enum
+{
+    MENU_KEYBOARD_CTRL_MASK = 0x0004, /**< Control modifier bit from evnt_multi(). */
+    MENU_KEYBOARD_ALT_MASK = 0x0008, /**< Alt modifier bit from evnt_multi(). */
+    MENU_SCAN_Q = 0x10, /**< Atari ST scan code for Q. */
+    MENU_SCAN_W = 0x11, /**< Atari ST scan code for W. */
+    MENU_SCAN_O = 0x18, /**< Atari ST scan code for O. */
+    MENU_SCAN_S = 0x1f, /**< Atari ST scan code for S. */
+    MENU_SCAN_N = 0x31 /**< Atari ST scan code for N. */
+};
+
 /** Loaded menu tree owned by the resource system. */
 static OBJECT *menu_tree;
 /** Whether the resource menu is currently installed. */
@@ -258,6 +269,10 @@ MenuAction menu_handle_message(const short message[8])
             action = MENU_ACTION_CLOSE;
             break;
 
+        case MENU_FILE_SAVE:
+            action = MENU_ACTION_SAVE;
+            break;
+
         case MENU_ABOUT:
             action = MENU_ACTION_ABOUT;
             break;
@@ -325,4 +340,48 @@ MenuAction menu_handle_message(const short message[8])
 
     menu_tnormal(menu_tree, message[3], 1);
     return action;
+}
+
+/**
+ * Translates a Ctrl-key shortcut into its enabled File-menu action.
+ *
+ * @param key GEM keyboard code returned by evnt_multi().
+ * @param key_state GEM modifier state returned by evnt_multi().
+ * @return The matching action, or MENU_ACTION_NONE if no active shortcut matches.
+ */
+MenuAction menu_handle_key(short key, short key_state)
+{
+    short scan_code;
+
+    if (!(key_state & MENU_KEYBOARD_CTRL_MASK)
+        || (key_state & MENU_KEYBOARD_ALT_MASK))
+    {
+        return MENU_ACTION_NONE;
+    }
+
+    scan_code = (short)(((unsigned short)key >> 8) & 0x00ff);
+    switch (scan_code)
+    {
+        case MENU_SCAN_N:
+            return document_creation_enabled
+                ? MENU_ACTION_NEW
+                : MENU_ACTION_NONE;
+
+        case MENU_SCAN_O:
+            return document_creation_enabled
+                ? MENU_ACTION_OPEN
+                : MENU_ACTION_NONE;
+
+        case MENU_SCAN_W:
+            return close_enabled ? MENU_ACTION_CLOSE : MENU_ACTION_NONE;
+
+        case MENU_SCAN_S:
+            return MENU_ACTION_SAVE;
+
+        case MENU_SCAN_Q:
+            return MENU_ACTION_QUIT;
+
+        default:
+            return MENU_ACTION_NONE;
+    }
 }

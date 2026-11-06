@@ -16,6 +16,8 @@ typedef enum
     MENU_ACTION_OPEN,
     /** The user selected the Close document item. */
     MENU_ACTION_CLOSE,
+    /** The user requested saving the active document. */
+    MENU_ACTION_SAVE,
     /** The user selected the application information item. */
     MENU_ACTION_ABOUT,
     /** The user selected the quit item. */
@@ -95,5 +97,14 @@ short menu_set_castle_navigation_enabled(
  * @return The selected menu action, or MENU_ACTION_NONE for other messages.
  */
 MenuAction menu_handle_message(const short message[8]);
+
+/**
+ * Translates a Ctrl-key shortcut into its enabled File-menu action.
+ *
+ * @param key GEM keyboard code returned by evnt_multi().
+ * @param key_state GEM modifier state returned by evnt_multi().
+ * @return The matching action, or MENU_ACTION_NONE if no active shortcut matches.
+ */
+MenuAction menu_handle_key(short key, short key_state);
 
 #endif

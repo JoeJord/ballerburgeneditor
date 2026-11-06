@@ -110,7 +110,7 @@ int main(void)
     while (running)
     {
         event_flags = evnt_multi(
-            MU_MESAG | MU_BUTTON,
+            MU_MESAG | MU_BUTTON | MU_KEYBD,
             1,
             1,
             1,
@@ -143,6 +143,10 @@ int main(void)
         if ((event_flags & MU_BUTTON) && action == MENU_ACTION_NONE)
         {
             action = toolbar_handle_click(mouse_x, mouse_y);
+        }
+        if ((event_flags & MU_KEYBD) && action == MENU_ACTION_NONE)
+        {
+            action = menu_handle_key(key, key_state);
         }
 
         switch (action)
@@ -180,6 +184,10 @@ int main(void)
             case MENU_ACTION_CLOSE:
                 app_logger_write("Action: Close document.");
                 document_window_close_top();
+                break;
+
+            case MENU_ACTION_SAVE:
+                app_logger_write("Action: Save requested; not implemented.");
                 break;
 
             case MENU_ACTION_ABOUT:
