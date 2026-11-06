@@ -16,7 +16,7 @@ RESOURCE_TARGET = $(dir $(TARGET))BALLERED.RSC
 all: $(TARGET) $(RESOURCE_TARGET)
 
 test: $(TEST_TARGET)
-	$(TEST_TARGET) ../../Ballerburg/src/BALLER.DAT
+	$(TEST_TARGET) ../../Ballerburg/src/BALLER_ORG.DAT
 
 $(TEST_TARGET): tests/castle_data_test.c src/io/castle_data.c src/io/castle_data.h
 	mkdir -p $(dir $@)
