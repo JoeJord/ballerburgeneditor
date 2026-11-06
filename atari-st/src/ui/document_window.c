@@ -18,6 +18,16 @@
 #define CASTLE_TITLE_BUFFER_SIZE 128
 /** Bounds resource rendering for malformed or unusually large DAT values. */
 #define MAX_RESOURCE_SPRITES_PER_STORE 8192
+/** Width of the original game's wind-vane clearing rectangle. */
+#define WIND_VANE_CLEAR_WIDTH 20
+/** Height of the original game's wind-vane clearing rectangle. */
+#define WIND_VANE_CLEAR_HEIGHT 15
+/** Horizontal flag-tip offset produced by the fixed wind strength. */
+#define WIND_VANE_FLAG_TIP_X_OFFSET 8
+/** Vertical flag-tip offset produced by the fixed wind strength. */
+#define WIND_VANE_FLAG_TIP_Y_OFFSET 8
+/** Lower flag attachment offset from the vane baseline. */
+#define WIND_VANE_FLAG_LOWER_Y_OFFSET 11
 
 /** Original king sprite drawing stream from BALLER2.C. */
 static const short king_sprite[] = {
@@ -88,6 +98,11 @@ static void draw_white_rectangle(
     long long top,
     long long width,
     long long height
+);
+static void draw_wind_vane(
+    CastleDataPoint position,
+    long long origin_x,
+    long long baseline_y
 );
 static void draw_castle_objects(
     const CastleDataCastle *castle,
@@ -532,6 +547,66 @@ static void draw_resource_stack(
 }
 
 /**
+ * Draws the original game's wind vane using a fixed positive wind strength.
+ *
+ * @param position Wind-vane position from the castle data.
+ * @param origin_x Screen X coordinate of the castle origin.
+ * @param baseline_y Screen Y coordinate of the castle baseline.
+ */
+static void draw_wind_vane(
+    CastleDataPoint position,
+    long long origin_x,
+    long long baseline_y
+)
+{
+    long long vane_x;
+    long long vane_y;
+    short mast[4];
+    short flag_top[4];
+    short flag_bottom[4];
+
+    if (position.x < 0 || position.y < 0)
+    {
+        return;
+    }
+
+    vane_x = origin_x + position.x;
+    vane_y = baseline_y - position.y;
+    if (vane_x < SHRT_MIN || vane_x + WIND_VANE_FLAG_TIP_X_OFFSET > SHRT_MAX
+        || vane_y - WIND_VANE_CLEAR_HEIGHT < SHRT_MIN || vane_y > SHRT_MAX)
+    {
+        return;
+    }
+
+    draw_white_rectangle(
+        vane_x - WIND_VANE_CLEAR_WIDTH / 2,
+        vane_y - WIND_VANE_CLEAR_HEIGHT,
+        WIND_VANE_CLEAR_WIDTH,
+        WIND_VANE_CLEAR_HEIGHT
+    );
+
+    mast[0] = (short)vane_x;
+    mast[1] = (short)vane_y;
+    mast[2] = (short)vane_x;
+    mast[3] = (short)(vane_y - WIND_VANE_CLEAR_HEIGHT);
+    flag_top[0] = (short)vane_x;
+    flag_top[1] = mast[3];
+    flag_top[2] = (short)(vane_x + WIND_VANE_FLAG_TIP_X_OFFSET);
+    flag_top[3] = (short)(vane_y - WIND_VANE_FLAG_TIP_Y_OFFSET);
+    flag_bottom[0] = (short)vane_x;
+    flag_bottom[1] = (short)(vane_y - WIND_VANE_FLAG_LOWER_Y_OFFSET);
+    flag_bottom[2] = flag_top[2];
+    flag_bottom[3] = flag_top[3];
+
+    vswr_mode(vdi_handle, MD_REPLACE);
+    vsl_color(vdi_handle, 1);
+    vsl_type(vdi_handle, 1);
+    v_pline(vdi_handle, 2, mast);
+    v_pline(vdi_handle, 2, flag_top);
+    v_pline(vdi_handle, 2, flag_bottom);
+}
+
+/**
  * Draws the king, all configured cannons, and starting resource sprites.
  *
  * @param castle Castle whose objects are drawn.
@@ -600,6 +675,7 @@ static void draw_castle_objects(
         origin_x,
         baseline_y
     );
+    draw_wind_vane(castle->wind_vane, origin_x, baseline_y);
 }
 
 /**

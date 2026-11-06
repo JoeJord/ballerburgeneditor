@@ -111,15 +111,19 @@ each resource area starts one pixel left of its DAT position and extends through
 the storage area's far edge. In the editor, these white backgrounds are offset
 one pixel right and one pixel up from that original clear rectangle.
 Inventory amounts are converted to sprite counts as in the game and limited by
-each store's configured dimensions. The toolbar's Previous Castle and Next
-Castle buttons select among all castles in the active DAT document. Geometry
-and sprite patterns use the original game's VDI writing modes, and rendering
-restores the work-area background fill state. DAT window titles come from the
+each store's configured dimensions. The renderer also draws the castle's wind
+vane at its DAT position, including the original white clearing area and mast;
+its flag uses a fixed positive wind strength of 15. The toolbar's Previous
+Castle and Next Castle buttons select among all castles in the active DAT
+document. Geometry and sprite patterns use the original game's VDI writing
+modes, and rendering restores the work-area background fill state. DAT window
+titles come from the
 `MSG_CASTLE_NO` resource string with its `%1$d` current-castle and `%2$d`
 total-castle tokens expanded by the editor and prefixed by the DAT filename
 and ` - `. Each open window owns a stable title buffer, avoiding transient
-title-string lifetimes across AES calls. The wind vane and other game-state
-objects are retained in the model but are not yet rendered.
+title-string lifetimes across AES calls. Other game-state values not represented
+by castle geometry or starting inventory are retained in the model but are not
+rendered.
 
 The About dialog is deliberately a separate feature module so its presentation
 can evolve without changing menu-tree construction or event routing. It gets
