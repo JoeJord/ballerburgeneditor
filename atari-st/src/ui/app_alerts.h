@@ -45,8 +45,8 @@ extern const char APP_ALERT_DOCUMENT_WINDOW_OPEN_FAILED[];
 extern const char APP_ALERT_DOCUMENT_WINDOW_TITLE_FAILED[];
 /** Alert shown when the untitled document name is missing from the resources. */
 extern const char APP_ALERT_DOCUMENT_WINDOW_TITLE_MISSING[];
-/** Alert shown when the document window limit has been reached. */
-extern const char APP_ALERT_DOCUMENT_WINDOW_LIMIT_REACHED[];
+/** Alert shown when AES cannot update File > New and File > Open. */
+extern const char APP_ALERT_DOCUMENT_MENU_UPDATE_FAILED[];
 /** Alert shown when there is no topmost document window to close. */
 extern const char APP_ALERT_TOP_DOCUMENT_WINDOW_MISSING[];
 /** Alert shown when a document window cannot be maximized. */

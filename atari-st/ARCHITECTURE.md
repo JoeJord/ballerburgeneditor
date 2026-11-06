@@ -68,9 +68,9 @@ then invokes the corresponding feature module.
    navigation to `document_window_navigate_castles()`. Edit commands are
    routed as application actions and logged pending their editing
    implementations; Quit exits the event loop. After each event it reports
-   whether document windows are open to `menu_set_close_enabled()`; `menu.c`
-   owns the enabled-state flag and updates the item only when that state
-   changes.
+   whether document windows are open to `menu_set_close_enabled()` and whether
+   a window slot is available to `menu_set_document_creation_enabled()`;
+   `menu.c` updates the relevant enabled states only when they change.
 6. On shutdown, `document_window_shutdown()` closes all remaining document
    windows and its VDI virtual workstation. Then `toolbar_hide()` closes the
    toolbar and its VDI workstation, `menu_hide()` removes the menu bar and
@@ -79,9 +79,11 @@ then invokes the corresponding feature module.
 
 Selecting File > New creates a blank, white document window titled using the
 `MSG_DOC_UNTITLED` string from the loaded resource.
-Multiple windows can be opened (up to the module's fixed capacity of eight),
-and each can be moved, resized, maximized/restored with the Fuller box, and
-closed independently. Open DAT documents retain their parsed castle models for
+Up to six document windows can be opened alongside the toolbar, within AES's
+seven application-window-handle limit. File > New and File > Open are disabled
+at capacity and enabled again when a window closes. Each window can be moved,
+resized, maximized/restored with the Fuller box, and closed independently.
+Open DAT documents retain their parsed castle models for
 the lifetime of their windows; their work areas show the number of loaded
 castles. The toolbar is a fixed, borderless GEM window immediately
 below the menu bar, with buttons for Quit, New, Open, and Info. File > Close is

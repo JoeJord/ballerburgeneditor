@@ -69,6 +69,14 @@ void menu_hide(void);
 short menu_set_close_enabled(short enabled);
 
 /**
+ * Enables or disables the File > New and File > Open menu items together.
+ *
+ * @param enabled Non-zero to enable both items.
+ * @return Non-zero if AES updated both menu items successfully.
+ */
+short menu_set_document_creation_enabled(short enabled);
+
+/**
  * Handles a message from the application's AES event loop.
  *
  * @param message Eight-word AES message buffer.

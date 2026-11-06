@@ -60,8 +60,8 @@ const char APP_ALERT_DOCUMENT_WINDOW_TITLE_FAILED[] =
     "[1][Unable to set the document window title.][OK]";
 const char APP_ALERT_DOCUMENT_WINDOW_TITLE_MISSING[] =
     "[1][Untitled document name is missing from the resources.][OK]";
-const char APP_ALERT_DOCUMENT_WINDOW_LIMIT_REACHED[] =
-    "[1][Window limit reached.][OK]";
+const char APP_ALERT_DOCUMENT_MENU_UPDATE_FAILED[] =
+    "[1][AES could not update|File > New and File > Open.][OK]";
 const char APP_ALERT_TOP_DOCUMENT_WINDOW_MISSING[] =
     "[1][Unable to find the top document window.][OK]";
 const char APP_ALERT_DOCUMENT_WINDOW_MAXIMIZE_FAILED[] =

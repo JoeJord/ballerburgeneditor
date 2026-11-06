@@ -12,8 +12,8 @@
 #include "document_window.h"
 #include "toolbar.h"
 
-/** Maximum number of document windows this module can manage simultaneously. */
-#define MAX_DOCUMENT_WINDOWS 8
+/** AES has seven application window handles; one is used by the toolbar. */
+#define MAX_DOCUMENT_WINDOWS 6
 /** Maximum formatted window-title length, including the terminating NUL. */
 #define CASTLE_TITLE_BUFFER_SIZE 128
 /** Bounds resource rendering for malformed or unusually large DAT values. */
@@ -1164,7 +1164,7 @@ static short create_document_window(
     slot = find_free_window_slot();
     if (slot < 0)
     {
-        app_alerts_show(APP_ALERT_DOCUMENT_WINDOW_LIMIT_REACHED);
+        app_logger_write("Document window limit reached; request ignored.");
         return 0;
     }
     if (!open_virtual_workstation())
@@ -1331,6 +1331,12 @@ short document_window_open_file(const char *path)
     size_t error_token;
     const char *file_name;
     char log_message[96];
+
+    if (!document_window_has_capacity())
+    {
+        app_logger_write("Document window limit reached; open request ignored.");
+        return 0;
+    }
 
     app_logger_write("Opening selected DAT file.");
     if (!path)
@@ -1554,6 +1560,16 @@ short document_window_has_open_windows(void)
     }
 
     return 0;
+}
+
+/**
+ * Checks whether another document window can be opened.
+ *
+ * @return Non-zero if at least one document-window slot is available.
+ */
+short document_window_has_capacity(void)
+{
+    return find_free_window_slot() >= 0;
 }
 
 /**

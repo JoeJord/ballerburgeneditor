@@ -12,6 +12,8 @@ static OBJECT *menu_tree;
 static short menu_installed;
 /** Current enabled state of the File > Close menu item. */
 static short close_enabled;
+/** Current shared enabled state of File > New and File > Open. */
+static short document_creation_enabled;
 
 /**
  * Loads the menu resource and installs its MAIN tree with AES.
@@ -61,6 +63,15 @@ short menu_show(void)
         return 0;
     }
     close_enabled = 0;
+    if (!menu_ienable(menu_tree, MENU_FILE_NEW, 1)
+        || !menu_ienable(menu_tree, MENU_FILE_OPEN, 1))
+    {
+        app_alerts_show(APP_ALERT_DOCUMENT_MENU_UPDATE_FAILED);
+        app_resources_release();
+        menu_tree = 0;
+        return 0;
+    }
+    document_creation_enabled = 1;
 
     if (!menu_bar(menu_tree, 1))
     {
@@ -88,6 +99,7 @@ void menu_hide(void)
     app_resources_release();
     menu_tree = 0;
     close_enabled = 0;
+    document_creation_enabled = 0;
 }
 
 /**
@@ -116,6 +128,37 @@ short menu_set_close_enabled(short enabled)
         new_state
             ? "File > Close menu item enabled."
             : "File > Close menu item disabled."
+    );
+    return 1;
+}
+
+/**
+ * Enables or disables the File > New and File > Open menu items together.
+ *
+ * @param enabled Non-zero to enable both items.
+ * @return Non-zero if AES updated both menu items successfully.
+ */
+short menu_set_document_creation_enabled(short enabled)
+{
+    short new_state;
+
+    new_state = enabled != 0;
+    if (new_state == document_creation_enabled)
+    {
+        return 1;
+    }
+
+    if (!menu_ienable(menu_tree, MENU_FILE_NEW, new_state)
+        || !menu_ienable(menu_tree, MENU_FILE_OPEN, new_state))
+    {
+        return 0;
+    }
+
+    document_creation_enabled = new_state;
+    app_logger_write(
+        new_state
+            ? "File > New and File > Open menu items enabled."
+            : "File > New and File > Open menu items disabled."
     );
     return 1;
 }

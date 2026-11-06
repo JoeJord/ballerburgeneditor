@@ -153,6 +153,14 @@ int main(void)
             {
                 short selection_result;
 
+                if (!document_window_has_capacity())
+                {
+                    app_logger_write(
+                        "Document window limit reached; open request ignored."
+                    );
+                    break;
+                }
+
                 app_logger_write("Action: Open document.");
                 selection_result = file_open_select(&selected_path);
                 if (selection_result > 0)
@@ -240,6 +248,12 @@ int main(void)
         if (!menu_set_close_enabled(document_window_has_open_windows()))
         {
             app_alerts_show(APP_ALERT_CLOSE_MENU_UPDATE_FAILED);
+        }
+        if (!menu_set_document_creation_enabled(
+            document_window_has_capacity()
+        ))
+        {
+            app_alerts_show(APP_ALERT_DOCUMENT_MENU_UPDATE_FAILED);
         }
     }
 

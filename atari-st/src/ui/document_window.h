@@ -52,6 +52,13 @@ short document_window_navigate_castles(DocumentCastleNavigation direction);
 short document_window_has_open_windows(void);
 
 /**
+ * Checks whether another document window can be opened.
+ *
+ * @return Non-zero if at least one document-window slot is available.
+ */
+short document_window_has_capacity(void);
+
+/**
  * Handles window-related messages from the AES event loop.
  *
  * @param message Eight-word AES message buffer.
