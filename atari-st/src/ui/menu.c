@@ -39,6 +39,19 @@ short menu_show(void)
     menu_tree[MENU_FILE_OPEN].ob_flags |= OF_SELECTABLE;
     menu_tree[MENU_FILE_CLOSE].ob_flags |= OF_SELECTABLE;
     menu_tree[MENU_QUIT].ob_flags |= OF_SELECTABLE;
+    menu_tree[MENU_PREV_CASTLE].ob_flags |= OF_SELECTABLE;
+    menu_tree[MENU_NEXT_CASTLE].ob_flags |= OF_SELECTABLE;
+    menu_tree[MENU_CASTLE_DEL].ob_flags |= OF_SELECTABLE;
+    menu_tree[MENU_CASTLE_ADD].ob_flags |= OF_SELECTABLE;
+    menu_tree[MENU_THRONE_ADD].ob_flags |= OF_SELECTABLE;
+    menu_tree[MENU_MONEY_ADD].ob_flags |= OF_SELECTABLE;
+    menu_tree[MENU_POWDER_ADD].ob_flags |= OF_SELECTABLE;
+    menu_tree[MENU_BALLS_ADD].ob_flags |= OF_SELECTABLE;
+    menu_tree[MENU_CANNON_ADD].ob_flags |= OF_SELECTABLE;
+    menu_tree[MENU_VANE_ADD].ob_flags |= OF_SELECTABLE;
+    menu_tree[MENU_WALL_ADD].ob_flags |= OF_SELECTABLE;
+    menu_tree[MENU_ROOF_ADD].ob_flags |= OF_SELECTABLE;
+    menu_tree[MENU_EDIT_DEL].ob_flags |= OF_SELECTABLE;
 
     if (!menu_ienable(menu_tree, MENU_FILE_CLOSE, 0))
     {
@@ -143,6 +156,58 @@ MenuAction menu_handle_message(const short message[8])
 
         case MENU_QUIT:
             action = MENU_ACTION_QUIT;
+            break;
+
+        case MENU_PREV_CASTLE:
+            action = MENU_ACTION_PREVIOUS_CASTLE;
+            break;
+
+        case MENU_NEXT_CASTLE:
+            action = MENU_ACTION_NEXT_CASTLE;
+            break;
+
+        case MENU_CASTLE_DEL:
+            action = MENU_ACTION_DELETE_CASTLE;
+            break;
+
+        case MENU_CASTLE_ADD:
+            action = MENU_ACTION_ADD_CASTLE;
+            break;
+
+        case MENU_THRONE_ADD:
+            action = MENU_ACTION_ADD_THRONE;
+            break;
+
+        case MENU_MONEY_ADD:
+            action = MENU_ACTION_ADD_MONEY_STORAGE;
+            break;
+
+        case MENU_POWDER_ADD:
+            action = MENU_ACTION_ADD_POWDER_STORAGE;
+            break;
+
+        case MENU_BALLS_ADD:
+            action = MENU_ACTION_ADD_BALL_STORAGE;
+            break;
+
+        case MENU_CANNON_ADD:
+            action = MENU_ACTION_ADD_CANNON;
+            break;
+
+        case MENU_VANE_ADD:
+            action = MENU_ACTION_ADD_WIND_VANE;
+            break;
+
+        case MENU_WALL_ADD:
+            action = MENU_ACTION_ADD_WALL;
+            break;
+
+        case MENU_ROOF_ADD:
+            action = MENU_ACTION_ADD_ROOF;
+            break;
+
+        case MENU_EDIT_DEL:
+            action = MENU_ACTION_DELETE_ELEMENT;
             break;
 
         default:

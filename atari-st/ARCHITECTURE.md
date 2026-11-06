@@ -57,15 +57,20 @@ then invokes the corresponding feature module.
    `menu_handle_message()` ignores non-selection messages; for `MN_SELECTED`,
    it normalizes the selected title and returns an application-level
    `MenuAction`. The toolbar handles redraw messages and maps button clicks to
-   the same actions, logging each toolbar button click separately. The
-   document-window module processes redraw, close, and top messages in the same
-   event loop.
+   the same actions, logging each toolbar button click separately. Edit-menu
+   object IDs and edit toolbar icons are conditionally included when present in
+   the generated `BALLERED.h`, allowing C-side preparation while the GEM
+   resource is being edited. The document-window module processes redraw,
+   close, and top messages in the same event loop.
 5. `main()` dispatches New to `document_window_create()`, Open through the GEM
    file selector and `document_window_open_file()`, Close to
-   `document_window_close_top()`, About to `about_dialog_show()`, or exits its
-   event loop for Quit. After each event it reports whether document windows
-   are open to `menu_set_close_enabled()`; `menu.c` owns the enabled-state flag
-   and updates the item only when that state changes.
+   `document_window_close_top()`, About to `about_dialog_show()`, and castle
+   navigation to `document_window_navigate_castles()`. Edit commands are
+   routed as application actions and logged pending their editing
+   implementations; Quit exits the event loop. After each event it reports
+   whether document windows are open to `menu_set_close_enabled()`; `menu.c`
+   owns the enabled-state flag and updates the item only when that state
+   changes.
 6. On shutdown, `document_window_shutdown()` closes all remaining document
    windows and its VDI virtual workstation. Then `toolbar_hide()` closes the
    toolbar and its VDI workstation, `menu_hide()` removes the menu bar and
@@ -85,9 +90,10 @@ available only from the menu. The toolbar gets its icons from the `IC_QUIT`,
 windows are confined to the desktop below the toolbar, including their maximize
 bounds. Toolbar icons have no individual frames; each 16x16 image is centered
 within a 20x20 button area. The toolbar provides Quit, New, Open, Previous
-Castle, Next Castle, and Info actions, in that order. Castle navigation applies
-to the most recently activated document window and stops at the first and last
-castle; blank documents and documents without additional castles are unchanged.
+Castle, Next Castle, any resource-defined editing actions, and Info actions, in
+that order. Castle navigation applies to the most recently activated document
+window and stops at the first and last castle; blank documents and documents
+without additional castles are unchanged.
 The toolbar window is 22 pixels high, leaving a one-pixel margin above and
 below each button area.
 

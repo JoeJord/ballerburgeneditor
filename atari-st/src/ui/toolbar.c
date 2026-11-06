@@ -30,6 +30,17 @@ static ToolbarButton toolbar_buttons[] = {
     { MENU_ACTION_OPEN, IC_FILE_OPEN, 0, 0 },
     { MENU_ACTION_PREVIOUS_CASTLE, IC_PREV_CASTLE, 0, 0 },
     { MENU_ACTION_NEXT_CASTLE, IC_NEXT_CASTLE, 0, 0 },
+    { MENU_ACTION_DELETE_CASTLE, IC_CASTLE_DEL, 0, 0 },
+    { MENU_ACTION_ADD_CASTLE, IC_CASTLE_ADD, 0, 0 },
+    { MENU_ACTION_ADD_THRONE, IC_THRONE_ADD, 0, 0 },
+    { MENU_ACTION_ADD_MONEY_STORAGE, IC_MONEY_ADD, 0, 0 },
+    { MENU_ACTION_ADD_POWDER_STORAGE, IC_POWDER_ADD, 0, 0 },
+    { MENU_ACTION_ADD_BALL_STORAGE, IC_BALLS_ADD, 0, 0 },
+    { MENU_ACTION_ADD_CANNON, IC_CANNON_ADD, 0, 0 },
+    { MENU_ACTION_ADD_WIND_VANE, IC_VANE_ADD, 0, 0 },
+    { MENU_ACTION_ADD_WALL, IC_WALL_ADD, 0, 0 },
+    { MENU_ACTION_ADD_ROOF, IC_ROOF_ADD, 0, 0 },
+    { MENU_ACTION_DELETE_ELEMENT, IC_EDIT_DEL, 0, 0 },
     { MENU_ACTION_ABOUT, IC_ABOUT, 0, 0 }
 };
 /** AES handle for the fixed, borderless toolbar window. */
@@ -87,6 +98,50 @@ static short load_toolbar_icons(void)
 
             case MENU_ACTION_NEXT_CASTLE:
                 app_logger_write("Loading toolbar icon IC_NEXT_CASTLE.");
+                break;
+
+            case MENU_ACTION_DELETE_CASTLE:
+                app_logger_write("Loading toolbar icon IC_CASTLE_DEL.");
+                break;
+
+            case MENU_ACTION_ADD_CASTLE:
+                app_logger_write("Loading toolbar icon IC_CASTLE_ADD.");
+                break;
+
+            case MENU_ACTION_ADD_THRONE:
+                app_logger_write("Loading toolbar icon IC_THRONE_ADD.");
+                break;
+
+            case MENU_ACTION_ADD_MONEY_STORAGE:
+                app_logger_write("Loading toolbar icon IC_MONEY_ADD.");
+                break;
+
+            case MENU_ACTION_ADD_POWDER_STORAGE:
+                app_logger_write("Loading toolbar icon IC_POWDER_ADD.");
+                break;
+
+            case MENU_ACTION_ADD_BALL_STORAGE:
+                app_logger_write("Loading toolbar icon IC_BALLS_ADD.");
+                break;
+
+            case MENU_ACTION_ADD_CANNON:
+                app_logger_write("Loading toolbar icon IC_CANNON_ADD.");
+                break;
+
+            case MENU_ACTION_ADD_WIND_VANE:
+                app_logger_write("Loading toolbar icon IC_VANE_ADD.");
+                break;
+
+            case MENU_ACTION_ADD_WALL:
+                app_logger_write("Loading toolbar icon IC_WALL_ADD.");
+                break;
+
+            case MENU_ACTION_ADD_ROOF:
+                app_logger_write("Loading toolbar icon IC_ROOF_ADD.");
+                break;
+
+            case MENU_ACTION_DELETE_ELEMENT:
+                app_logger_write("Loading toolbar icon IC_EDIT_DEL.");
                 break;
 
             case MENU_ACTION_NONE:
@@ -498,6 +553,20 @@ MenuAction toolbar_handle_click(short x, short y)
 
                 case MENU_ACTION_NEXT_CASTLE:
                     app_logger_write("Toolbar: Next castle button clicked.");
+                    break;
+
+                case MENU_ACTION_DELETE_CASTLE:
+                case MENU_ACTION_ADD_CASTLE:
+                case MENU_ACTION_ADD_THRONE:
+                case MENU_ACTION_ADD_MONEY_STORAGE:
+                case MENU_ACTION_ADD_POWDER_STORAGE:
+                case MENU_ACTION_ADD_BALL_STORAGE:
+                case MENU_ACTION_ADD_CANNON:
+                case MENU_ACTION_ADD_WIND_VANE:
+                case MENU_ACTION_ADD_WALL:
+                case MENU_ACTION_ADD_ROOF:
+                case MENU_ACTION_DELETE_ELEMENT:
+                    app_logger_write("Toolbar: Edit action button clicked.");
                     break;
 
                 case MENU_ACTION_NONE:

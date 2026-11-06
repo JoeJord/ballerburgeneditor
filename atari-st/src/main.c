@@ -184,6 +184,50 @@ int main(void)
                 document_window_navigate_castles(DOCUMENT_CASTLE_NEXT);
                 break;
 
+            case MENU_ACTION_DELETE_CASTLE:
+                app_logger_write("Edit action requested: delete castle.");
+                break;
+
+            case MENU_ACTION_ADD_CASTLE:
+                app_logger_write("Edit action requested: add castle.");
+                break;
+
+            case MENU_ACTION_ADD_THRONE:
+                app_logger_write("Edit action requested: add throne.");
+                break;
+
+            case MENU_ACTION_ADD_MONEY_STORAGE:
+                app_logger_write("Edit action requested: add money storage.");
+                break;
+
+            case MENU_ACTION_ADD_POWDER_STORAGE:
+                app_logger_write("Edit action requested: add powder storage.");
+                break;
+
+            case MENU_ACTION_ADD_BALL_STORAGE:
+                app_logger_write("Edit action requested: add cannonball storage.");
+                break;
+
+            case MENU_ACTION_ADD_CANNON:
+                app_logger_write("Edit action requested: add cannon.");
+                break;
+
+            case MENU_ACTION_ADD_WIND_VANE:
+                app_logger_write("Edit action requested: add wind vane.");
+                break;
+
+            case MENU_ACTION_ADD_WALL:
+                app_logger_write("Edit action requested: add wall.");
+                break;
+
+            case MENU_ACTION_ADD_ROOF:
+                app_logger_write("Edit action requested: add roof.");
+                break;
+
+            case MENU_ACTION_DELETE_ELEMENT:
+                app_logger_write("Edit action requested: delete selected element.");
+                break;
+
             case MENU_ACTION_QUIT:
                 app_logger_write("Action: Quit.");
                 running = 0;

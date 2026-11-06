@@ -23,7 +23,29 @@ typedef enum
     /** The user requested the previous castle in the active document. */
     MENU_ACTION_PREVIOUS_CASTLE,
     /** The user requested the next castle in the active document. */
-    MENU_ACTION_NEXT_CASTLE
+    MENU_ACTION_NEXT_CASTLE,
+    /** The user requested removing the current castle. */
+    MENU_ACTION_DELETE_CASTLE,
+    /** The user requested adding a castle. */
+    MENU_ACTION_ADD_CASTLE,
+    /** The user requested adding the throne. */
+    MENU_ACTION_ADD_THRONE,
+    /** The user requested adding the money storage area. */
+    MENU_ACTION_ADD_MONEY_STORAGE,
+    /** The user requested adding the powder storage area. */
+    MENU_ACTION_ADD_POWDER_STORAGE,
+    /** The user requested adding the cannonball storage area. */
+    MENU_ACTION_ADD_BALL_STORAGE,
+    /** The user requested adding a cannon. */
+    MENU_ACTION_ADD_CANNON,
+    /** The user requested adding the wind vane. */
+    MENU_ACTION_ADD_WIND_VANE,
+    /** The user requested creating a wall polygon. */
+    MENU_ACTION_ADD_WALL,
+    /** The user requested creating a roof polygon. */
+    MENU_ACTION_ADD_ROOF,
+    /** The user requested deleting the selected editor element. */
+    MENU_ACTION_DELETE_ELEMENT
 } MenuAction;
 
 /**
