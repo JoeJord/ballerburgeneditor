@@ -25,8 +25,8 @@ provides the menu's `OBJECT` tree and handles the resulting AES messages.
 | `src/ui/document_window.h` | Declares document-window creation, message handling, and shutdown. |
 | `src/ui/app_resources.c` | Owns the resource filename and load lifecycle, and provides access to resource trees and strings. |
 | `src/ui/app_resources.h` | Declares resource loading, release, and resource-access functions. |
-| `src/ui/app_alerts.c` | Defines shared fixed English alert strings and displays them through AES. |
-| `src/ui/app_alerts.h` | Declares the alert-string constants and alert display function. |
+| `src/ui/app_alerts.c` | Resolves alert fallbacks to RSC free strings when available and displays them through AES. |
+| `src/ui/app_alerts.h` | Declares built-in alert fallbacks and the alert display function. |
 | `src/util/app_logger.c` | Appends application events and alerts to `BALLERED.LOG`. |
 | `src/util/app_logger.h` | Declares application log lifecycle and write functions. |
 | `src/BALLERED.RSC` | GEM resource containing the menu and About dialog trees, object layouts, flags, and labels. |
@@ -139,6 +139,12 @@ The About dialog is deliberately a separate feature module so its presentation
 can evolve without changing menu-tree construction or event routing. It gets
 the already-loaded resource tree through `app_resources_get_about_dialog()`
 (OK button `BTN_ABOUT_OK`) and does not load or release the resource itself.
+
+Application alerts use `ALR_` free-string resources when the resource IDs exist
+in generated `BALLERED.h`. The resource file is loaded on demand for early
+startup alerts and released again when startup aborts. Built-in text is retained
+for resource-load failure and as a fallback if an expected alert string is
+missing.
 
 The resource currently marks the Info, New, and Quit entries as non-selectable
 (the Quit entry only carries `OF_LASTOB`). `menu.c` adds `OF_SELECTABLE` to

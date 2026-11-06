@@ -75,7 +75,7 @@ extern const char APP_ALERT_TOOLBAR_WINDOW_DELETE_FAILED[];
 /**
  * Displays an AES alert with the standard alert icon.
  *
- * @param text GEM alert text, including its button specification.
+ * @param text Built-in fallback alert text, including its button specification.
  */
 void app_alerts_show(const char *text);
 

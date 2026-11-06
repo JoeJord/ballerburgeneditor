@@ -4,6 +4,7 @@
 #include "about_dialog.h"
 #include "app_alerts.h"
 #include "app_logger.h"
+#include "app_resources.h"
 #include "document_window.h"
 #include "file_open.h"
 #include "menu.h"
@@ -60,6 +61,7 @@ int main(void)
         if (application_id >= 0)
         {
             app_alerts_show(APP_ALERT_LOG_OPEN_FAILED);
+            app_resources_release();
             appl_exit();
         }
         return 1;
@@ -78,6 +80,7 @@ int main(void)
     if (!check_display_mode())
     {
         app_logger_write("Unsupported display mode; exiting.");
+        app_resources_release();
         appl_exit();
         app_logger_close();
         return 1;
