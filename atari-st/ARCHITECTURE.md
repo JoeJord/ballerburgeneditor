@@ -111,7 +111,9 @@ each resource area starts one pixel left of its DAT position and extends through
 the storage area's far edge. In the editor, these white backgrounds are offset
 one pixel right and one pixel up from that original clear rectangle.
 Inventory amounts are converted to sprite counts as in the game and limited by
-each store's configured dimensions. The renderer also draws the castle's wind
+each store's configured dimensions; empty money sacks use a simple solid outer
+contour, empty powder barrels use a sparse pixel raster, and empty cannonballs
+are shown as closed circles. The renderer also draws the castle's wind
 vane at its DAT position, including the original white clearing area and mast;
 its flag uses a fixed positive wind strength of 15. The toolbar's Previous
 Castle and Next Castle buttons select among all castles in the active DAT

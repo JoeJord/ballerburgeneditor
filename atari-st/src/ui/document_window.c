@@ -29,6 +29,14 @@
 /** Lower flag attachment offset from the vane baseline. */
 #define WIND_VANE_FLAG_LOWER_Y_OFFSET 11
 
+enum
+{
+    RESOURCE_PLACEHOLDER_NONE = 0, /**< Draw occupied resource sprites normally. */
+    RESOURCE_PLACEHOLDER_MONEY = 1, /**< Draw an empty sack as an outer contour. */
+    RESOURCE_PLACEHOLDER_POWDER = 2, /**< Draw an empty barrel as sparse pixels. */
+    RESOURCE_PLACEHOLDER_BALL = 3 /**< Draw an empty cannonball as a circle. */
+};
+
 /** Original king sprite drawing stream from BALLER2.C. */
 static const short king_sprite[] = {
     -2, 2, 2, 8, 3, 5, 12, 8, 12, 12, 16, 12, 17, 14, 15, 15, 15, 17,
@@ -92,7 +100,18 @@ static short active_document_handle;
  * @return The matching slot index, or -1 if the window is not managed here.
  */
 static short find_window_slot(short handle);
-static void draw_sprite(long long origin_x, long long baseline_y, const short *drawing);
+static void draw_sprite(
+    long long origin_x,
+    long long baseline_y,
+    const short *drawing,
+    short outline_only,
+    short close_outline
+);
+static void draw_resource_placeholder(
+    short placeholder_type,
+    long long origin_x,
+    long long baseline_y
+);
 static void draw_white_rectangle(
     long long left,
     long long top,
@@ -307,11 +326,15 @@ static short find_window_slot(short handle)
  * @param origin_x Screen X coordinate of the sprite's local origin.
  * @param baseline_y Screen Y coordinate of its local baseline.
  * @param drawing Ordered sprite commands terminated by -1.
+ * @param outline_only Whether to draw only the sprite outline.
+ * @param close_outline Whether to connect the outline's last point to its first.
  */
 static void draw_sprite(
     long long origin_x,
     long long baseline_y,
-    const short *drawing
+    const short *drawing,
+    short outline_only,
+    short close_outline
 )
 {
     short points[128];
@@ -324,25 +347,37 @@ static void draw_sprite(
     long long screen_x;
     long long screen_y;
 
-    fill_mode = 1;
+    fill_mode = outline_only ? 0 : 1;
     vswr_mode(vdi_handle, MD_REPLACE);
     vsf_color(vdi_handle, 1);
     vsl_color(vdi_handle, 1);
     vsf_interior(vdi_handle, FIS_PATTERN);
     vsf_style(vdi_handle, 9);
+    vsl_type(vdi_handle, 1);
 
     while (*drawing != CASTLE_DATA_RECORD_TERMINATOR)
     {
         if (*drawing == CASTLE_DATA_FILL_STYLE_MARKER)
         {
+            short interior;
+            short style;
+
             drawing++;
-            vsf_interior(vdi_handle, *drawing++);
-            vsf_style(vdi_handle, *drawing++);
+            interior = *drawing++;
+            style = *drawing++;
+            if (!outline_only)
+            {
+                vsf_interior(vdi_handle, interior);
+                vsf_style(vdi_handle, style);
+            }
             continue;
         }
         if (*drawing == CASTLE_DATA_DRAW_MODE_MARKER)
         {
-            fill_mode = !fill_mode;
+            if (!outline_only)
+            {
+                fill_mode = !fill_mode;
+            }
             drawing++;
             continue;
         }
@@ -408,13 +443,109 @@ static void draw_sprite(
         }
         else
         {
-            v_pline(vdi_handle, point_count, points);
+            if (close_outline)
+            {
+                points[point_count * 2] = points[0];
+                points[point_count * 2 + 1] = points[1];
+                v_pline(vdi_handle, point_count + 1, points);
+            }
+            else
+            {
+                v_pline(vdi_handle, point_count, points);
+            }
         }
     }
 
     vswr_mode(vdi_handle, MD_REPLACE);
     vsf_interior(vdi_handle, FIS_SOLID);
     vsf_color(vdi_handle, 0);
+    vsl_type(vdi_handle, 1);
+}
+
+/**
+ * Draws a resource-specific empty-slot symbol.
+ *
+ * @param placeholder_type Resource symbol to draw.
+ * @param origin_x Screen X coordinate of the sprite's local origin.
+ * @param baseline_y Screen Y coordinate of the sprite's local baseline.
+ */
+static void draw_resource_placeholder(
+    short placeholder_type,
+    long long origin_x,
+    long long baseline_y
+)
+{
+    static const short money_sack_outline[] = {
+        2, 8, 4, 8, 4, 7, 5, 6, 6, 4, 6, 2, 5, 1, 4, 0,
+        2, 0, 1, 1, 0, 2, 0, 4, 1, 6, 2, 7, 2, 8
+    };
+    static const char powder_barrel_pixels[9][10] = {
+        "..#####..",
+        ".#.....#.",
+        "#.......#",
+        "#.......#",
+        "#.......#",
+        "#.......#",
+        "#.......#",
+        ".#.....#.",
+        "..#####.."
+    };
+    short points[30];
+    short rectangle[4];
+    short index;
+    short row;
+    short column;
+    long long screen_x;
+    long long screen_y;
+
+    vswr_mode(vdi_handle, MD_REPLACE);
+    vsf_color(vdi_handle, 1);
+    vsl_color(vdi_handle, 1);
+    vsl_type(vdi_handle, 1);
+
+    if (placeholder_type == RESOURCE_PLACEHOLDER_MONEY)
+    {
+        for (index = 0; index < 15; index++)
+        {
+            screen_x = origin_x + money_sack_outline[index * 2];
+            screen_y = baseline_y - money_sack_outline[index * 2 + 1];
+            if (screen_x < SHRT_MIN || screen_x > SHRT_MAX
+                || screen_y < SHRT_MIN || screen_y > SHRT_MAX)
+            {
+                return;
+            }
+            points[index * 2] = (short)screen_x;
+            points[index * 2 + 1] = (short)screen_y;
+        }
+        v_pline(vdi_handle, 15, points);
+        return;
+    }
+
+    if (placeholder_type == RESOURCE_PLACEHOLDER_POWDER)
+    {
+        for (row = 0; row < 9; row++)
+        {
+            for (column = 0; column < 9; column++)
+            {
+                if (powder_barrel_pixels[row][column] != '#')
+                {
+                    continue;
+                }
+                screen_x = origin_x + column;
+                screen_y = baseline_y - row;
+                if (screen_x < SHRT_MIN || screen_x > SHRT_MAX
+                    || screen_y < SHRT_MIN || screen_y > SHRT_MAX)
+                {
+                    continue;
+                }
+                rectangle[0] = (short)screen_x;
+                rectangle[1] = (short)screen_y;
+                rectangle[2] = (short)screen_x;
+                rectangle[3] = (short)screen_y;
+                vr_recfl(vdi_handle, rectangle);
+            }
+        }
+    }
 }
 
 /**
@@ -489,6 +620,7 @@ static unsigned long resource_sprite_count(int amount, unsigned long units_per_s
  * @param sprite Original-game sprite command stream.
  * @param origin_x Screen X coordinate of the castle origin.
  * @param baseline_y Screen Y coordinate of the castle baseline.
+ * @param placeholder_type Empty-slot symbol to draw, or NONE for no placeholders.
  */
 static void draw_resource_stack(
     CastleDataPoint position,
@@ -498,7 +630,8 @@ static void draw_resource_stack(
     short step_y,
     const short *sprite,
     long long origin_x,
-    long long baseline_y
+    long long baseline_y,
+    short placeholder_type
 )
 {
     unsigned long columns;
@@ -519,11 +652,6 @@ static void draw_resource_stack(
         (long long)storage.height + 1
     );
 
-    if (item_count == 0)
-    {
-        return;
-    }
-
     columns = ((unsigned long)storage.width - 1) / (unsigned short)step_x + 1;
     rows = ((unsigned long)storage.height - 1) / (unsigned short)step_y + 1;
     if (item_count > MAX_RESOURCE_SPRITES_PER_STORE)
@@ -532,15 +660,40 @@ static void draw_resource_stack(
     }
 
     drawn = 0;
-    for (row = 0; row < rows && drawn < item_count; row++)
+    for (row = 0; row < rows && drawn < MAX_RESOURCE_SPRITES_PER_STORE; row++)
     {
-        for (column = 0; column < columns && drawn < item_count; column++)
+        for (column = 0;
+             column < columns && drawn < MAX_RESOURCE_SPRITES_PER_STORE;
+             column++)
         {
-            draw_sprite(
-                origin_x + position.x + (long long)column * step_x,
-                baseline_y - position.y - (long long)row * step_y,
-                sprite
-            );
+            if (drawn < item_count)
+            {
+                draw_sprite(
+                    origin_x + position.x + (long long)column * step_x,
+                    baseline_y - position.y - (long long)row * step_y,
+                    sprite,
+                    0,
+                    0
+                );
+            }
+            else if (placeholder_type == RESOURCE_PLACEHOLDER_BALL)
+            {
+                draw_sprite(
+                    origin_x + position.x + (long long)column * step_x,
+                    baseline_y - position.y - (long long)row * step_y,
+                    sprite,
+                    1,
+                    1
+                );
+            }
+            else
+            {
+                draw_resource_placeholder(
+                    placeholder_type,
+                    origin_x + position.x + (long long)column * step_x,
+                    baseline_y - position.y - (long long)row * step_y
+                );
+            }
             drawn++;
         }
     }
@@ -630,7 +783,9 @@ static void draw_castle_objects(
     draw_sprite(
         origin_x + castle->throne.x,
         baseline_y - castle->throne.y,
-        king_sprite
+        king_sprite,
+        0,
+        0
     );
     for (index = 0; index < castle->cannon_count; index++)
     {
@@ -641,7 +796,9 @@ static void draw_castle_objects(
         draw_sprite(
             origin_x + castle->cannons[index].x,
             baseline_y - castle->cannons[index].y,
-            cannon_sprite
+            cannon_sprite,
+            0,
+            0
         );
     }
 
@@ -653,7 +810,8 @@ static void draw_castle_objects(
         10,
         money_sprite,
         origin_x,
-        baseline_y
+        baseline_y,
+        RESOURCE_PLACEHOLDER_MONEY
     );
     draw_resource_stack(
         castle->powder,
@@ -663,7 +821,8 @@ static void draw_castle_objects(
         9,
         powder_sprite,
         origin_x,
-        baseline_y
+        baseline_y,
+        RESOURCE_PLACEHOLDER_POWDER
     );
     draw_resource_stack(
         castle->cannonballs,
@@ -673,7 +832,8 @@ static void draw_castle_objects(
         6,
         cannonball_sprite,
         origin_x,
-        baseline_y
+        baseline_y,
+        RESOURCE_PLACEHOLDER_BALL
     );
     draw_wind_vane(castle->wind_vane, origin_x, baseline_y);
 }
