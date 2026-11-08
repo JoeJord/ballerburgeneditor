@@ -162,4 +162,13 @@ CastleDataReadResult castle_data_read(
  */
 void castle_data_document_destroy(CastleDataDocument *document);
 
+/**
+ * Removes a castle from the document at the specified index.
+ *
+ * @param document Document to modify.
+ * @param index Zero-based index of the castle to remove.
+ * @return Non-zero if the castle was removed successfully.
+ */
+short castle_data_remove_castle(CastleDataDocument *document, size_t index);
+
 #endif

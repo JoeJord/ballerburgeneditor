@@ -993,7 +993,6 @@ static void redraw_window(short handle, const GRECT *redraw_area)
     long long castle_origin_x;
     long long castle_baseline_y;
     const CastleDataCastle *castle;
-    char status_text[40];
 
     slot = find_window_slot(handle);
 
@@ -1049,13 +1048,7 @@ static void redraw_window(short handle, const GRECT *redraw_area)
                 vr_recfl(vdi_handle, fill);
                 if (slot >= 0 && window_has_castle_document[slot])
                 {
-                    if (window_documents[slot].castle_count == 0)
-                    {
-                        strcpy(status_text, "No castles in this file.");
-                        vst_color(vdi_handle, 1);
-                        v_gtext(vdi_handle, work_x + 8, work_y + 16, status_text);
-                    }
-                    else
+                    if (window_documents[slot].castle_count > 0)
                     {
                         castle = &window_documents[slot].castles[
                             window_selected_castles[slot]
@@ -1623,6 +1616,110 @@ short document_window_has_open_windows(void)
 short document_window_has_capacity(void)
 {
     return find_free_window_slot() >= 0;
+}
+
+/**
+ * Checks whether the active document has at least one castle.
+ *
+ * @return Non-zero if the active document window has a castle.
+ */
+short document_window_has_castle(void)
+{
+    short active_handle;
+    short slot;
+
+    slot = find_active_document(&active_handle);
+    if (slot < 0 || !window_has_castle_document[slot])
+    {
+        return 0;
+    }
+
+    return window_documents[slot].castle_count > 0;
+}
+
+/**
+ * Removes the currently selected castle from the active document.
+ *
+ * @return Non-zero if a castle was removed successfully.
+ */
+short document_window_remove_castle(void)
+{
+    short active_handle;
+    short slot;
+    short work_x;
+    short work_y;
+    short work_width;
+    short work_height;
+    GRECT redraw_area;
+    size_t selected_castle;
+
+    slot = find_active_document(&active_handle);
+    if (slot < 0 || !window_has_castle_document[slot])
+    {
+        app_logger_write("Castle removal ignored without an active DAT document.");
+        return 0;
+    }
+
+    if (window_documents[slot].castle_count == 0)
+    {
+        app_logger_write("Castle removal ignored: document has no castles.");
+        return 0;
+    }
+
+    selected_castle = window_selected_castles[slot];
+    if (!castle_data_remove_castle(&window_documents[slot], selected_castle))
+    {
+        app_logger_write("Castle removal failed.");
+        return 0;
+    }
+
+    if (window_documents[slot].castle_count == 0)
+    {
+        window_selected_castles[slot] = 0;
+    }
+    else if (selected_castle >= window_documents[slot].castle_count)
+    {
+        window_selected_castles[slot] = window_documents[slot].castle_count - 1;
+    }
+
+    if (!format_castle_title(
+        window_file_names[slot],
+        window_documents[slot].castle_count > 0
+            ? window_selected_castles[slot] + 1
+            : 0,
+        window_documents[slot].castle_count,
+        window_titles[slot],
+        sizeof(window_titles[slot])
+    ))
+    {
+        app_logger_write("Unable to format window title after castle removal.");
+    }
+    else if (!wind_set_str(active_handle, WF_NAME, window_titles[slot]))
+    {
+        app_logger_write("Unable to update window title after castle removal.");
+    }
+
+    if (!wind_get(
+        active_handle,
+        WF_WORKXYWH,
+        &work_x,
+        &work_y,
+        &work_width,
+        &work_height
+    ))
+    {
+        app_logger_write("Unable to get window work area for redraw.");
+        return 1;
+    }
+
+    redraw_area.g_x = work_x;
+    redraw_area.g_y = work_y;
+    redraw_area.g_w = work_width;
+    redraw_area.g_h = work_height;
+    redraw_window(active_handle, &redraw_area);
+
+    app_logger_write("Castle removed successfully.");
+    return 1;
 }
 
 /**

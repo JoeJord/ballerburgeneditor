@@ -29,6 +29,8 @@ static short document_creation_enabled;
 static short previous_castle_enabled;
 /** Current enabled state of the Next Castle menu item. */
 static short next_castle_enabled;
+/** Current enabled state of the Delete Castle menu item. */
+static short delete_castle_enabled;
 
 /**
  * Loads the menu resource and installs its MAIN tree with AES.
@@ -72,6 +74,7 @@ short menu_show(void)
 
     previous_castle_enabled = -1;
     next_castle_enabled = -1;
+    delete_castle_enabled = -1;
     if (!menu_set_castle_navigation_enabled(0, 0))
     {
         app_logger_write("Unable to disable castle navigation menu items.");
@@ -127,6 +130,7 @@ void menu_hide(void)
     document_creation_enabled = 0;
     previous_castle_enabled = 0;
     next_castle_enabled = 0;
+    delete_castle_enabled = 0;
 }
 
 /**
@@ -236,6 +240,36 @@ short menu_set_castle_navigation_enabled(
         );
     }
 
+    return 1;
+}
+
+/**
+ * Enables or disables the Delete Castle menu item.
+ *
+ * @param enabled Non-zero to enable the item.
+ * @return Non-zero if AES updated the menu item successfully.
+ */
+short menu_set_delete_castle_enabled(short enabled)
+{
+    short new_state;
+
+    new_state = enabled != 0;
+    if (new_state == delete_castle_enabled)
+    {
+        return 1;
+    }
+
+    if (!menu_ienable(menu_tree, MENU_CASTLE_DEL, new_state))
+    {
+        return 0;
+    }
+
+    delete_castle_enabled = new_state;
+    app_logger_write(
+        new_state
+            ? "Delete Castle menu item enabled."
+            : "Delete Castle menu item disabled."
+    );
     return 1;
 }
 

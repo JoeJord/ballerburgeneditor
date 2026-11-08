@@ -67,6 +67,20 @@ short document_window_has_open_windows(void);
 short document_window_has_capacity(void);
 
 /**
+ * Checks whether the active document has at least one castle.
+ *
+ * @return Non-zero if the active document window has a castle.
+ */
+short document_window_has_castle(void);
+
+/**
+ * Removes the currently selected castle from the active document.
+ *
+ * @return Non-zero if a castle was removed successfully.
+ */
+short document_window_remove_castle(void);
+
+/**
  * Handles window-related messages from the AES event loop.
  *
  * @param message Eight-word AES message buffer.

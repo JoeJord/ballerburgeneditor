@@ -620,6 +620,36 @@ void castle_data_document_destroy(CastleDataDocument *document)
 }
 
 /**
+ * Removes a castle from the document at the specified index.
+ *
+ * @param document Document to modify.
+ * @param index Zero-based index of the castle to remove.
+ * @return Non-zero if the castle was removed successfully.
+ */
+short castle_data_remove_castle(CastleDataDocument *document, size_t index)
+{
+    size_t move_count;
+
+    if (!document || index >= document->castle_count)
+    {
+        return 0;
+    }
+
+    destroy_castle(&document->castles[index]);
+    move_count = document->castle_count - index - 1;
+    if (move_count > 0)
+    {
+        memmove(
+            &document->castles[index],
+            &document->castles[index + 1],
+            move_count * sizeof(*document->castles)
+        );
+    }
+    document->castle_count--;
+    return 1;
+}
+
+/**
  * Reads a BALLER.DAT file into an initialized document.
  *
  * The destination remains unchanged unless the complete file, including its
