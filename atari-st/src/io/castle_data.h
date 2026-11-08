@@ -171,4 +171,21 @@ void castle_data_document_destroy(CastleDataDocument *document);
  */
 short castle_data_remove_castle(CastleDataDocument *document, size_t index);
 
+/**
+ * Appends a new castle with default values to the document.
+ *
+ * @param document Document receiving the new castle.
+ * @return Non-zero if the castle was added successfully.
+ */
+short castle_data_add_castle(CastleDataDocument *document);
+
+/**
+ * Inserts a new castle with default values at the specified position.
+ *
+ * @param document Document receiving the new castle.
+ * @param index Zero-based index where the castle should be inserted.
+ * @return Non-zero if the castle was inserted successfully.
+ */
+short castle_data_insert_castle(CastleDataDocument *document, size_t index);
+
 #endif

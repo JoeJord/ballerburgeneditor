@@ -13,16 +13,16 @@ provides the menu's `OBJECT` tree and handles the resulting AES messages.
 | `src/main.c` | Initializes AES, runs the message loop, routes menu actions, and shuts down the application. |
 | `src/io/file_open.c` | Shows the GEM file selector for DAT files and returns the selected path. |
 | `src/io/file_open.h` | Declares the DAT file selection entry point. |
-| `src/io/castle_data.c` | Parses and validates BALLER.DAT numeric castle records and drawing commands, and removes castles from documents. |
-| `src/io/castle_data.h` | Defines the owned castle model, parser interface, and castle removal function. |
-| `src/ui/menu.c` | Gets and installs the `MAIN` menu tree, translates AES selections into application actions, updates the Close, castle navigation, and Delete Castle item states, and releases the resource. |
+| `src/io/castle_data.c` | Parses and validates BALLER.DAT numeric castle records and drawing commands, removes castles from documents, and adds new castles with default values. |
+| `src/io/castle_data.h` | Defines the owned castle model, parser interface, castle removal, and castle addition functions. |
+| `src/ui/menu.c` | Gets and installs the `MAIN` menu tree, translates AES selections into application actions, updates the Close, castle navigation, Delete Castle, and Add Castle item states, and releases the resource. |
 | `src/ui/menu.h` | Declares the menu action contract and menu state update functions used by the application event loop. |
 | `src/ui/toolbar.c` | Displays the fixed toolbar below the menu using its RSC free images, and maps clicks to application actions. |
 | `src/ui/toolbar.h` | Declares toolbar lifecycle, input, and layout functions. |
 | `src/ui/about_dialog.c` | Retrieves and displays the `DLG_ABOUT` dialog tree. |
 | `src/ui/about_dialog.h` | Declares the About dialog entry point. |
-| `src/ui/document_window.c` | Owns parsed castle documents, creates document windows, redraws their work areas, and removes castles from the active document. |
-| `src/ui/document_window.h` | Declares document-window creation, message handling, shutdown, castle removal, and castle existence queries. |
+| `src/ui/document_window.c` | Owns parsed castle documents, creates document windows, redraws their work areas, removes castles from the active document, and adds new castles. |
+| `src/ui/document_window.h` | Declares document-window creation, message handling, shutdown, castle removal, castle addition, and castle existence queries. |
 | `src/ui/app_resources.c` | Owns the resource filename and load lifecycle, and provides access to resource trees and strings. |
 | `src/ui/app_resources.h` | Declares resource loading, release, and resource-access functions. |
 | `src/ui/app_alerts.c` | Resolves alert fallbacks to RSC free strings when available and displays them through AES. |
@@ -70,19 +70,22 @@ then invokes the corresponding feature module.
 5. `main()` dispatches New to `document_window_create()`, Open through the GEM
    file selector and `document_window_open_file()`, Close to
    `document_window_close_top()`, About to `about_dialog_show()`, castle
-   navigation to `document_window_navigate_castles()`, and castle deletion to
-   `document_window_remove_castle()`. Edit commands are routed as application
+   navigation to `document_window_navigate_castles()`, castle deletion to
+   `document_window_remove_castle()`, and castle addition to
+   `document_window_add_castle()`. Edit commands are routed as application
    actions and logged pending their editing implementations; Quit exits the
    event loop. After each event it reports whether document windows are open to
    `menu_set_close_enabled()`, whether a window slot is available to
    `menu_set_document_creation_enabled()`, whether the active document has a
-   castle to `menu_set_delete_castle_enabled()`, and whether navigation is
+   castle to `menu_set_delete_castle_enabled()`, whether a document window is
+   open to `menu_set_add_castle_enabled()`, and whether navigation is
    possible to `menu_set_castle_navigation_enabled()`. `menu.c` updates the
    relevant enabled states only when they change. Previous Castle and Next
    Castle are enabled independently according to whether the active document
    has an adjacent castle in that direction; blank documents and boundary
    castles leave the corresponding item disabled. Delete Castle is enabled
-   only when the active document contains at least one castle.
+   only when the active document contains at least one castle. Add Castle is
+   enabled when at least one document window is open.
 6. On shutdown, `document_window_shutdown()` closes all remaining document
    windows and its VDI virtual workstation. Then `toolbar_hide()` closes the
    toolbar and its VDI workstation, `menu_hide()` removes the menu bar and
@@ -123,13 +126,16 @@ document work area at one-to-one scale, horizontally centered with its
 baseline near the bottom of the work area. The renderer also draws the castle's
 king, cannon positions, and starting money, powder, and cannonball inventories
 using the original game's sprite command streams and resource-grid spacing.
-The king and all three resource storage areas are cleared to solid white before
-their sprites are drawn, matching the original game's object-background
-clearing behavior. These clear rectangles preserve the original inclusive VDI
-coordinates: the king area begins 25 pixels above its baseline and is 30x25;
-each resource area starts one pixel left of its DAT position and extends through
-the storage area's far edge. In the editor, these white backgrounds are offset
-one pixel right and one pixel up from that original clear rectangle.
+Castle objects (throne, cannons, resource storage areas, and wind vane) are only
+rendered when their positions are valid (coordinates >= 0); positions set to -1
+are treated as unset and skipped. The king and all three resource storage areas
+are cleared to solid white before their sprites are drawn, matching the original
+game's object-background clearing behavior. These clear rectangles preserve the
+original inclusive VDI coordinates: the king area begins 25 pixels above its
+baseline and is 30x25; each resource area starts one pixel left of its DAT
+position and extends through the storage area's far edge. In the editor, these
+white backgrounds are offset one pixel right and one pixel up from that original
+clear rectangle.
 Inventory amounts are converted to sprite counts as in the game and limited by
 each store's configured dimensions; empty money sacks use a simple solid outer
 contour, empty powder barrels use a sparse pixel raster, and empty cannonballs

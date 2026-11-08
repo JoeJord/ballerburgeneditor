@@ -775,19 +775,22 @@ static void draw_castle_objects(
 {
     size_t index;
 
-    draw_white_rectangle(
-        origin_x + castle->throne.x,
-        baseline_y - castle->throne.y - 25,
-        30,
-        25
-    );
-    draw_sprite(
-        origin_x + castle->throne.x,
-        baseline_y - castle->throne.y,
-        king_sprite,
-        0,
-        0
-    );
+    if (castle->throne.x >= 0 && castle->throne.y >= 0)
+    {
+        draw_white_rectangle(
+            origin_x + castle->throne.x,
+            baseline_y - castle->throne.y - 25,
+            30,
+            25
+        );
+        draw_sprite(
+            origin_x + castle->throne.x,
+            baseline_y - castle->throne.y,
+            king_sprite,
+            0,
+            0
+        );
+    }
     for (index = 0; index < castle->cannon_count; index++)
     {
         if (castle->cannons[index].x < 0 || castle->cannons[index].y < 0)
@@ -803,39 +806,48 @@ static void draw_castle_objects(
         );
     }
 
-    draw_resource_stack(
-        castle->money,
-        castle->money_storage,
-        resource_sprite_count(castle->resources.money, 150),
-        7,
-        10,
-        money_sprite,
-        origin_x,
-        baseline_y,
-        RESOURCE_PLACEHOLDER_MONEY
-    );
-    draw_resource_stack(
-        castle->powder,
-        castle->powder_storage,
-        resource_sprite_count(castle->resources.powder, 30),
-        9,
-        9,
-        powder_sprite,
-        origin_x,
-        baseline_y,
-        RESOURCE_PLACEHOLDER_POWDER
-    );
-    draw_resource_stack(
-        castle->cannonballs,
-        castle->cannonball_storage,
-        resource_sprite_count(castle->resources.cannonballs, 1),
-        6,
-        6,
-        cannonball_sprite,
-        origin_x,
-        baseline_y,
-        RESOURCE_PLACEHOLDER_BALL
-    );
+    if (castle->money.x >= 0 && castle->money.y >= 0)
+    {
+        draw_resource_stack(
+            castle->money,
+            castle->money_storage,
+            resource_sprite_count(castle->resources.money, 150),
+            7,
+            10,
+            money_sprite,
+            origin_x,
+            baseline_y,
+            RESOURCE_PLACEHOLDER_MONEY
+        );
+    }
+    if (castle->powder.x >= 0 && castle->powder.y >= 0)
+    {
+        draw_resource_stack(
+            castle->powder,
+            castle->powder_storage,
+            resource_sprite_count(castle->resources.powder, 30),
+            9,
+            9,
+            powder_sprite,
+            origin_x,
+            baseline_y,
+            RESOURCE_PLACEHOLDER_POWDER
+        );
+    }
+    if (castle->cannonballs.x >= 0 && castle->cannonballs.y >= 0)
+    {
+        draw_resource_stack(
+            castle->cannonballs,
+            castle->cannonball_storage,
+            resource_sprite_count(castle->resources.cannonballs, 1),
+            6,
+            6,
+            cannonball_sprite,
+            origin_x,
+            baseline_y,
+            RESOURCE_PLACEHOLDER_BALL
+        );
+    }
     draw_wind_vane(castle->wind_vane, origin_x, baseline_y);
 }
 
@@ -1719,6 +1731,82 @@ short document_window_remove_castle(void)
     redraw_window(active_handle, &redraw_area);
 
     app_logger_write("Castle removed successfully.");
+    return 1;
+}
+
+/**
+ * Adds a new castle to the active document and selects it.
+ *
+ * @return Non-zero if a castle was added successfully.
+ */
+short document_window_add_castle(void)
+{
+    short active_handle;
+    short slot;
+    short work_x;
+    short work_y;
+    short work_width;
+    short work_height;
+    GRECT redraw_area;
+    size_t insert_index;
+
+    slot = find_active_document(&active_handle);
+    if (slot < 0)
+    {
+        app_logger_write("Castle addition ignored without an active document window.");
+        return 0;
+    }
+
+    if (!window_has_castle_document[slot])
+    {
+        app_logger_write("Castle addition ignored: active window is not a DAT document.");
+        return 0;
+    }
+
+    insert_index = window_selected_castles[slot] + 1;
+    if (!castle_data_insert_castle(&window_documents[slot], insert_index))
+    {
+        app_logger_write("Castle addition failed.");
+        return 0;
+    }
+
+    window_selected_castles[slot] = insert_index;
+
+    if (!format_castle_title(
+        window_file_names[slot],
+        window_selected_castles[slot] + 1,
+        window_documents[slot].castle_count,
+        window_titles[slot],
+        sizeof(window_titles[slot])
+    ))
+    {
+        app_logger_write("Unable to format window title after castle addition.");
+    }
+    else if (!wind_set_str(active_handle, WF_NAME, window_titles[slot]))
+    {
+        app_logger_write("Unable to update window title after castle addition.");
+    }
+
+    if (!wind_get(
+        active_handle,
+        WF_WORKXYWH,
+        &work_x,
+        &work_y,
+        &work_width,
+        &work_height
+    ))
+    {
+        app_logger_write("Unable to get window work area for redraw.");
+        return 1;
+    }
+
+    redraw_area.g_x = work_x;
+    redraw_area.g_y = work_y;
+    redraw_area.g_w = work_width;
+    redraw_area.g_h = work_height;
+    redraw_window(active_handle, &redraw_area);
+
+    app_logger_write("Castle added successfully.");
     return 1;
 }
 

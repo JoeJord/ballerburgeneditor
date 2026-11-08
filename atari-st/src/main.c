@@ -210,6 +210,7 @@ int main(void)
 
             case MENU_ACTION_ADD_CASTLE:
                 app_logger_write("Edit action requested: add castle.");
+                document_window_add_castle();
                 break;
 
             case MENU_ACTION_ADD_THRONE:
@@ -277,6 +278,10 @@ int main(void)
         if (!menu_set_delete_castle_enabled(document_window_has_castle()))
         {
             app_logger_write("Unable to update delete castle menu item.");
+        }
+        if (!menu_set_add_castle_enabled(document_window_has_open_windows()))
+        {
+            app_logger_write("Unable to update add castle menu item.");
         }
     }
 

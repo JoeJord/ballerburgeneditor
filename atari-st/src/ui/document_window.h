@@ -81,6 +81,13 @@ short document_window_has_castle(void);
 short document_window_remove_castle(void);
 
 /**
+ * Adds a new castle to the active document and selects it.
+ *
+ * @return Non-zero if a castle was added successfully.
+ */
+short document_window_add_castle(void);
+
+/**
  * Handles window-related messages from the AES event loop.
  *
  * @param message Eight-word AES message buffer.

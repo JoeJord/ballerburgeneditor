@@ -650,6 +650,148 @@ short castle_data_remove_castle(CastleDataDocument *document, size_t index)
 }
 
 /**
+ * Appends a new castle with default values to the document.
+ *
+ * @param document Document receiving the new castle.
+ * @return Non-zero if the castle was added successfully.
+ */
+short castle_data_add_castle(CastleDataDocument *document)
+{
+    CastleDataCastle castle;
+    size_t castle_capacity;
+    size_t index;
+
+    if (!document)
+    {
+        return 0;
+    }
+
+    memset(&castle, 0, sizeof(castle));
+    castle.width = 100;
+    castle.cannon_count = 0;
+    castle.throne.x = -1;
+    castle.throne.y = -1;
+    castle.wind_vane.x = -1;
+    castle.wind_vane.y = -1;
+    castle.money.x = -1;
+    castle.money.y = -1;
+    castle.powder.x = -1;
+    castle.powder.y = -1;
+    castle.cannonballs.x = -1;
+    castle.cannonballs.y = -1;
+    castle.money_storage.width = 0;
+    castle.money_storage.height = 0;
+    castle.powder_storage.width = 0;
+    castle.powder_storage.height = 0;
+    castle.cannonball_storage.width = 0;
+    castle.cannonball_storage.height = 0;
+    castle.resources.money = 0;
+    castle.resources.powder = 0;
+    castle.resources.cannonballs = 0;
+    castle.resources.people = 0;
+    for (index = 0; index < CASTLE_DATA_RESERVED_VALUE_COUNT; index++)
+    {
+        castle.reserved[index] = 0;
+    }
+    castle.drawing = 0;
+    castle.drawing_count = 0;
+
+    castle_capacity = document->castle_count;
+    if (!append_castle(document, &castle_capacity, &castle))
+    {
+        return 0;
+    }
+
+    return 1;
+}
+
+/**
+ * Inserts a new castle with default values at the specified position.
+ *
+ * @param document Document receiving the new castle.
+ * @param index Zero-based index where the castle should be inserted.
+ * @return Non-zero if the castle was inserted successfully.
+ */
+short castle_data_insert_castle(CastleDataDocument *document, size_t index)
+{
+    CastleDataCastle castle;
+    CastleDataCastle *resized_castles;
+    size_t castle_capacity;
+    size_t new_capacity;
+    size_t move_count;
+    size_t i;
+
+    if (!document)
+    {
+        return 0;
+    }
+
+    if (index > document->castle_count)
+    {
+        index = document->castle_count;
+    }
+
+    memset(&castle, 0, sizeof(castle));
+    castle.width = 100;
+    castle.cannon_count = 0;
+    castle.throne.x = -1;
+    castle.throne.y = -1;
+    castle.wind_vane.x = -1;
+    castle.wind_vane.y = -1;
+    castle.money.x = -1;
+    castle.money.y = -1;
+    castle.powder.x = -1;
+    castle.powder.y = -1;
+    castle.cannonballs.x = -1;
+    castle.cannonballs.y = -1;
+    castle.money_storage.width = 0;
+    castle.money_storage.height = 0;
+    castle.powder_storage.width = 0;
+    castle.powder_storage.height = 0;
+    castle.cannonball_storage.width = 0;
+    castle.cannonball_storage.height = 0;
+    castle.resources.money = 0;
+    castle.resources.powder = 0;
+    castle.resources.cannonballs = 0;
+    castle.resources.people = 0;
+    for (i = 0; i < CASTLE_DATA_RESERVED_VALUE_COUNT; i++)
+    {
+        castle.reserved[i] = 0;
+    }
+    castle.drawing = 0;
+    castle.drawing_count = 0;
+
+    castle_capacity = document->castle_count;
+    resized_castles = (CastleDataCastle *)reserve_array(
+        document->castles,
+        castle_capacity,
+        document->castle_count + 1,
+        sizeof(*document->castles),
+        &new_capacity
+    );
+    if (!resized_castles)
+    {
+        return 0;
+    }
+
+    document->castles = resized_castles;
+
+    move_count = document->castle_count - index;
+    if (move_count > 0)
+    {
+        memmove(
+            &document->castles[index + 1],
+            &document->castles[index],
+            move_count * sizeof(*document->castles)
+        );
+    }
+
+    document->castles[index] = castle;
+    document->castle_count++;
+    return 1;
+}
+
+/**
  * Reads a BALLER.DAT file into an initialized document.
  *
  * The destination remains unchanged unless the complete file, including its
