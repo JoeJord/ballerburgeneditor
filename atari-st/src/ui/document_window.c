@@ -1788,7 +1788,7 @@ short document_window_add_castle(void)
         return 0;
     }
 
-    if (!window_has_castle_document[slot])
+    if (window_documents[slot].castle_count == 0)
     {
         window_documents[slot].castles = 0;
         window_documents[slot].castle_count = 0;
