@@ -86,6 +86,8 @@ static char window_file_names[MAX_DOCUMENT_WINDOWS][CASTLE_TITLE_BUFFER_SIZE];
 static GRECT restore_bounds[MAX_DOCUMENT_WINDOWS];
 /** Whether each document window is currently maximized. */
 static short window_maximized[MAX_DOCUMENT_WINDOWS];
+/** Whether each document has unsaved changes. */
+static short window_modified[MAX_DOCUMENT_WINDOWS];
 /** VDI virtual workstation used to clear document work areas. */
 static VdiHdl vdi_handle;
 /** Number used to cascade newly opened windows. */
@@ -163,6 +165,7 @@ static short append_title_text(
 /**
  * Formats the castle title resource's positional placeholders.
  *
+ * @param slot Window slot index, or -1 to skip the modification indicator.
  * @param file_name Basename of the DAT file.
  * @param castle_number One-based current castle number, or zero for no castles.
  * @param castle_count Number of castles in the document.
@@ -171,6 +174,7 @@ static short append_title_text(
  * @return Non-zero if the resource string was available and fit in the buffer.
  */
 static short format_castle_title(
+    short slot,
     const char *file_name,
     size_t castle_number,
     size_t castle_count,
@@ -190,6 +194,13 @@ static short format_castle_title(
 
     output[0] = '\0';
     output_length = 0;
+    if (slot >= 0 && window_modified[slot])
+    {
+        if (!append_title_text(output, output_capacity, &output_length, "* "))
+        {
+            return 0;
+        }
+    }
     if (!append_title_text(output, output_capacity, &output_length, file_name)
         || !append_title_text(output, output_capacity, &output_length, " - "))
     {
@@ -1166,6 +1177,7 @@ static short close_window(short slot)
     castle_data_document_destroy(&window_documents[slot]);
     window_has_castle_document[slot] = 0;
     window_selected_castles[slot] = 0;
+    window_modified[slot] = 0;
     window_maximized[slot] = 0;
     app_logger_write("Document window closed.");
     return 1;
@@ -1227,6 +1239,7 @@ static short create_document_window(
             file_name
         )
             || !format_castle_title(
+            slot,
             window_file_names[slot],
             document->castle_count > 0 ? 1 : 0,
             document->castle_count,
@@ -1256,6 +1269,7 @@ static short create_document_window(
             return 0;
         }
         if (!format_castle_title(
+            slot,
             title,
             0,
             0,
@@ -1333,11 +1347,13 @@ static short create_document_window(
         document->castle_count = 0;
         window_has_castle_document[slot] = 1;
         window_selected_castles[slot] = 0;
+        window_modified[slot] = 0;
     }
     else
     {
         window_has_castle_document[slot] = 0;
         window_selected_castles[slot] = 0;
+        window_modified[slot] = 0;
     }
     restore_bounds[slot].g_x = x;
     restore_bounds[slot].g_y = y;
@@ -1549,6 +1565,7 @@ short document_window_navigate_castles(DocumentCastleNavigation direction)
     }
 
     if (!format_castle_title(
+        slot,
         window_file_names[slot],
         selected_castle + 1,
         window_documents[slot].castle_count,
@@ -1696,6 +1713,7 @@ short document_window_remove_castle(void)
         app_logger_write("Castle removal failed.");
         return 0;
     }
+    window_modified[slot] = 1;
 
     if (window_documents[slot].castle_count == 0)
     {
@@ -1707,6 +1725,7 @@ short document_window_remove_castle(void)
     }
 
     if (!format_castle_title(
+        slot,
         window_file_names[slot],
         window_documents[slot].castle_count > 0
             ? window_selected_castles[slot] + 1
@@ -1789,8 +1808,10 @@ short document_window_add_castle(void)
     }
 
     window_selected_castles[slot] = insert_index;
+    window_modified[slot] = 1;
 
     if (!format_castle_title(
+        slot,
         window_file_names[slot],
         window_selected_castles[slot] + 1,
         window_documents[slot].castle_count,
@@ -1956,6 +1977,7 @@ void document_window_shutdown(void)
         }
         castle_data_document_destroy(&window_documents[index]);
         window_has_castle_document[index] = 0;
+        window_modified[index] = 0;
     }
 
     if (vdi_handle != 0)
