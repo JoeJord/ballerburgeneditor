@@ -1242,16 +1242,28 @@ static short create_document_window(
     }
     else
     {
-        window_titles[slot][0] = '\0';
+        window_file_names[slot][0] = '\0';
         title_length = 0;
         if (!title || !append_title_text(
-            window_titles[slot],
-            sizeof(window_titles[slot]),
+            window_file_names[slot],
+            sizeof(window_file_names[slot]),
             &title_length,
             title
         ))
         {
             app_logger_write("Unable to store the document window title.");
+            app_alerts_show(APP_ALERT_DOCUMENT_WINDOW_TITLE_MISSING);
+            return 0;
+        }
+        if (!format_castle_title(
+            title,
+            0,
+            0,
+            window_titles[slot],
+            sizeof(window_titles[slot])
+        ))
+        {
+            app_logger_write("Unable to format the castle window title.");
             app_alerts_show(APP_ALERT_DOCUMENT_WINDOW_TITLE_MISSING);
             return 0;
         }
@@ -1759,11 +1771,17 @@ short document_window_add_castle(void)
 
     if (!window_has_castle_document[slot])
     {
-        app_logger_write("Castle addition ignored: active window is not a DAT document.");
-        return 0;
+        window_documents[slot].castles = 0;
+        window_documents[slot].castle_count = 0;
+        window_has_castle_document[slot] = 1;
+        window_selected_castles[slot] = 0;
+        insert_index = 0;
+    }
+    else
+    {
+        insert_index = window_selected_castles[slot] + 1;
     }
 
-    insert_index = window_selected_castles[slot] + 1;
     if (!castle_data_insert_castle(&window_documents[slot], insert_index))
     {
         app_logger_write("Castle addition failed.");
