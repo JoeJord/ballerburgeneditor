@@ -897,3 +897,201 @@ CastleDataReadResult castle_data_read(
     *document = parsed_document;
     return CASTLE_DATA_READ_OK;
 }
+
+/**
+ * Writes a single integer token to the file.
+ *
+ * @param file File to write to.
+ * @param value Integer value to write.
+ * @return Non-zero if the value was written successfully.
+ */
+static short write_integer(FILE *file, int value)
+{
+    return fprintf(file, "%d ", value) >= 0;
+}
+
+/**
+ * Writes a castle's drawing commands to the file.
+ *
+ * @param file File to write to.
+ * @param castle Castle whose drawing to write.
+ * @return Non-zero if the drawing was written successfully.
+ */
+static short write_drawing(FILE *file, const CastleDataCastle *castle)
+{
+    size_t index;
+    size_t point_index;
+
+    for (index = 0; index < castle->drawing_count; index++)
+    {
+        const CastleDataDrawing *drawing = &castle->drawing[index];
+
+        switch (drawing->type)
+        {
+            case CASTLE_DATA_DRAW_POLYGON:
+                for (point_index = 0;
+                     point_index < drawing->value.polygon.point_count;
+                     point_index++)
+                {
+                    const CastleDataPoint *point =
+                        &drawing->value.polygon.points[point_index];
+                    if (!write_integer(file, point->x)
+                        || !write_integer(file, point->y))
+                    {
+                        return 0;
+                    }
+                }
+                if (!write_integer(file, CASTLE_DATA_POLYGON_TERMINATOR))
+                {
+                    return 0;
+                }
+                break;
+
+            case CASTLE_DATA_DRAW_FILL_STYLE:
+                if (!write_integer(file, CASTLE_DATA_FILL_STYLE_MARKER)
+                    || !write_integer(file, drawing->value.fill_style.style)
+                    || !write_integer(file, drawing->value.fill_style.index))
+                {
+                    return 0;
+                }
+                break;
+
+            case CASTLE_DATA_DRAW_TOGGLE_MODE:
+                if (!write_integer(file, CASTLE_DATA_DRAW_MODE_MARKER))
+                {
+                    return 0;
+                }
+                break;
+        }
+    }
+    return 1;
+}
+
+/**
+ * Writes a single castle record to the file.
+ *
+ * @param file File to write to.
+ * @param castle Castle to write.
+ * @return Non-zero if the castle was written successfully.
+ */
+static short write_castle(FILE *file, const CastleDataCastle *castle)
+{
+    size_t index;
+
+    if (!write_integer(file, castle->width))
+    {
+        return 0;
+    }
+
+    for (index = 0; index < CASTLE_DATA_CANNON_POSITION_COUNT; index++)
+    {
+        const CastleDataPoint *point = &castle->cannons[index];
+        if (index < castle->cannon_count)
+        {
+            if (!write_integer(file, point->x) || !write_integer(file, point->y))
+            {
+                return 0;
+            }
+        }
+        else
+        {
+            if (!write_integer(file, -1) || !write_integer(file, -1))
+            {
+                return 0;
+            }
+        }
+    }
+
+    if (!write_integer(file, castle->throne.x)
+        || !write_integer(file, castle->throne.y)
+        || !write_integer(file, castle->wind_vane.x)
+        || !write_integer(file, castle->wind_vane.y)
+        || !write_integer(file, castle->money.x)
+        || !write_integer(file, castle->money.y)
+        || !write_integer(file, castle->powder.x)
+        || !write_integer(file, castle->powder.y)
+        || !write_integer(file, castle->cannonballs.x)
+        || !write_integer(file, castle->cannonballs.y)
+        || !write_integer(file, castle->money_storage.width)
+        || !write_integer(file, castle->money_storage.height)
+        || !write_integer(file, castle->powder_storage.width)
+        || !write_integer(file, castle->powder_storage.height)
+        || !write_integer(file, castle->cannonball_storage.width)
+        || !write_integer(file, castle->cannonball_storage.height)
+        || !write_integer(file, castle->resources.money)
+        || !write_integer(file, castle->resources.powder)
+        || !write_integer(file, castle->resources.cannonballs)
+        || !write_integer(file, castle->resources.people))
+    {
+        return 0;
+    }
+
+    for (index = 0; index < CASTLE_DATA_RESERVED_VALUE_COUNT; index++)
+    {
+        if (!write_integer(file, castle->reserved[index]))
+        {
+            return 0;
+        }
+    }
+
+    if (!write_drawing(file, castle))
+    {
+        return 0;
+    }
+
+    if (!write_integer(file, CASTLE_DATA_RECORD_TERMINATOR))
+    {
+        return 0;
+    }
+
+    return 1;
+}
+
+/**
+ * Writes a castles file from a document.
+ *
+ * @param path File path to write.
+ * @param document Document to write.
+ * @return The write result.
+ */
+CastleDataWriteResult castle_data_write(
+    const char *path,
+    const CastleDataDocument *document
+)
+{
+    FILE *file;
+    size_t index;
+
+    if (!path || !document)
+    {
+        return CASTLE_DATA_WRITE_INVALID_ARGUMENT;
+    }
+
+    file = fopen(path, "wb");
+    if (!file)
+    {
+        return CASTLE_DATA_WRITE_IO_ERROR;
+    }
+
+    for (index = 0; index < document->castle_count; index++)
+    {
+        if (!write_castle(file, &document->castles[index]))
+        {
+            fclose(file);
+            return CASTLE_DATA_WRITE_IO_ERROR;
+        }
+    }
+
+    if (!write_integer(file, CASTLE_DATA_FILE_TERMINATOR))
+    {
+        fclose(file);
+        return CASTLE_DATA_WRITE_IO_ERROR;
+    }
+
+    if (fclose(file) != 0)
+    {
+        return CASTLE_DATA_WRITE_IO_ERROR;
+    }
+
+    return CASTLE_DATA_WRITE_OK;
+}

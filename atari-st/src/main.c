@@ -187,7 +187,13 @@ int main(void)
                 break;
 
             case MENU_ACTION_SAVE:
-                app_logger_write("Action: Save requested; not implemented.");
+                app_logger_write("Action: Save document.");
+                document_window_save(0);
+                break;
+
+            case MENU_ACTION_SAVE_AS:
+                app_logger_write("Action: Save document as.");
+                document_window_save(1);
                 break;
 
             case MENU_ACTION_ABOUT:
@@ -282,6 +288,14 @@ int main(void)
         if (!menu_set_add_castle_enabled(document_window_has_open_windows()))
         {
             app_logger_write("Unable to update add castle menu item.");
+        }
+        if (!menu_set_save_enabled(document_window_is_modified()))
+        {
+            app_logger_write("Unable to update save menu item.");
+        }
+        if (!menu_set_save_as_enabled(document_window_has_open_windows()))
+        {
+            app_logger_write("Unable to update save as menu item.");
         }
     }
 

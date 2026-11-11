@@ -141,6 +141,19 @@ typedef enum
 } CastleDataReadResult;
 
 /**
+ * Result of writing a castles file.
+ */
+typedef enum
+{
+    /** The document was written successfully. */
+    CASTLE_DATA_WRITE_OK,
+    /** The path is invalid or the file could not be written. */
+    CASTLE_DATA_WRITE_IO_ERROR,
+    /** A required function argument was null. */
+    CASTLE_DATA_WRITE_INVALID_ARGUMENT
+} CastleDataWriteResult;
+
+/**
  * Reads a BALLER.DAT file, replacing the initialized output document on success.
  *
  * @param path File path to read.
@@ -187,5 +200,17 @@ short castle_data_add_castle(CastleDataDocument *document);
  * @return Non-zero if the castle was inserted successfully.
  */
 short castle_data_insert_castle(CastleDataDocument *document, size_t index);
+
+/**
+ * Writes a castles file from a document.
+ *
+ * @param path File path to write.
+ * @param document Document to write.
+ * @return The write result.
+ */
+CastleDataWriteResult castle_data_write(
+    const char *path,
+    const CastleDataDocument *document
+);
 
 #endif

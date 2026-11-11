@@ -18,6 +18,8 @@ typedef enum
     MENU_ACTION_CLOSE,
     /** The user requested saving the active document. */
     MENU_ACTION_SAVE,
+    /** The user requested saving the active document with a new filename. */
+    MENU_ACTION_SAVE_AS,
     /** The user selected the application information item. */
     MENU_ACTION_ABOUT,
     /** The user selected the quit item. */
@@ -105,6 +107,22 @@ short menu_set_delete_castle_enabled(short enabled);
  * @return Non-zero if AES updated the menu item successfully.
  */
 short menu_set_add_castle_enabled(short enabled);
+
+/**
+ * Enables or disables the File > Save menu item.
+ *
+ * @param enabled Non-zero to enable the item.
+ * @return Non-zero if AES updated the menu item successfully.
+ */
+short menu_set_save_enabled(short enabled);
+
+/**
+ * Enables or disables the File > Save As menu item.
+ *
+ * @param enabled Non-zero to enable the item.
+ * @return Non-zero if AES updated the menu item successfully.
+ */
+short menu_set_save_as_enabled(short enabled);
 
 /**
  * Handles a message from the application's AES event loop.

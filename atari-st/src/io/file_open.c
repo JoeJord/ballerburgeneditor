@@ -163,13 +163,19 @@ static short combine_selected_path(
 }
 
 /**
- * Shows the GEM file selector filtered to DAT files.
+ * Internal implementation for file selection dialogs.
  *
+ * @param title_resource Resource ID for the dialog title.
+ * @param log_prefix Prefix for log messages.
  * @param selected_path Receives a pointer to the selected full path, valid
  *                      until the next call to this function.
  * @return 1 if a file was selected, 0 if cancelled, or -1 on error.
  */
-short file_open_select(const char **selected_path)
+static short file_select_internal(
+    short title_resource,
+    const char *log_prefix,
+    const char **selected_path
+)
 {
     char path[OPEN_PATH_LENGTH];
     char file[FILE_NAME_LENGTH];
@@ -191,7 +197,7 @@ short file_open_select(const char **selected_path)
         return -1;
     }
 
-    dialog_title = app_resources_get_string(MSG_FILE_OPEN);
+    dialog_title = app_resources_get_string(title_resource);
     if (!dialog_title)
     {
         app_logger_write("File selector title is missing from the resources.");
@@ -230,6 +236,30 @@ short file_open_select(const char **selected_path)
     }
 
     *selected_path = selected_file_path;
-    app_logger_write("DAT file selected.");
+    app_logger_write(log_prefix);
     return 1;
+}
+
+/**
+ * Shows the GEM file selector filtered to DAT files.
+ *
+ * @param selected_path Receives a pointer to the selected full path, valid
+ *                      until the next call to this function.
+ * @return 1 if a file was selected, 0 if cancelled, or -1 on error.
+ */
+short file_open_select(const char **selected_path)
+{
+    return file_select_internal(MSG_FILE_OPEN, "DAT file selected.", selected_path);
+}
+
+/**
+ * Shows the GEM file selector for saving DAT files.
+ *
+ * @param selected_path Receives a pointer to the selected full path, valid
+ *                      until the next call to this function.
+ * @return 1 if a file was selected, 0 if cancelled, or -1 on error.
+ */
+short file_save_select(const char **selected_path)
+{
+    return file_select_internal(MSG_FILE_SAVE, "DAT file selected for saving.", selected_path);
 }

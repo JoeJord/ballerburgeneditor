@@ -1,5 +1,6 @@
 #include <gem.h>
 #include <limits.h>
+#include <osbind.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,6 +11,7 @@
 #include "app_resources.h"
 #include "castle_data.h"
 #include "document_window.h"
+#include "file_open.h"
 #include "toolbar.h"
 
 /** AES has seven application window handles; one is used by the toolbar. */
@@ -82,6 +84,8 @@ static size_t window_selected_castles[MAX_DOCUMENT_WINDOWS];
 static char window_titles[MAX_DOCUMENT_WINDOWS][CASTLE_TITLE_BUFFER_SIZE];
 /** Basename of the DAT file associated with each document window. */
 static char window_file_names[MAX_DOCUMENT_WINDOWS][CASTLE_TITLE_BUFFER_SIZE];
+/** Whether each document has an associated file path. */
+static short window_has_file_path[MAX_DOCUMENT_WINDOWS];
 /** Normal window bounds restored after unmaximizing each document window. */
 static GRECT restore_bounds[MAX_DOCUMENT_WINDOWS];
 /** Whether each document window is currently maximized. */
@@ -1177,6 +1181,7 @@ static short close_window(short slot)
     castle_data_document_destroy(&window_documents[slot]);
     window_has_castle_document[slot] = 0;
     window_selected_castles[slot] = 0;
+    window_has_file_path[slot] = 0;
     window_modified[slot] = 0;
     window_maximized[slot] = 0;
     app_logger_write("Document window closed.");
@@ -1347,12 +1352,14 @@ static short create_document_window(
         document->castle_count = 0;
         window_has_castle_document[slot] = 1;
         window_selected_castles[slot] = 0;
+        window_has_file_path[slot] = 0;
         window_modified[slot] = 0;
     }
     else
     {
         window_has_castle_document[slot] = 0;
         window_selected_castles[slot] = 0;
+        window_has_file_path[slot] = 0;
         window_modified[slot] = 0;
     }
     restore_bounds[slot].g_x = x;
@@ -1397,6 +1404,7 @@ short document_window_open_file(const char *path)
     size_t error_token;
     const char *file_name;
     char log_message[96];
+    short slot;
 
     if (!document_window_has_capacity())
     {
@@ -1458,6 +1466,13 @@ short document_window_open_file(const char *path)
         castle_data_document_destroy(&document);
         return 0;
     }
+
+    slot = find_window_slot(active_document_handle);
+    if (slot >= 0)
+    {
+        window_has_file_path[slot] = 1;
+    }
+
     return 1;
 }
 
@@ -1676,6 +1691,151 @@ short document_window_has_castle(void)
     }
 
     return window_documents[slot].castle_count > 0;
+}
+
+/**
+ * Checks whether the active document has unsaved changes.
+ *
+ * @return Non-zero if the active document has been modified.
+ */
+short document_window_is_modified(void)
+{
+    short active_handle;
+    short slot;
+
+    slot = find_active_document(&active_handle);
+    if (slot < 0)
+    {
+        return 0;
+    }
+
+    return window_modified[slot];
+}
+
+/**
+ * Saves the active document.
+ *
+ * If the document has no associated file, the save-as dialog is shown.
+ * On success, the modification flag is cleared and the window title is updated.
+ *
+ * @param force_dialog Non-zero to always show the save-as dialog.
+ * @return Non-zero if the document was saved successfully.
+ */
+short document_window_save(short force_dialog)
+{
+    short active_handle;
+    short slot;
+    const char *save_path;
+    const char *file_name;
+    short selection_result;
+    CastleDataWriteResult write_result;
+    size_t title_length;
+    short handle;
+    char full_path[256];
+    char directory[128];
+    short drive;
+
+    slot = find_active_document(&active_handle);
+    if (slot < 0)
+    {
+        app_logger_write("Save failed: no active document.");
+        return 0;
+    }
+
+    if (force_dialog || !window_has_file_path[slot])
+    {
+        app_logger_write("Showing save-as dialog.");
+        selection_result = file_save_select(&save_path);
+        if (selection_result <= 0)
+        {
+            app_logger_write((selection_result == 0) ? "Save-as cancelled." : "Save-as dialog failed.");
+            return 0;
+        }
+
+        handle = window_handles[slot];
+        window_file_names[slot][0] = '\0';
+        title_length = 0;
+        file_name = strrchr(save_path, '\\');
+        if (file_name)
+        {
+            file_name++;
+        }
+        else
+        {
+            file_name = save_path;
+        }
+        if (!append_title_text(
+            window_file_names[slot],
+            sizeof(window_file_names[slot]),
+            &title_length,
+            file_name
+        ))
+        {
+            app_logger_write("Unable to store the document file name.");
+            return 0;
+        }
+
+        if (!format_castle_title(
+            slot,
+            window_file_names[slot],
+            window_documents[slot].castle_count > 0
+                ? window_selected_castles[slot] + 1
+                : 0,
+            window_documents[slot].castle_count,
+            window_titles[slot],
+            sizeof(window_titles[slot])
+        ))
+        {
+            app_logger_write("Unable to format window title after save-as.");
+        }
+        else if (!wind_set_str(handle, WF_NAME, window_titles[slot]))
+        {
+            app_logger_write("Unable to update window title after save-as.");
+        }
+
+        window_has_file_path[slot] = 1;
+    }
+    else
+    {
+        drive = Dgetdrv();
+        if (Dgetpath(directory, drive + 1) < 0)
+        {
+            app_logger_write("Unable to get current directory for save.");
+            return 0;
+        }
+        sprintf(full_path, "%c:\\%s\\%s", 'A' + drive, directory, window_file_names[slot]);
+        save_path = full_path;
+    }
+
+    write_result = castle_data_write(save_path, &window_documents[slot]);
+    if (write_result != CASTLE_DATA_WRITE_OK)
+    {
+        app_logger_write("Save failed: unable to write document.");
+        return 0;
+    }
+
+    window_modified[slot] = 0;
+    app_logger_write("Document saved successfully.");
+
+    if (!format_castle_title(
+        slot,
+        window_file_names[slot],
+        window_documents[slot].castle_count > 0
+            ? window_selected_castles[slot] + 1
+            : 0,
+        window_documents[slot].castle_count,
+        window_titles[slot],
+        sizeof(window_titles[slot])
+    ))
+    {
+        app_logger_write("Unable to format window title after save.");
+    }
+    else if (!wind_set_str(active_handle, WF_NAME, window_titles[slot]))
+    {
+        app_logger_write("Unable to update window title after save.");
+    }
+
+    return 1;
 }
 
 /**

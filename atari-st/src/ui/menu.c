@@ -33,6 +33,10 @@ static short next_castle_enabled;
 static short delete_castle_enabled;
 /** Current enabled state of the Add Castle menu item. */
 static short add_castle_enabled;
+/** Current enabled state of the File > Save menu item. */
+static short save_enabled;
+/** Current enabled state of the File > Save As menu item. */
+static short save_as_enabled;
 
 /**
  * Loads the menu resource and installs its MAIN tree with AES.
@@ -78,6 +82,8 @@ short menu_show(void)
     next_castle_enabled = -1;
     delete_castle_enabled = -1;
     add_castle_enabled = -1;
+    save_enabled = -1;
+    save_as_enabled = -1;
     if (!menu_set_castle_navigation_enabled(0, 0))
     {
         app_logger_write("Unable to disable castle navigation menu items.");
@@ -103,6 +109,16 @@ short menu_show(void)
         return 0;
     }
     document_creation_enabled = 1;
+    if (!menu_ienable(menu_tree, MENU_FILE_SAVE, 0)
+        || !menu_ienable(menu_tree, MENU_FILE_SAVEAS, 0))
+    {
+        app_alerts_show(APP_ALERT_DOCUMENT_MENU_UPDATE_FAILED);
+        app_resources_release();
+        menu_tree = 0;
+        return 0;
+    }
+    save_enabled = 0;
+    save_as_enabled = 0;
 
     if (!menu_bar(menu_tree, 1))
     {
@@ -135,6 +151,8 @@ void menu_hide(void)
     next_castle_enabled = 0;
     delete_castle_enabled = 0;
     add_castle_enabled = 0;
+    save_enabled = 0;
+    save_as_enabled = 0;
 }
 
 /**
@@ -308,6 +326,66 @@ short menu_set_add_castle_enabled(short enabled)
 }
 
 /**
+ * Enables or disables the File > Save menu item.
+ *
+ * @param enabled Non-zero to enable the item.
+ * @return Non-zero if AES updated the menu item successfully.
+ */
+short menu_set_save_enabled(short enabled)
+{
+    short new_state;
+
+    new_state = enabled != 0;
+    if (new_state == save_enabled)
+    {
+        return 1;
+    }
+
+    if (!menu_ienable(menu_tree, MENU_FILE_SAVE, new_state))
+    {
+        return 0;
+    }
+
+    save_enabled = new_state;
+    app_logger_write(
+        new_state
+            ? "File > Save menu item enabled."
+            : "File > Save menu item disabled."
+    );
+    return 1;
+}
+
+/**
+ * Enables or disables the File > Save As menu item.
+ *
+ * @param enabled Non-zero to enable the item.
+ * @return Non-zero if AES updated the menu item successfully.
+ */
+short menu_set_save_as_enabled(short enabled)
+{
+    short new_state;
+
+    new_state = enabled != 0;
+    if (new_state == save_as_enabled)
+    {
+        return 1;
+    }
+
+    if (!menu_ienable(menu_tree, MENU_FILE_SAVEAS, new_state))
+    {
+        return 0;
+    }
+
+    save_as_enabled = new_state;
+    app_logger_write(
+        new_state
+            ? "File > Save As menu item enabled."
+            : "File > Save As menu item disabled."
+    );
+    return 1;
+}
+
+/**
  * Handles a message from AES and normalizes selected menu titles.
  *
  * @param message Eight-word AES message buffer.
@@ -339,6 +417,10 @@ MenuAction menu_handle_message(const short message[8])
 
         case MENU_FILE_SAVE:
             action = MENU_ACTION_SAVE;
+            break;
+
+        case MENU_FILE_SAVEAS:
+            action = MENU_ACTION_SAVE_AS;
             break;
 
         case MENU_ABOUT:
@@ -444,7 +526,7 @@ MenuAction menu_handle_key(short key, short key_state)
             return close_enabled ? MENU_ACTION_CLOSE : MENU_ACTION_NONE;
 
         case MENU_SCAN_S:
-            return MENU_ACTION_SAVE;
+            return save_enabled ? MENU_ACTION_SAVE : MENU_ACTION_NONE;
 
         case MENU_SCAN_Q:
             return MENU_ACTION_QUIT;

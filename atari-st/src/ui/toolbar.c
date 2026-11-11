@@ -4,6 +4,7 @@
 #include "app_alerts.h"
 #include "app_logger.h"
 #include "app_resources.h"
+#include "document_window.h"
 #include "toolbar.h"
 
 /** Width of each toolbar button's layout and hit area. */
@@ -28,6 +29,7 @@ static ToolbarButton toolbar_buttons[] = {
     { MENU_ACTION_QUIT, IC_QUIT, 0, 0 },
     { MENU_ACTION_NEW, IC_FILE_NEW, 0, 0 },
     { MENU_ACTION_OPEN, IC_FILE_OPEN, 0, 0 },
+    { MENU_ACTION_SAVE, IC_FILE_SAVE, 0, 0 },
     { MENU_ACTION_PREVIOUS_CASTLE, IC_PREV_CASTLE, 0, 0 },
     { MENU_ACTION_NEXT_CASTLE, IC_NEXT_CASTLE, 0, 0 },
     { MENU_ACTION_DELETE_CASTLE, IC_CASTLE_DEL, 0, 0 },
@@ -89,6 +91,10 @@ static short load_toolbar_icons(void)
                 break;
 
             case MENU_ACTION_SAVE:
+                app_logger_write("Loading toolbar icon IC_FILE_SAVE.");
+                break;
+
+            case MENU_ACTION_SAVE_AS:
                 break;
 
             case MENU_ACTION_ABOUT:
@@ -547,6 +553,11 @@ MenuAction toolbar_handle_click(short x, short y)
                     break;
 
                 case MENU_ACTION_SAVE:
+                    app_logger_write("Toolbar: Save button clicked.");
+                    document_window_save(0);
+                    break;
+
+                case MENU_ACTION_SAVE_AS:
                     break;
 
                 case MENU_ACTION_ABOUT:

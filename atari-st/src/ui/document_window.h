@@ -74,6 +74,24 @@ short document_window_has_capacity(void);
 short document_window_has_castle(void);
 
 /**
+ * Checks whether the active document has unsaved changes.
+ *
+ * @return Non-zero if the active document has been modified.
+ */
+short document_window_is_modified(void);
+
+/**
+ * Saves the active document.
+ *
+ * If the document has no associated file, the save-as dialog is shown.
+ * On success, the modification flag is cleared and the window title is updated.
+ *
+ * @param force_dialog Non-zero to always show the save-as dialog.
+ * @return Non-zero if the document was saved successfully.
+ */
+short document_window_save(short force_dialog);
+
+/**
  * Removes the currently selected castle from the active document.
  *
  * @return Non-zero if a castle was removed successfully.
