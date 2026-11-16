@@ -734,7 +734,7 @@ static void draw_wind_vane(
     short flag_top[4];
     short flag_bottom[4];
 
-    if (position.x < 0 || position.y < 0)
+    if (!castle_data_is_point_set(&position))
     {
         return;
     }
@@ -790,7 +790,7 @@ static void draw_castle_objects(
 {
     size_t index;
 
-    if (castle->throne.x >= 0 && castle->throne.y >= 0)
+    if (castle_data_is_point_set(&castle->throne))
     {
         draw_white_rectangle(
             origin_x + castle->throne.x,
@@ -808,7 +808,7 @@ static void draw_castle_objects(
     }
     for (index = 0; index < castle->cannon_count; index++)
     {
-        if (castle->cannons[index].x < 0 || castle->cannons[index].y < 0)
+        if (!castle_data_is_point_set(&castle->cannons[index]))
         {
             continue;
         }
@@ -821,7 +821,7 @@ static void draw_castle_objects(
         );
     }
 
-    if (castle->money.x >= 0 && castle->money.y >= 0)
+    if (castle_data_is_point_set(&castle->money))
     {
         draw_resource_stack(
             castle->money,
@@ -835,7 +835,7 @@ static void draw_castle_objects(
             RESOURCE_PLACEHOLDER_MONEY
         );
     }
-    if (castle->powder.x >= 0 && castle->powder.y >= 0)
+    if (castle_data_is_point_set(&castle->powder))
     {
         draw_resource_stack(
             castle->powder,
@@ -849,7 +849,7 @@ static void draw_castle_objects(
             RESOURCE_PLACEHOLDER_POWDER
         );
     }
-    if (castle->cannonballs.x >= 0 && castle->cannonballs.y >= 0)
+    if (castle_data_is_point_set(&castle->cannonballs))
     {
         draw_resource_stack(
             castle->cannonballs,

@@ -6,6 +6,263 @@
 
 #include "castle_data.h"
 
+/**
+ * Coordinate translation offset for normalization.
+ */
+typedef struct
+{
+    int x;
+    int y;
+} CoordinateOffset;
+
+/**
+ * Checks whether a point has a defined position (not using the unset sentinel).
+ *
+ * @param point Point to test.
+ * @return Non-zero if the point is set, zero if unset.
+ */
+short castle_data_is_point_set(const CastleDataPoint *point)
+{
+    return point->x != CASTLE_DATA_UNSET_COORDINATE
+        && point->y != CASTLE_DATA_UNSET_COORDINATE;
+}
+
+/**
+ * Translates a point by the supplied coordinate offset.
+ *
+ * @param point Point to translate.
+ * @param offset Horizontal and vertical translation.
+ * @return The translated point.
+ */
+static CastleDataPoint translate_point(
+    CastleDataPoint point,
+    const CoordinateOffset *offset
+)
+{
+    CastleDataPoint translated;
+    translated.x = point.x + offset->x;
+    translated.y = point.y + offset->y;
+    return translated;
+}
+
+/**
+ * Translates a point only when it is set.
+ *
+ * @param point Point to translate if set.
+ * @param offset Horizontal and vertical translation.
+ * @return The original unset point, or the translated point when set.
+ */
+static CastleDataPoint translate_if_set(
+    CastleDataPoint point,
+    const CoordinateOffset *offset
+)
+{
+    return castle_data_is_point_set(&point) ? translate_point(point, offset) : point;
+}
+
+/**
+ * Updates the minimum coordinates if the point is set and provides smaller values.
+ *
+ * @param point Point to compare against current minima.
+ * @param minimum_x Address of the current minimum X; updated if smaller.
+ * @param minimum_y Address of the current minimum Y; updated if smaller.
+ */
+static void update_minimum(
+    const CastleDataPoint *point,
+    int *minimum_x,
+    int *minimum_y
+)
+{
+    if (!castle_data_is_point_set(point))
+    {
+        return;
+    }
+    if (point->x < *minimum_x)
+    {
+        *minimum_x = point->x;
+    }
+    if (point->y < *minimum_y)
+    {
+        *minimum_y = point->y;
+    }
+}
+
+/**
+ * Converts a point from file-format -1,-1 to the model's unset sentinel.
+ *
+ * @param point Point to convert.
+ */
+static void convert_unset_point(CastleDataPoint *point)
+{
+    if (point->x == -1 && point->y == -1)
+    {
+        point->x = CASTLE_DATA_UNSET_COORDINATE;
+        point->y = CASTLE_DATA_UNSET_COORDINATE;
+    }
+}
+
+/**
+ * Calculates the translation that moves set coordinates to a non-negative origin.
+ *
+ * @param castle Castle whose set coordinates determine the translation.
+ * @return The x and y translation needed to normalize set coordinates.
+ */
+static CoordinateOffset calculate_offset(const CastleDataCastle *castle)
+{
+    CoordinateOffset offset;
+    int minimum_x;
+    int minimum_y;
+    size_t index;
+    size_t drawing_index;
+    size_t point_index;
+
+    minimum_x = INT_MAX;
+    minimum_y = INT_MAX;
+
+    for (index = 0; index < castle->cannon_count; index++)
+    {
+        update_minimum(&castle->cannons[index], &minimum_x, &minimum_y);
+    }
+
+    for (drawing_index = 0; drawing_index < castle->drawing_count; drawing_index++)
+    {
+        const CastleDataDrawing *drawing = &castle->drawing[drawing_index];
+        if (drawing->type == CASTLE_DATA_DRAW_POLYGON)
+        {
+            for (point_index = 0;
+                 point_index < drawing->value.polygon.point_count;
+                 point_index++)
+            {
+                update_minimum(&drawing->value.polygon.points[point_index],
+                               &minimum_x, &minimum_y);
+            }
+        }
+    }
+
+    update_minimum(&castle->throne, &minimum_x, &minimum_y);
+    update_minimum(&castle->wind_vane, &minimum_x, &minimum_y);
+    update_minimum(&castle->money, &minimum_x, &minimum_y);
+    update_minimum(&castle->powder, &minimum_x, &minimum_y);
+    update_minimum(&castle->cannonballs, &minimum_x, &minimum_y);
+
+    if (minimum_x == INT_MAX)
+    {
+        offset.x = 0;
+        offset.y = 0;
+    }
+    else
+    {
+        offset.x = -minimum_x;
+        offset.y = -minimum_y;
+    }
+    return offset;
+}
+
+/**
+ * Releases the dynamic drawing data owned by a normalized castle.
+ *
+ * @param castle Castle to release; may be a shallow copy.
+ */
+static void destroy_normalized_castle(CastleDataCastle *castle)
+{
+    size_t index;
+
+    for (index = 0; index < castle->drawing_count; index++)
+    {
+        if (castle->drawing[index].type == CASTLE_DATA_DRAW_POLYGON)
+        {
+            free(castle->drawing[index].value.polygon.points);
+        }
+    }
+    free(castle->drawing);
+}
+
+/**
+ * Translates set castle coordinates so the minimum x and y coordinates are zero.
+ *
+ * @param castle Castle whose set coordinates are translated.
+ * @return A castle translated so set coordinates start at a non-negative origin.
+ */
+static CastleDataCastle normalize_castle(const CastleDataCastle *castle)
+{
+    CastleDataCastle normalized;
+    CoordinateOffset offset;
+    size_t index;
+    size_t drawing_index;
+    size_t point_index;
+
+    offset = calculate_offset(castle);
+    if (offset.x == 0 && offset.y == 0)
+    {
+        memset(&normalized, 0, sizeof(normalized));
+        return normalized;
+    }
+
+    memset(&normalized, 0, sizeof(normalized));
+    normalized.width = castle->width;
+    normalized.cannon_count = castle->cannon_count;
+    for (index = 0; index < castle->cannon_count; index++)
+    {
+        normalized.cannons[index] =
+            translate_if_set(castle->cannons[index], &offset);
+    }
+
+    normalized.throne = translate_if_set(castle->throne, &offset);
+    normalized.wind_vane = translate_if_set(castle->wind_vane, &offset);
+    normalized.money = translate_if_set(castle->money, &offset);
+    normalized.powder = translate_if_set(castle->powder, &offset);
+    normalized.cannonballs = translate_if_set(castle->cannonballs, &offset);
+    normalized.money_storage = castle->money_storage;
+    normalized.powder_storage = castle->powder_storage;
+    normalized.cannonball_storage = castle->cannonball_storage;
+    normalized.resources = castle->resources;
+    for (index = 0; index < CASTLE_DATA_RESERVED_VALUE_COUNT; index++)
+    {
+        normalized.reserved[index] = castle->reserved[index];
+    }
+
+    normalized.drawing =
+        (CastleDataDrawing *)malloc(castle->drawing_count * sizeof(CastleDataDrawing));
+    if (!normalized.drawing)
+    {
+        normalized.drawing_count = 0;
+        return normalized;
+    }
+
+    for (drawing_index = 0; drawing_index < castle->drawing_count;
+         drawing_index++)
+    {
+        const CastleDataDrawing *src = &castle->drawing[drawing_index];
+        CastleDataDrawing *dst = &normalized.drawing[drawing_index];
+        dst->type = src->type;
+        if (src->type == CASTLE_DATA_DRAW_POLYGON)
+        {
+            dst->value.polygon.point_count = src->value.polygon.point_count;
+            dst->value.polygon.points = (CastleDataPoint *)malloc(
+                src->value.polygon.point_count * sizeof(CastleDataPoint));
+            if (!dst->value.polygon.points)
+            {
+                normalized.drawing_count = drawing_index;
+                return normalized;
+            }
+            for (point_index = 0;
+                 point_index < src->value.polygon.point_count;
+                 point_index++)
+            {
+                dst->value.polygon.points[point_index] =
+                    translate_point(src->value.polygon.points[point_index], &offset);
+            }
+        }
+        else if (src->type == CASTLE_DATA_DRAW_FILL_STYLE)
+        {
+            dst->value.fill_style = src->value.fill_style;
+        }
+        normalized.drawing_count++;
+    }
+
+    return normalized;
+}
+
 /** Streaming lexical state and the first error found while parsing. */
 typedef struct
 {
@@ -535,8 +792,18 @@ static short read_castle(
         || !read_point(parser, &castle->wind_vane)
         || !read_point(parser, &castle->money)
         || !read_point(parser, &castle->powder)
-        || !read_point(parser, &castle->cannonballs)
-        || !read_required_integer(parser, &castle->money_storage.width)
+        || !read_point(parser, &castle->cannonballs))
+    {
+        return 0;
+    }
+
+    convert_unset_point(&castle->throne);
+    convert_unset_point(&castle->wind_vane);
+    convert_unset_point(&castle->money);
+    convert_unset_point(&castle->powder);
+    convert_unset_point(&castle->cannonballs);
+
+    if (!read_required_integer(parser, &castle->money_storage.width)
         || !read_required_integer(parser, &castle->money_storage.height)
         || !read_required_integer(parser, &castle->powder_storage.width)
         || !read_required_integer(parser, &castle->powder_storage.height)
@@ -669,16 +936,16 @@ short castle_data_add_castle(CastleDataDocument *document)
     memset(&castle, 0, sizeof(castle));
     castle.width = 100;
     castle.cannon_count = 0;
-    castle.throne.x = -1;
-    castle.throne.y = -1;
-    castle.wind_vane.x = -1;
-    castle.wind_vane.y = -1;
-    castle.money.x = -1;
-    castle.money.y = -1;
-    castle.powder.x = -1;
-    castle.powder.y = -1;
-    castle.cannonballs.x = -1;
-    castle.cannonballs.y = -1;
+    castle.throne.x = CASTLE_DATA_UNSET_COORDINATE;
+    castle.throne.y = CASTLE_DATA_UNSET_COORDINATE;
+    castle.wind_vane.x = CASTLE_DATA_UNSET_COORDINATE;
+    castle.wind_vane.y = CASTLE_DATA_UNSET_COORDINATE;
+    castle.money.x = CASTLE_DATA_UNSET_COORDINATE;
+    castle.money.y = CASTLE_DATA_UNSET_COORDINATE;
+    castle.powder.x = CASTLE_DATA_UNSET_COORDINATE;
+    castle.powder.y = CASTLE_DATA_UNSET_COORDINATE;
+    castle.cannonballs.x = CASTLE_DATA_UNSET_COORDINATE;
+    castle.cannonballs.y = CASTLE_DATA_UNSET_COORDINATE;
     castle.money_storage.width = 0;
     castle.money_storage.height = 0;
     castle.powder_storage.width = 0;
@@ -734,16 +1001,16 @@ short castle_data_insert_castle(CastleDataDocument *document, size_t index)
     memset(&castle, 0, sizeof(castle));
     castle.width = 100;
     castle.cannon_count = 0;
-    castle.throne.x = -1;
-    castle.throne.y = -1;
-    castle.wind_vane.x = -1;
-    castle.wind_vane.y = -1;
-    castle.money.x = -1;
-    castle.money.y = -1;
-    castle.powder.x = -1;
-    castle.powder.y = -1;
-    castle.cannonballs.x = -1;
-    castle.cannonballs.y = -1;
+    castle.throne.x = CASTLE_DATA_UNSET_COORDINATE;
+    castle.throne.y = CASTLE_DATA_UNSET_COORDINATE;
+    castle.wind_vane.x = CASTLE_DATA_UNSET_COORDINATE;
+    castle.wind_vane.y = CASTLE_DATA_UNSET_COORDINATE;
+    castle.money.x = CASTLE_DATA_UNSET_COORDINATE;
+    castle.money.y = CASTLE_DATA_UNSET_COORDINATE;
+    castle.powder.x = CASTLE_DATA_UNSET_COORDINATE;
+    castle.powder.y = CASTLE_DATA_UNSET_COORDINATE;
+    castle.cannonballs.x = CASTLE_DATA_UNSET_COORDINATE;
+    castle.cannonballs.y = CASTLE_DATA_UNSET_COORDINATE;
     castle.money_storage.width = 0;
     castle.money_storage.height = 0;
     castle.powder_storage.width = 0;
@@ -911,6 +1178,19 @@ static short write_integer(FILE *file, int value)
 }
 
 /**
+ * Writes a point coordinate, converting the unset sentinel back to -1.
+ *
+ * @param file File to write to.
+ * @param value Coordinate value to write.
+ * @return Non-zero if the value was written successfully.
+ */
+static short write_point_coordinate(FILE *file, int value)
+{
+    int output_value = (value == CASTLE_DATA_UNSET_COORDINATE) ? -1 : value;
+    return write_integer(file, output_value);
+}
+
+/**
  * Writes a castle's drawing commands to the file.
  *
  * @param file File to write to.
@@ -1002,16 +1282,16 @@ static short write_castle(FILE *file, const CastleDataCastle *castle)
         }
     }
 
-    if (!write_integer(file, castle->throne.x)
-        || !write_integer(file, castle->throne.y)
-        || !write_integer(file, castle->wind_vane.x)
-        || !write_integer(file, castle->wind_vane.y)
-        || !write_integer(file, castle->money.x)
-        || !write_integer(file, castle->money.y)
-        || !write_integer(file, castle->powder.x)
-        || !write_integer(file, castle->powder.y)
-        || !write_integer(file, castle->cannonballs.x)
-        || !write_integer(file, castle->cannonballs.y)
+    if (!write_point_coordinate(file, castle->throne.x)
+        || !write_point_coordinate(file, castle->throne.y)
+        || !write_point_coordinate(file, castle->wind_vane.x)
+        || !write_point_coordinate(file, castle->wind_vane.y)
+        || !write_point_coordinate(file, castle->money.x)
+        || !write_point_coordinate(file, castle->money.y)
+        || !write_point_coordinate(file, castle->powder.x)
+        || !write_point_coordinate(file, castle->powder.y)
+        || !write_point_coordinate(file, castle->cannonballs.x)
+        || !write_point_coordinate(file, castle->cannonballs.y)
         || !write_integer(file, castle->money_storage.width)
         || !write_integer(file, castle->money_storage.height)
         || !write_integer(file, castle->powder_storage.width)
@@ -1075,11 +1355,14 @@ CastleDataWriteResult castle_data_write(
 
     for (index = 0; index < document->castle_count; index++)
     {
-        if (!write_castle(file, &document->castles[index]))
+        CastleDataCastle normalized = normalize_castle(&document->castles[index]);
+        if (!write_castle(file, &normalized))
         {
+            destroy_normalized_castle(&normalized);
             fclose(file);
             return CASTLE_DATA_WRITE_IO_ERROR;
         }
+        destroy_normalized_castle(&normalized);
     }
 
     if (!write_integer(file, CASTLE_DATA_FILE_TERMINATOR))

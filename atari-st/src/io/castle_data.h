@@ -21,7 +21,9 @@ enum
     /** Marker that introduces a fill-style and fill-index pair. */
     CASTLE_DATA_FILL_STYLE_MARKER = -2,
     /** Marker that switches between filled polygons and outlines. */
-    CASTLE_DATA_DRAW_MODE_MARKER = -4
+    CASTLE_DATA_DRAW_MODE_MARKER = -4,
+    /** Sentinel value used in the model for unset coordinates (INT_MIN). */
+    CASTLE_DATA_UNSET_COORDINATE = -2147483648
 };
 
 /**
@@ -212,5 +214,13 @@ CastleDataWriteResult castle_data_write(
     const char *path,
     const CastleDataDocument *document
 );
+
+/**
+ * Checks whether a point has a defined position (not using the unset sentinel).
+ *
+ * @param point Point to test.
+ * @return Non-zero if the point is set, zero if unset.
+ */
+short castle_data_is_point_set(const CastleDataPoint *point);
 
 #endif
