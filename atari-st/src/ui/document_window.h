@@ -81,6 +81,20 @@ short document_window_has_castle(void);
 short document_window_is_modified(void);
 
 /**
+ * Checks whether any document has unsaved changes.
+ *
+ * @return Non-zero if any document has been modified.
+ */
+short document_window_has_unsaved_changes(void);
+
+/**
+ * Closes all document windows, prompting to save each unsaved document.
+ *
+ * @return Non-zero if all documents were closed successfully.
+ */
+short document_window_close_all(void);
+
+/**
  * Saves the active document.
  *
  * If the document has no associated file, the save-as dialog is shown.

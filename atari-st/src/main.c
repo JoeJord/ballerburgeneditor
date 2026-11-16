@@ -136,6 +136,19 @@ int main(void)
         action = MENU_ACTION_NONE;
         if (event_flags & MU_MESAG)
         {
+            if (message[0] == AP_TERM)
+            {
+                app_logger_write("Received AP_TERM message.");
+                if (document_window_has_unsaved_changes())
+                {
+                    if (!document_window_close_all())
+                    {
+                        continue;
+                    }
+                }
+                running = 0;
+                continue;
+            }
             action = menu_handle_message(message);
             document_window_handle_message(message);
             toolbar_handle_message(message);
@@ -257,6 +270,13 @@ int main(void)
 
             case MENU_ACTION_QUIT:
                 app_logger_write("Action: Quit.");
+                if (document_window_has_unsaved_changes())
+                {
+                    if (!document_window_close_all())
+                    {
+                        break;
+                    }
+                }
                 running = 0;
                 break;
 

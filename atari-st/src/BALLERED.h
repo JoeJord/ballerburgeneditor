@@ -38,6 +38,7 @@
 #define MSG_DOC_UNTITLED 1   /* Free string in the resource */
 #define MSG_CASTLE_NO 2   /* Free string in the resource */
 #define MSG_FILE_SAVE 3   /* Free string in the resource */
+
 #define ALR_LOG_OPEN 4   /* Free string in the resource */
 #define ALR_ABOUT_MISS 5   /* Free string in the resource */
 #define ALR_CLOSE_UPD 6   /* Free string in the resource */
@@ -72,6 +73,7 @@
 #define ALR_TOOL_OPEN 35  /* Free string in the resource */
 #define ALR_TOOL_CLOSE 36  /* Free string in the resource */
 #define ALR_TOOL_DELETE 37  /* Free string in the resource */
+#define ALR_UNSAVED_CHAN 38  /* Free string in the resource */
 
 #define IC_QUIT  0   /* Icon for application exit */
 #define IC_FILE_NEW 1   /* Icon for new file */

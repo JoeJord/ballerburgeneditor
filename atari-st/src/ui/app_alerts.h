@@ -71,12 +71,15 @@ extern const char APP_ALERT_TOOLBAR_WINDOW_OPEN_FAILED[];
 extern const char APP_ALERT_TOOLBAR_WINDOW_CLOSE_FAILED[];
 /** Alert shown when AES cannot delete the toolbar window. */
 extern const char APP_ALERT_TOOLBAR_WINDOW_DELETE_FAILED[];
+/** Alert shown when closing a document with unsaved changes. */
+extern const char APP_ALERT_UNSAVED_CHANGES[];
 
 /**
  * Displays an AES alert with the standard alert icon.
  *
  * @param text Built-in fallback alert text, including its button specification.
+ * @return The button number selected by the user (1-based).
  */
-void app_alerts_show(const char *text);
+short app_alerts_show(const char *text);
 
 #endif

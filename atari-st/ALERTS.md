@@ -41,6 +41,7 @@ a message text creates a line break.
 | `ALR_TOOL_OPEN` | `[1][Die Werkzeugleiste kann nicht&#124;geöffnet werden.][Beenden]` | `[1][Unable to open the toolbar.][Quit]` |
 | `ALR_TOOL_CLOSE` | `[1][Die Werkzeugleiste kann nicht&#124;geschlossen werden.][OK]` | `[1][Unable to close the toolbar.][OK]` |
 | `ALR_TOOL_DELETE` | `[1][Die Werkzeugleiste kann nicht&#124;gelöscht werden.][OK]` | `[1][Unable to delete the toolbar.][OK]` |
+| `ALR_UNSAVED_CHANGES` | `[1][Änderungen vor dem&#124;Schließen speichern?][Abbrechen&#124;Verwerfen&#124;Speichern]` | `[2][Save changes before closing?][Cancle&#124;Discard&#124;Save]` |
 
 ## Alert when the resource file is unavailable
 

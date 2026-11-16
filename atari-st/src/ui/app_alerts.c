@@ -48,6 +48,7 @@ static const AppAlertResource alert_resources[] = {
     { APP_ALERT_TOOLBAR_WINDOW_OPEN_FAILED, ALR_TOOL_OPEN },
     { APP_ALERT_TOOLBAR_WINDOW_CLOSE_FAILED, ALR_TOOL_CLOSE },
     { APP_ALERT_TOOLBAR_WINDOW_DELETE_FAILED, ALR_TOOL_DELETE },
+    { APP_ALERT_UNSAVED_CHANGES, ALR_UNSAVED_CHAN },
     { 0, 0 }
 };
 
@@ -89,14 +90,15 @@ static const char *resolve_alert_text(const char *text)
  * Displays an AES alert with the standard alert icon.
  *
  * @param text Built-in fallback alert text, including its button specification.
+ * @return The button number selected by the user (1-based).
  */
-void app_alerts_show(const char *text)
+short app_alerts_show(const char *text)
 {
     const char *alert_text;
 
     alert_text = resolve_alert_text(text);
     app_logger_write(alert_text);
-    form_alert(1, alert_text);
+    return form_alert(1, alert_text);
 }
 
 const char APP_ALERT_LOG_OPEN_FAILED[] =
@@ -169,3 +171,5 @@ const char APP_ALERT_TOOLBAR_WINDOW_CLOSE_FAILED[] =
     "[1][Unable to close the toolbar.][OK]";
 const char APP_ALERT_TOOLBAR_WINDOW_DELETE_FAILED[] =
     "[1][Unable to delete the toolbar.][OK]";
+const char APP_ALERT_UNSAVED_CHANGES[] =
+    "[2][Save changes before closing?][Cancel|Discard|Save]";

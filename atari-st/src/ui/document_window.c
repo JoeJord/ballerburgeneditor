@@ -1151,6 +1151,53 @@ static short find_active_document(short *handle)
 }
 
 /**
+ * Checks if a window slot can be closed, prompting to save if needed.
+ *
+ * @param slot Window handle slot.
+ * @return Non-zero if the window should be closed, zero if cancelled.
+ */
+static short confirm_close(short slot)
+{
+    short alert_result;
+
+    if (!window_modified[slot])
+    {
+        return 1;
+    }
+
+    alert_result = app_alerts_show(APP_ALERT_UNSAVED_CHANGES);
+    if (alert_result == 3/*Save*/)
+    {
+        short active_handle;
+        short original_slot;
+
+        active_handle = window_handles[slot];
+        original_slot = find_active_document(&active_handle);
+        if (original_slot == slot)
+        {
+            if (!document_window_save(0))
+            {
+                return 0;
+            }
+        }
+        else
+        {
+            active_document_handle = active_handle;
+            if (!document_window_save(0))
+            {
+                return 0;
+            }
+        }
+    }
+    else if (alert_result == 1/*Cancel*/)
+    {
+        return 0;
+    }
+
+    return 1;
+}
+
+/**
  * Closes and deletes a managed window.
  *
  * @param slot Window handle slot.
@@ -1508,6 +1555,11 @@ short document_window_close_top(void)
         return 0;
     }
 
+    if (!confirm_close(slot))
+    {
+        return 0;
+    }
+
     return close_window(slot);
 }
 
@@ -1710,6 +1762,65 @@ short document_window_is_modified(void)
     }
 
     return window_modified[slot];
+}
+
+/**
+ * Checks whether any document has unsaved changes.
+ *
+ * @return Non-zero if any document has been modified.
+ */
+short document_window_has_unsaved_changes(void)
+{
+    short index;
+
+    for (index = 0; index < MAX_DOCUMENT_WINDOWS; index++)
+    {
+        if (window_handles[index] != 0 && window_modified[index])
+        {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+/**
+ * Closes all document windows, prompting to save each unsaved document.
+ *
+ * @return Non-zero if all documents were closed successfully.
+ */
+short document_window_close_all(void)
+{
+    short index;
+    short handle;
+    short slot;
+
+    for (index = 0; index < MAX_DOCUMENT_WINDOWS; index++)
+    {
+        if (window_handles[index] == 0)
+        {
+            continue;
+        }
+
+        handle = window_handles[index];
+        slot = find_window_slot(handle);
+        if (slot < 0)
+        {
+            continue;
+        }
+
+        if (!confirm_close(slot))
+        {
+            return 0;
+        }
+
+        if (!close_window(slot))
+        {
+            return 0;
+        }
+    }
+
+    return 1;
 }
 
 /**
@@ -2036,7 +2147,10 @@ void document_window_handle_message(const short message[8])
             break;
 
         case WM_CLOSED:
-            close_window(slot);
+            if (confirm_close(slot))
+            {
+                close_window(slot);
+            }
             break;
 
         case WM_TOPPED:
