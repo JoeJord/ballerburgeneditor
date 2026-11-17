@@ -192,11 +192,6 @@ static CastleDataCastle normalize_castle(const CastleDataCastle *castle)
     size_t point_index;
 
     offset = calculate_offset(castle);
-    if (offset.x == 0 && offset.y == 0)
-    {
-        memset(&normalized, 0, sizeof(normalized));
-        return normalized;
-    }
 
     memset(&normalized, 0, sizeof(normalized));
     normalized.width = castle->width;
