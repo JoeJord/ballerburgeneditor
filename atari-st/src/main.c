@@ -270,6 +270,7 @@ int main(void)
 
             case MENU_ACTION_DELETE_ELEMENT:
                 app_logger_write("Edit action requested: delete selected element.");
+                document_window_remove_selected_object();
                 break;
 
             case MENU_ACTION_QUIT:
@@ -320,6 +321,10 @@ int main(void)
         if (!menu_set_save_as_enabled(document_window_has_open_windows()))
         {
             app_logger_write("Unable to update save as menu item.");
+        }
+        if (!menu_set_delete_element_enabled(document_window_has_selected_object()))
+        {
+            app_logger_write("Unable to update delete element menu item.");
         }
     }
 

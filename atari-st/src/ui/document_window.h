@@ -136,6 +136,20 @@ void document_window_handle_message(const short message[8]);
 short document_window_handle_click(short x, short y);
 
 /**
+ * Checks whether the active document has a selected object.
+ *
+ * @return Non-zero if an object is selected in the active document.
+ */
+short document_window_has_selected_object(void);
+
+/**
+ * Removes the currently selected object from the active document.
+ *
+ * @return Non-zero if an object was removed successfully.
+ */
+short document_window_remove_selected_object(void);
+
+/**
  * Closes all document windows and releases the virtual workstation.
  */
 void document_window_shutdown(void);

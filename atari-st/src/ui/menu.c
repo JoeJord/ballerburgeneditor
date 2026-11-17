@@ -37,6 +37,8 @@ static short add_castle_enabled;
 static short save_enabled;
 /** Current enabled state of the File > Save As menu item. */
 static short save_as_enabled;
+/** Current enabled state of the Edit > Delete menu item. */
+static short delete_element_enabled;
 
 /**
  * Loads the menu resource and installs its MAIN tree with AES.
@@ -84,6 +86,7 @@ short menu_show(void)
     add_castle_enabled = -1;
     save_enabled = -1;
     save_as_enabled = -1;
+    delete_element_enabled = -1;
     if (!menu_set_castle_navigation_enabled(0, 0))
     {
         app_logger_write("Unable to disable castle navigation menu items.");
@@ -153,6 +156,7 @@ void menu_hide(void)
     add_castle_enabled = 0;
     save_enabled = 0;
     save_as_enabled = 0;
+    delete_element_enabled = 0;
 }
 
 /**
@@ -381,6 +385,36 @@ short menu_set_save_as_enabled(short enabled)
         new_state
             ? "File > Save As menu item enabled."
             : "File > Save As menu item disabled."
+    );
+    return 1;
+}
+
+/**
+ * Enables or disables the Edit > Delete menu item.
+ *
+ * @param enabled Non-zero to enable the item.
+ * @return Non-zero if AES updated the menu item successfully.
+ */
+short menu_set_delete_element_enabled(short enabled)
+{
+    short new_state;
+
+    new_state = enabled != 0;
+    if (new_state == delete_element_enabled)
+    {
+        return 1;
+    }
+
+    if (!menu_ienable(menu_tree, MENU_EDIT_DEL, new_state))
+    {
+        return 0;
+    }
+
+    delete_element_enabled = new_state;
+    app_logger_write(
+        new_state
+            ? "Edit > Delete menu item enabled."
+            : "Edit > Delete menu item disabled."
     );
     return 1;
 }

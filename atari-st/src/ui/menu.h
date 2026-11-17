@@ -125,6 +125,14 @@ short menu_set_save_enabled(short enabled);
 short menu_set_save_as_enabled(short enabled);
 
 /**
+ * Enables or disables the Edit > Delete menu item.
+ *
+ * @param enabled Non-zero to enable the item.
+ * @return Non-zero if AES updated the menu item successfully.
+ */
+short menu_set_delete_element_enabled(short enabled);
+
+/**
  * Handles a message from the application's AES event loop.
  *
  * @param message Eight-word AES message buffer.

@@ -579,12 +579,18 @@ static void draw_resource_placeholder(
             if (screen_x < SHRT_MIN || screen_x > SHRT_MAX
                 || screen_y < SHRT_MIN || screen_y > SHRT_MAX)
             {
+                vswr_mode(vdi_handle, MD_REPLACE);
+                vsf_interior(vdi_handle, FIS_SOLID);
+                vsf_color(vdi_handle, 0);
                 return;
             }
             points[index * 2] = (short)screen_x;
             points[index * 2 + 1] = (short)screen_y;
         }
         v_pline(vdi_handle, 15, points);
+        vswr_mode(vdi_handle, MD_REPLACE);
+        vsf_interior(vdi_handle, FIS_SOLID);
+        vsf_color(vdi_handle, 0);
         return;
     }
 
@@ -613,6 +619,10 @@ static void draw_resource_placeholder(
             }
         }
     }
+
+    vswr_mode(vdi_handle, MD_REPLACE);
+    vsf_interior(vdi_handle, FIS_SOLID);
+    vsf_color(vdi_handle, 0);
 }
 
 /**
@@ -657,6 +667,9 @@ static void draw_white_rectangle(
     vsf_interior(vdi_handle, FIS_SOLID);
     vsf_color(vdi_handle, 0);
     vr_recfl(vdi_handle, rectangle);
+    vswr_mode(vdi_handle, MD_REPLACE);
+    vsf_interior(vdi_handle, FIS_SOLID);
+    vsf_color(vdi_handle, 0);
 }
 
 /**
@@ -824,6 +837,8 @@ static void draw_wind_vane(
     v_pline(vdi_handle, 2, mast);
     v_pline(vdi_handle, 2, flag_top);
     v_pline(vdi_handle, 2, flag_bottom);
+    vswr_mode(vdi_handle, MD_REPLACE);
+    vsl_type(vdi_handle, 1);
 }
 
 /**
@@ -1205,6 +1220,7 @@ static void draw_selection_highlight(
     long long rect_width;
     long long rect_height;
     size_t index;
+    short should_draw;
 
     if (window_selected_object_type[slot] == CASTLE_OBJECT_NONE)
     {
@@ -1216,6 +1232,8 @@ static void draw_selection_highlight(
     vsl_type(vdi_handle, 7); /* Dotted line */
     vsl_width(vdi_handle, 1);
 
+    should_draw = 0;
+
     switch (window_selected_object_type[slot])
     {
         case CASTLE_OBJECT_THRONE:
@@ -1225,10 +1243,7 @@ static void draw_selection_highlight(
                 rect_y = baseline_y - castle->throne.y - 27;
                 rect_width = 34;
                 rect_height = 29;
-            }
-            else
-            {
-                return;
+                should_draw = 1;
             }
             break;
 
@@ -1242,10 +1257,7 @@ static void draw_selection_highlight(
                 rect_y = baseline_y - castle->cannons[index].y - 19;
                 rect_width = 20;
                 rect_height = 20;
-            }
-            else
-            {
-                return;
+                should_draw = 1;
             }
             break;
 
@@ -1256,10 +1268,7 @@ static void draw_selection_highlight(
                 rect_y = baseline_y - castle->wind_vane.y - WIND_VANE_CLEAR_HEIGHT - 2;
                 rect_width = WIND_VANE_CLEAR_WIDTH + 4;
                 rect_height = WIND_VANE_CLEAR_HEIGHT + 4;
-            }
-            else
-            {
-                return;
+                should_draw = 1;
             }
             break;
 
@@ -1270,10 +1279,7 @@ static void draw_selection_highlight(
                 rect_y = baseline_y - castle->money.y - castle->money_storage.height - 1;
                 rect_width = castle->money_storage.width + 5;
                 rect_height = castle->money_storage.height + 5;
-            }
-            else
-            {
-                return;
+                should_draw = 1;
             }
             break;
 
@@ -1284,10 +1290,7 @@ static void draw_selection_highlight(
                 rect_y = baseline_y - castle->powder.y - castle->powder_storage.height - 1;
                 rect_width = castle->powder_storage.width + 5;
                 rect_height = castle->powder_storage.height + 5;
-            }
-            else
-            {
-                return;
+                should_draw = 1;
             }
             break;
 
@@ -1298,10 +1301,7 @@ static void draw_selection_highlight(
                 rect_y = baseline_y - castle->cannonballs.y - castle->cannonball_storage.height - 1;
                 rect_width = castle->cannonball_storage.width + 5;
                 rect_height = castle->cannonball_storage.height + 5;
-            }
-            else
-            {
-                return;
+                should_draw = 1;
             }
             break;
 
@@ -1335,51 +1335,51 @@ static void draw_selection_highlight(
 
                     vr_recfl(vdi_handle, marker_rect);
                 }
-                vswr_mode(vdi_handle, MD_REPLACE);
-                vsl_type(vdi_handle, 1);
-                return;
-            }
-            else
-            {
-                return;
             }
             break;
 
         default:
-            return;
+            break;
     }
 
-    /* Clamp to short range for VDI */
-    if (rect_x < SHRT_MIN || rect_x > SHRT_MAX
-        || rect_y < SHRT_MIN || rect_y > SHRT_MAX
-        || rect_width <= 0 || rect_height <= 0
-        || rect_x + rect_width > SHRT_MAX
-        || rect_y + rect_height > SHRT_MAX)
+    /* Draw the highlight rectangle for non-polygon objects */
+    if (should_draw)
     {
-        return;
+        /* Clamp to short range for VDI */
+        if (rect_x < SHRT_MIN || rect_x > SHRT_MAX
+            || rect_y < SHRT_MIN || rect_y > SHRT_MAX
+            || rect_width <= 0 || rect_height <= 0
+            || rect_x + rect_width > SHRT_MAX
+            || rect_y + rect_height > SHRT_MAX)
+        {
+            should_draw = 0;
+        }
+        else
+        {
+            highlight_rect[0] = (short)rect_x;
+            highlight_rect[1] = (short)rect_y;
+            highlight_rect[2] = (short)(rect_x + rect_width - 1);
+            highlight_rect[3] = (short)(rect_y + rect_height - 1);
+
+            /* Draw the highlight rectangle */
+            {
+                short points[10];
+                points[0] = highlight_rect[0];
+                points[1] = highlight_rect[1];
+                points[2] = highlight_rect[2];
+                points[3] = highlight_rect[1];
+                points[4] = highlight_rect[2];
+                points[5] = highlight_rect[3];
+                points[6] = highlight_rect[0];
+                points[7] = highlight_rect[3];
+                points[8] = highlight_rect[0];
+                points[9] = highlight_rect[1];
+                v_pline(vdi_handle, 5, points);
+            }
+        }
     }
 
-    highlight_rect[0] = (short)rect_x;
-    highlight_rect[1] = (short)rect_y;
-    highlight_rect[2] = (short)(rect_x + rect_width - 1);
-    highlight_rect[3] = (short)(rect_y + rect_height - 1);
-
-    /* Draw the highlight rectangle */
-    {
-        short points[10];
-        points[0] = highlight_rect[0];
-        points[1] = highlight_rect[1];
-        points[2] = highlight_rect[2];
-        points[3] = highlight_rect[1];
-        points[4] = highlight_rect[2];
-        points[5] = highlight_rect[3];
-        points[6] = highlight_rect[0];
-        points[7] = highlight_rect[3];
-        points[8] = highlight_rect[0];
-        points[9] = highlight_rect[1];
-        v_pline(vdi_handle, 5, points);
-    }
-
+    /* Always restore VDI state before returning */
     vswr_mode(vdi_handle, MD_REPLACE);
     vsl_type(vdi_handle, 1);
 }
@@ -2347,6 +2347,150 @@ short document_window_has_unsaved_changes(void)
         {
             return 1;
         }
+    }
+
+    return 0;
+}
+
+/**
+ * Checks whether the active document has a selected object.
+ *
+ * @return Non-zero if an object is selected in the active document.
+ */
+short document_window_has_selected_object(void)
+{
+    short active_handle;
+    short slot;
+
+    slot = find_active_document(&active_handle);
+    if (slot < 0)
+    {
+        return 0;
+    }
+
+    return window_selected_object_type[slot] != CASTLE_OBJECT_NONE;
+}
+
+/**
+ * Removes the currently selected object from the active document.
+ *
+ * @return Non-zero if an object was removed successfully.
+ */
+short document_window_remove_selected_object(void)
+{
+    short active_handle;
+    short slot;
+    CastleDataCastle *castle;
+    GRECT redraw_area;
+    size_t index;
+    size_t drawing_index;
+    short removed;
+
+    slot = find_active_document(&active_handle);
+    if (slot < 0 || !window_has_castle_document[slot])
+    {
+        app_logger_write("Object removal ignored without an active DAT document.");
+        return 0;
+    }
+
+    if (window_documents[slot].castle_count == 0)
+    {
+        app_logger_write("Object removal ignored: document has no castles.");
+        return 0;
+    }
+
+    castle = &window_documents[slot].castles[window_selected_castles[slot]];
+    removed = 0;
+
+    switch (window_selected_object_type[slot])
+    {
+        case CASTLE_OBJECT_THRONE:
+            castle->throne.x = CASTLE_DATA_UNSET_COORDINATE;
+            castle->throne.y = CASTLE_DATA_UNSET_COORDINATE;
+            removed = 1;
+            break;
+
+        case CASTLE_OBJECT_CANNON:
+            index = window_selected_object_index[slot];
+            if (index < castle->cannon_count)
+            {
+                castle->cannons[index].x = CASTLE_DATA_UNSET_COORDINATE;
+                castle->cannons[index].y = CASTLE_DATA_UNSET_COORDINATE;
+                removed = 1;
+            }
+            break;
+
+        case CASTLE_OBJECT_WIND_VANE:
+            castle->wind_vane.x = CASTLE_DATA_UNSET_COORDINATE;
+            castle->wind_vane.y = CASTLE_DATA_UNSET_COORDINATE;
+            removed = 1;
+            break;
+
+        case CASTLE_OBJECT_MONEY:
+            castle->money.x = CASTLE_DATA_UNSET_COORDINATE;
+            castle->money.y = CASTLE_DATA_UNSET_COORDINATE;
+            removed = 1;
+            break;
+
+        case CASTLE_OBJECT_POWDER:
+            castle->powder.x = CASTLE_DATA_UNSET_COORDINATE;
+            castle->powder.y = CASTLE_DATA_UNSET_COORDINATE;
+            removed = 1;
+            break;
+
+        case CASTLE_OBJECT_CANNONBALLS:
+            castle->cannonballs.x = CASTLE_DATA_UNSET_COORDINATE;
+            castle->cannonballs.y = CASTLE_DATA_UNSET_COORDINATE;
+            removed = 1;
+            break;
+
+        case CASTLE_OBJECT_WALL:
+        case CASTLE_OBJECT_ROOF:
+            drawing_index = window_selected_object_index[slot];
+            if (drawing_index < castle->drawing_count)
+            {
+                /* Remove the drawing by shifting remaining drawings */
+                for (index = drawing_index; index < castle->drawing_count - 1; index++)
+                {
+                    castle->drawing[index] = castle->drawing[index + 1];
+                }
+                castle->drawing_count--;
+                removed = 1;
+            }
+            break;
+
+        default:
+            app_logger_write("No object selected for removal.");
+            return 0;
+    }
+
+    if (removed)
+    {
+        window_selected_object_type[slot] = CASTLE_OBJECT_NONE;
+        window_selected_object_index[slot] = 0;
+        window_modified[slot] = 1;
+        app_logger_write("Selected object removed from castle.");
+
+        /* Redraw the work area */
+        redraw_area.g_x = 0;
+        redraw_area.g_y = 0;
+        redraw_area.g_w = 0;
+        redraw_area.g_h = 0;
+        wind_get_grect(window_handles[slot], WF_WORKXYWH, &redraw_area);
+        redraw_window(window_handles[slot], &redraw_area);
+
+        /* Update window title to show modification */
+        format_castle_title(
+            slot,
+            window_file_names[slot],
+            window_selected_castles[slot] + 1,
+            window_documents[slot].castle_count,
+            window_titles[slot],
+            CASTLE_TITLE_BUFFER_SIZE
+        );
+        wind_set(window_handles[slot], WF_NAME, (short)((long)window_titles[slot] >> 16), (short)((long)window_titles[slot] & 0xFFFF), 0, 0);
+
+        return 1;
     }
 
     return 0;
