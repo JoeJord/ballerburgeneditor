@@ -127,6 +127,15 @@ short document_window_add_castle(void);
 void document_window_handle_message(const short message[8]);
 
 /**
+ * Handles a mouse click in a document window's work area.
+ *
+ * @param x Mouse X coordinate in screen space.
+ * @param y Mouse Y coordinate in screen space.
+ * @return Non-zero if the click was handled by a document window.
+ */
+short document_window_handle_click(short x, short y);
+
+/**
  * Closes all document windows and releases the virtual workstation.
  */
 void document_window_shutdown(void);

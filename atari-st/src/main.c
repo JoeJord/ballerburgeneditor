@@ -156,6 +156,10 @@ int main(void)
         if ((event_flags & MU_BUTTON) && action == MENU_ACTION_NONE)
         {
             action = toolbar_handle_click(mouse_x, mouse_y);
+            if (action == MENU_ACTION_NONE)
+            {
+                document_window_handle_click(mouse_x, mouse_y);
+            }
         }
         if ((event_flags & MU_KEYBD) && action == MENU_ACTION_NONE)
         {

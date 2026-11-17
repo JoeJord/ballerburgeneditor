@@ -39,6 +39,22 @@ enum
     RESOURCE_PLACEHOLDER_BALL = 3 /**< Draw an empty cannonball as a circle. */
 };
 
+/**
+ * Types of selectable castle objects.
+ */
+enum
+{
+    CASTLE_OBJECT_NONE = 0, /**< No object selected. */
+    CASTLE_OBJECT_THRONE = 1, /**< King's throne. */
+    CASTLE_OBJECT_CANNON = 2, /**< Cannon position. */
+    CASTLE_OBJECT_WIND_VANE = 3, /**< Wind vane. */
+    CASTLE_OBJECT_MONEY = 4, /**< Money storage area. */
+    CASTLE_OBJECT_POWDER = 5, /**< Powder storage area. */
+    CASTLE_OBJECT_CANNONBALLS = 6, /**< Cannonball storage area. */
+    CASTLE_OBJECT_WALL = 7, /**< Wall polygon. */
+    CASTLE_OBJECT_ROOF = 8 /**< Roof polygon. */
+};
+
 /** Original king sprite drawing stream from BALLER2.C. */
 static const short king_sprite[] = {
     -2, 2, 2, 8, 3, 5, 12, 8, 12, 12, 16, 12, 17, 14, 15, 15, 15, 17,
@@ -92,6 +108,10 @@ static GRECT restore_bounds[MAX_DOCUMENT_WINDOWS];
 static short window_maximized[MAX_DOCUMENT_WINDOWS];
 /** Whether each document has unsaved changes. */
 static short window_modified[MAX_DOCUMENT_WINDOWS];
+/** Type of selected object in each document window. */
+static short window_selected_object_type[MAX_DOCUMENT_WINDOWS];
+/** Index of selected object (for cannons, polygons, etc.) in each document window. */
+static size_t window_selected_object_index[MAX_DOCUMENT_WINDOWS];
 /** VDI virtual workstation used to clear document work areas. */
 static VdiHdl vdi_handle;
 /** Number used to cascade newly opened windows. */
@@ -131,6 +151,37 @@ static void draw_wind_vane(
     long long baseline_y
 );
 static void draw_castle_objects(
+    const CastleDataCastle *castle,
+    long long origin_x,
+    long long baseline_y
+);
+static void redraw_window(short handle, const GRECT *redraw_area);
+static short point_in_rectangle(
+    long long point_x,
+    long long point_y,
+    long long rect_x,
+    long long rect_y,
+    long long rect_width,
+    long long rect_height
+);
+static short point_in_polygon(
+    long long point_x,
+    long long point_y,
+    const CastleDataPolygon *polygon,
+    long long origin_x,
+    long long baseline_y
+);
+static void handle_object_click(
+    short slot,
+    short mouse_x,
+    short mouse_y,
+    short work_x,
+    short work_y,
+    short work_width,
+    short work_height
+);
+static void draw_selection_highlight(
+    short slot,
     const CastleDataCastle *castle,
     long long origin_x,
     long long baseline_y
@@ -867,6 +918,473 @@ static void draw_castle_objects(
 }
 
 /**
+ * Tests if a point lies within a rectangle.
+ *
+ * @param point_x Point X coordinate.
+ * @param point_y Point Y coordinate.
+ * @param rect_x Rectangle left X coordinate.
+ * @param rect_y Rectangle top Y coordinate.
+ * @param rect_width Rectangle width.
+ * @param rect_height Rectangle height.
+ * @return Non-zero if the point is inside the rectangle.
+ */
+static short point_in_rectangle(
+    long long point_x,
+    long long point_y,
+    long long rect_x,
+    long long rect_y,
+    long long rect_width,
+    long long rect_height
+)
+{
+    if (rect_width <= 0 || rect_height <= 0)
+    {
+        return 0;
+    }
+    return point_x >= rect_x && point_x < rect_x + rect_width
+        && point_y >= rect_y && point_y < rect_y + rect_height;
+}
+
+/**
+ * Tests if a point lies within a polygon using ray casting.
+ *
+ * @param point_x Point X coordinate.
+ * @param point_y Point Y coordinate.
+ * @param polygon Polygon to test.
+ * @param origin_x Castle origin X coordinate.
+ * @param baseline_y Castle baseline Y coordinate.
+ * @return Non-zero if the point is inside the polygon.
+ */
+static short point_in_polygon(
+    long long point_x,
+    long long point_y,
+    const CastleDataPolygon *polygon,
+    long long origin_x,
+    long long baseline_y
+)
+{
+    size_t i;
+    size_t j;
+    short inside;
+    long long vi_x;
+    long long vi_y;
+    long long vj_x;
+    long long vj_y;
+
+    if (!polygon || polygon->point_count < 3)
+    {
+        return 0;
+    }
+
+    inside = 0;
+    j = polygon->point_count - 1;
+    for (i = 0; i < polygon->point_count; i++)
+    {
+        vi_x = origin_x + polygon->points[i].x;
+        vi_y = baseline_y - polygon->points[i].y;
+        vj_x = origin_x + polygon->points[j].x;
+        vj_y = baseline_y - polygon->points[j].y;
+
+        if (((vi_y > point_y) != (vj_y > point_y))
+            && (point_x < (vj_x - vi_x) * (point_y - vi_y) / (vj_y - vi_y) + vi_x))
+        {
+            inside = !inside;
+        }
+        j = i;
+    }
+
+    return inside;
+}
+
+/**
+ * Handles a mouse click in the document work area to select castle objects.
+ *
+ * @param slot Window slot index.
+ * @param mouse_x Mouse X coordinate in screen space.
+ * @param mouse_y Mouse Y coordinate in screen space.
+ * @param work_x Work-area left coordinate.
+ * @param work_y Work-area top coordinate.
+ * @param work_width Work-area width.
+ * @param work_height Work-area height.
+ */
+static void handle_object_click(
+    short slot,
+    short mouse_x,
+    short mouse_y,
+    short work_x,
+    short work_y,
+    short work_width,
+    short work_height
+)
+{
+    const CastleDataCastle *castle;
+    long long origin_x;
+    long long baseline_y;
+    size_t index;
+    size_t drawing_index;
+    short found;
+
+    if (!window_has_castle_document[slot]
+        || window_documents[slot].castle_count == 0)
+    {
+        return;
+    }
+
+    castle = &window_documents[slot].castles[window_selected_castles[slot]];
+    origin_x = (long long)work_x + ((long long)work_width - castle->width) / 2;
+    baseline_y = (long long)work_y + work_height - 12;
+    found = 0;
+
+    /* Check wind vane (drawn last, so check first for hit detection) */
+    if (!found && castle_data_is_point_set(&castle->wind_vane))
+    {
+        long long vane_x = origin_x + castle->wind_vane.x - WIND_VANE_CLEAR_WIDTH / 2;
+        long long vane_y = baseline_y - castle->wind_vane.y - WIND_VANE_CLEAR_HEIGHT;
+        if (point_in_rectangle(
+            mouse_x, mouse_y,
+            vane_x, vane_y,
+            WIND_VANE_CLEAR_WIDTH, WIND_VANE_CLEAR_HEIGHT
+        ))
+        {
+            window_selected_object_type[slot] = CASTLE_OBJECT_WIND_VANE;
+            window_selected_object_index[slot] = 0;
+            found = 1;
+        }
+    }
+
+    /* Check cannonball storage area */
+    if (!found && castle_data_is_point_set(&castle->cannonballs))
+    {
+        long long storage_x = origin_x + castle->cannonballs.x;
+        long long storage_y = baseline_y - castle->cannonballs.y - castle->cannonball_storage.height + 1;
+        if (point_in_rectangle(
+            mouse_x, mouse_y,
+            storage_x, storage_y,
+            castle->cannonball_storage.width + 1,
+            castle->cannonball_storage.height + 1
+        ))
+        {
+            window_selected_object_type[slot] = CASTLE_OBJECT_CANNONBALLS;
+            window_selected_object_index[slot] = 0;
+            found = 1;
+        }
+    }
+
+    /* Check powder storage area */
+    if (!found && castle_data_is_point_set(&castle->powder))
+    {
+        long long storage_x = origin_x + castle->powder.x;
+        long long storage_y = baseline_y - castle->powder.y - castle->powder_storage.height + 1;
+        if (point_in_rectangle(
+            mouse_x, mouse_y,
+            storage_x, storage_y,
+            castle->powder_storage.width + 1,
+            castle->powder_storage.height + 1
+        ))
+        {
+            window_selected_object_type[slot] = CASTLE_OBJECT_POWDER;
+            window_selected_object_index[slot] = 0;
+            found = 1;
+        }
+    }
+
+    /* Check money storage area */
+    if (!found && castle_data_is_point_set(&castle->money))
+    {
+        long long storage_x = origin_x + castle->money.x;
+        long long storage_y = baseline_y - castle->money.y - castle->money_storage.height + 1;
+        if (point_in_rectangle(
+            mouse_x, mouse_y,
+            storage_x, storage_y,
+            castle->money_storage.width + 1,
+            castle->money_storage.height + 1
+        ))
+        {
+            window_selected_object_type[slot] = CASTLE_OBJECT_MONEY;
+            window_selected_object_index[slot] = 0;
+            found = 1;
+        }
+    }
+
+    /* Check cannons */
+    if (!found)
+    {
+        for (index = 0; index < castle->cannon_count; index++)
+        {
+            if (castle_data_is_point_set(&castle->cannons[index]))
+            {
+                /* Cannon coordinate is the lower-left corner of the sprite */
+                long long cannon_x = origin_x + castle->cannons[index].x;
+                long long cannon_y = baseline_y - castle->cannons[index].y - 19;
+                if (point_in_rectangle(mouse_x, mouse_y, cannon_x, cannon_y, 20, 20))
+                {
+                    window_selected_object_type[slot] = CASTLE_OBJECT_CANNON;
+                    window_selected_object_index[slot] = index;
+                    found = 1;
+                    break;
+                }
+            }
+        }
+    }
+
+    /* Check throne (king) */
+    if (!found && castle_data_is_point_set(&castle->throne))
+    {
+        long long throne_x = origin_x + castle->throne.x;
+        long long throne_y = baseline_y - castle->throne.y - 25;
+        if (point_in_rectangle(mouse_x, mouse_y, throne_x, throne_y, 30, 25))
+        {
+            window_selected_object_type[slot] = CASTLE_OBJECT_THRONE;
+            window_selected_object_index[slot] = 0;
+            found = 1;
+        }
+    }
+
+    /* Check drawing polygons (walls and roofs) */
+    if (!found)
+    {
+        for (drawing_index = 0; drawing_index < castle->drawing_count; drawing_index++)
+        {
+            const CastleDataDrawing *drawing = &castle->drawing[drawing_index];
+            if (drawing->type == CASTLE_DATA_DRAW_POLYGON)
+            {
+                if (point_in_polygon(
+                    mouse_x, mouse_y,
+                    &drawing->value.polygon,
+                    origin_x,
+                    baseline_y
+                ))
+                {
+                    /* Distinguish between wall and roof based on fill style */
+                    /* This is a simplified approach - could be refined */
+                    window_selected_object_type[slot] = CASTLE_OBJECT_WALL;
+                    window_selected_object_index[slot] = drawing_index;
+                    found = 1;
+                    break;
+                }
+            }
+        }
+    }
+
+    /* If no object was clicked, clear selection */
+    if (!found)
+    {
+        window_selected_object_type[slot] = CASTLE_OBJECT_NONE;
+        window_selected_object_index[slot] = 0;
+    }
+
+    /* Redraw the window to show selection highlight */
+    {
+        GRECT redraw_area;
+        redraw_area.g_x = work_x;
+        redraw_area.g_y = work_y;
+        redraw_area.g_w = work_width;
+        redraw_area.g_h = work_height;
+        redraw_window(window_handles[slot], &redraw_area);
+    }
+}
+
+/**
+ * Draws a highlight rectangle around the selected castle object.
+ *
+ * @param slot Window slot index.
+ * @param castle Castle being displayed.
+ * @param origin_x Castle origin X coordinate.
+ * @param baseline_y Castle baseline Y coordinate.
+ */
+static void draw_selection_highlight(
+    short slot,
+    const CastleDataCastle *castle,
+    long long origin_x,
+    long long baseline_y
+)
+{
+    short highlight_rect[4];
+    long long rect_x;
+    long long rect_y;
+    long long rect_width;
+    long long rect_height;
+    size_t index;
+
+    if (window_selected_object_type[slot] == CASTLE_OBJECT_NONE)
+    {
+        return;
+    }
+
+    vswr_mode(vdi_handle, MD_XOR);
+    vsl_color(vdi_handle, 1);
+    vsl_type(vdi_handle, 7); /* Dotted line */
+    vsl_width(vdi_handle, 1);
+
+    switch (window_selected_object_type[slot])
+    {
+        case CASTLE_OBJECT_THRONE:
+            if (castle_data_is_point_set(&castle->throne))
+            {
+                rect_x = origin_x + castle->throne.x - 2;
+                rect_y = baseline_y - castle->throne.y - 27;
+                rect_width = 34;
+                rect_height = 29;
+            }
+            else
+            {
+                return;
+            }
+            break;
+
+        case CASTLE_OBJECT_CANNON:
+            index = window_selected_object_index[slot];
+            if (index < castle->cannon_count
+                && castle_data_is_point_set(&castle->cannons[index]))
+            {
+                /* Cannon coordinate is the lower-left corner of the sprite */
+                rect_x = origin_x + castle->cannons[index].x;
+                rect_y = baseline_y - castle->cannons[index].y - 19;
+                rect_width = 20;
+                rect_height = 20;
+            }
+            else
+            {
+                return;
+            }
+            break;
+
+        case CASTLE_OBJECT_WIND_VANE:
+            if (castle_data_is_point_set(&castle->wind_vane))
+            {
+                rect_x = origin_x + castle->wind_vane.x - WIND_VANE_CLEAR_WIDTH / 2 - 2;
+                rect_y = baseline_y - castle->wind_vane.y - WIND_VANE_CLEAR_HEIGHT - 2;
+                rect_width = WIND_VANE_CLEAR_WIDTH + 4;
+                rect_height = WIND_VANE_CLEAR_HEIGHT + 4;
+            }
+            else
+            {
+                return;
+            }
+            break;
+
+        case CASTLE_OBJECT_MONEY:
+            if (castle_data_is_point_set(&castle->money))
+            {
+                rect_x = origin_x + castle->money.x - 2;
+                rect_y = baseline_y - castle->money.y - castle->money_storage.height - 1;
+                rect_width = castle->money_storage.width + 5;
+                rect_height = castle->money_storage.height + 5;
+            }
+            else
+            {
+                return;
+            }
+            break;
+
+        case CASTLE_OBJECT_POWDER:
+            if (castle_data_is_point_set(&castle->powder))
+            {
+                rect_x = origin_x + castle->powder.x - 2;
+                rect_y = baseline_y - castle->powder.y - castle->powder_storage.height - 1;
+                rect_width = castle->powder_storage.width + 5;
+                rect_height = castle->powder_storage.height + 5;
+            }
+            else
+            {
+                return;
+            }
+            break;
+
+        case CASTLE_OBJECT_CANNONBALLS:
+            if (castle_data_is_point_set(&castle->cannonballs))
+            {
+                rect_x = origin_x + castle->cannonballs.x - 2;
+                rect_y = baseline_y - castle->cannonballs.y - castle->cannonball_storage.height - 1;
+                rect_width = castle->cannonball_storage.width + 5;
+                rect_height = castle->cannonball_storage.height + 5;
+            }
+            else
+            {
+                return;
+            }
+            break;
+
+        case CASTLE_OBJECT_WALL:
+        case CASTLE_OBJECT_ROOF:
+            index = window_selected_object_index[slot];
+            if (index < castle->drawing_count
+                && castle->drawing[index].type == CASTLE_DATA_DRAW_POLYGON)
+            {
+                /* For polygons, draw small squares at each vertex */
+                const CastleDataPolygon *polygon = &castle->drawing[index].value.polygon;
+                size_t i;
+                short marker_size = 4; /* Size of corner marker squares */
+
+                for (i = 0; i < polygon->point_count; i++)
+                {
+                    long long screen_x = origin_x + polygon->points[i].x;
+                    long long screen_y = baseline_y - polygon->points[i].y;
+                    short marker_rect[4];
+
+                    if (screen_x < SHRT_MIN || screen_x > SHRT_MAX
+                        || screen_y < SHRT_MIN || screen_y > SHRT_MAX)
+                    {
+                        continue;
+                    }
+
+                    marker_rect[0] = (short)(screen_x - marker_size / 2);
+                    marker_rect[1] = (short)(screen_y - marker_size / 2);
+                    marker_rect[2] = (short)(screen_x + marker_size / 2);
+                    marker_rect[3] = (short)(screen_y + marker_size / 2);
+
+                    vr_recfl(vdi_handle, marker_rect);
+                }
+                vswr_mode(vdi_handle, MD_REPLACE);
+                vsl_type(vdi_handle, 1);
+                return;
+            }
+            else
+            {
+                return;
+            }
+            break;
+
+        default:
+            return;
+    }
+
+    /* Clamp to short range for VDI */
+    if (rect_x < SHRT_MIN || rect_x > SHRT_MAX
+        || rect_y < SHRT_MIN || rect_y > SHRT_MAX
+        || rect_width <= 0 || rect_height <= 0
+        || rect_x + rect_width > SHRT_MAX
+        || rect_y + rect_height > SHRT_MAX)
+    {
+        return;
+    }
+
+    highlight_rect[0] = (short)rect_x;
+    highlight_rect[1] = (short)rect_y;
+    highlight_rect[2] = (short)(rect_x + rect_width - 1);
+    highlight_rect[3] = (short)(rect_y + rect_height - 1);
+
+    /* Draw the highlight rectangle */
+    {
+        short points[10];
+        points[0] = highlight_rect[0];
+        points[1] = highlight_rect[1];
+        points[2] = highlight_rect[2];
+        points[3] = highlight_rect[1];
+        points[4] = highlight_rect[2];
+        points[5] = highlight_rect[3];
+        points[6] = highlight_rect[0];
+        points[7] = highlight_rect[3];
+        points[8] = highlight_rect[0];
+        points[9] = highlight_rect[1];
+        v_pline(vdi_handle, 5, points);
+    }
+
+    vswr_mode(vdi_handle, MD_REPLACE);
+    vsl_type(vdi_handle, 1);
+}
+
+/**
  * Draws a castle's ordered VDI drawing commands at one-to-one scale.
  *
  * @param castle Castle geometry to draw.
@@ -1096,6 +1614,12 @@ static void redraw_window(short handle, const GRECT *redraw_area)
                             castle_origin_x,
                             castle_baseline_y
                         );
+                        draw_selection_highlight(
+                            slot,
+                            castle,
+                            castle_origin_x,
+                            castle_baseline_y
+                        );
                     }
                 }
             }
@@ -1116,6 +1640,44 @@ static void redraw_window(short handle, const GRECT *redraw_area)
     }
 
     wind_update(END_UPDATE);
+}
+
+/**
+ * Handles a mouse click in a document window's work area.
+ *
+ * @param x Mouse X coordinate in screen space.
+ * @param y Mouse Y coordinate in screen space.
+ * @return Non-zero if the click was handled by a document window.
+ */
+short document_window_handle_click(short x, short y)
+{
+    short index;
+    short handle;
+    short work_x;
+    short work_y;
+    short work_width;
+    short work_height;
+
+    for (index = 0; index < MAX_DOCUMENT_WINDOWS; index++)
+    {
+        handle = window_handles[index];
+        if (handle == 0)
+        {
+            continue;
+        }
+
+        if (wind_get(handle, WF_WORKXYWH, &work_x, &work_y, &work_width, &work_height))
+        {
+            if (x >= work_x && x < work_x + work_width
+                && y >= work_y && y < work_y + work_height)
+            {
+                handle_object_click(index, x, y, work_x, work_y, work_width, work_height);
+                return 1;
+            }
+        }
+    }
+
+    return 0;
 }
 
 /**
@@ -1231,6 +1793,8 @@ static short close_window(short slot)
     window_has_file_path[slot] = 0;
     window_modified[slot] = 0;
     window_maximized[slot] = 0;
+    window_selected_object_type[slot] = CASTLE_OBJECT_NONE;
+    window_selected_object_index[slot] = 0;
     app_logger_write("Document window closed.");
     return 1;
 }
@@ -1414,6 +1978,8 @@ static short create_document_window(
     restore_bounds[slot].g_w = width;
     restore_bounds[slot].g_h = height;
     window_maximized[slot] = 0;
+    window_selected_object_type[slot] = CASTLE_OBJECT_NONE;
+    window_selected_object_index[slot] = 0;
     app_logger_write("Document window created.");
     return 1;
 }
@@ -1651,6 +2217,8 @@ short document_window_navigate_castles(DocumentCastleNavigation direction)
     }
 
     window_selected_castles[slot] = selected_castle;
+    window_selected_object_type[slot] = CASTLE_OBJECT_NONE;
+    window_selected_object_index[slot] = 0;
     redraw_area.g_x = work_x;
     redraw_area.g_y = work_y;
     redraw_area.g_w = work_width;
