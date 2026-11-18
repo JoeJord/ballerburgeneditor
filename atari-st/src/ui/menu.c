@@ -14,8 +14,20 @@ enum
     MENU_SCAN_W = 0x11, /**< Atari ST scan code for W. */
     MENU_SCAN_O = 0x18, /**< Atari ST scan code for O. */
     MENU_SCAN_S = 0x1f, /**< Atari ST scan code for S. */
-    MENU_SCAN_N = 0x31 /**< Atari ST scan code for N. */
+    MENU_SCAN_N = 0x31, /**< Atari ST scan code for N. */
+    MENU_SCAN_DELETE = 0x53 /**< Atari ST scan code for Delete. */
 };
+
+/**
+ * Checks whether the Ctrl modifier is present in the keyboard state.
+ *
+ * @param key_state GEM modifier state returned by evnt_multi().
+ * @return Non-zero if Ctrl is pressed, zero otherwise.
+ */
+static short is_ctrl_pressed(short key_state)
+{
+    return (key_state & MENU_KEYBOARD_CTRL_MASK) != 0;
+}
 
 /** Loaded menu tree owned by the resource system. */
 static OBJECT *menu_tree;
@@ -527,7 +539,8 @@ MenuAction menu_handle_message(const short message[8])
 }
 
 /**
- * Translates a Ctrl-key shortcut into its enabled File-menu action.
+ * Translates keyboard shortcuts into their enabled menu actions.
+ * File-menu shortcuts require Ctrl; Delete key works without modifiers.
  *
  * @param key GEM keyboard code returned by evnt_multi().
  * @param key_state GEM modifier state returned by evnt_multi().
@@ -537,8 +550,7 @@ MenuAction menu_handle_key(short key, short key_state)
 {
     short scan_code;
 
-    if (!(key_state & MENU_KEYBOARD_CTRL_MASK)
-        || (key_state & MENU_KEYBOARD_ALT_MASK))
+    if (key_state & MENU_KEYBOARD_ALT_MASK)
     {
         return MENU_ACTION_NONE;
     }
@@ -547,23 +559,34 @@ MenuAction menu_handle_key(short key, short key_state)
     switch (scan_code)
     {
         case MENU_SCAN_N:
-            return document_creation_enabled
+            return is_ctrl_pressed(key_state) && document_creation_enabled
                 ? MENU_ACTION_NEW
                 : MENU_ACTION_NONE;
 
         case MENU_SCAN_O:
-            return document_creation_enabled
+            return is_ctrl_pressed(key_state) && document_creation_enabled
                 ? MENU_ACTION_OPEN
                 : MENU_ACTION_NONE;
 
         case MENU_SCAN_W:
-            return close_enabled ? MENU_ACTION_CLOSE : MENU_ACTION_NONE;
+            return is_ctrl_pressed(key_state) && close_enabled
+                ? MENU_ACTION_CLOSE
+                : MENU_ACTION_NONE;
 
         case MENU_SCAN_S:
-            return save_enabled ? MENU_ACTION_SAVE : MENU_ACTION_NONE;
+            return is_ctrl_pressed(key_state) && save_enabled
+                ? MENU_ACTION_SAVE
+                : MENU_ACTION_NONE;
 
         case MENU_SCAN_Q:
-            return MENU_ACTION_QUIT;
+            return is_ctrl_pressed(key_state)
+                ? MENU_ACTION_QUIT
+                : MENU_ACTION_NONE;
+
+        case MENU_SCAN_DELETE:
+            return delete_element_enabled
+                ? MENU_ACTION_DELETE_ELEMENT
+                : MENU_ACTION_NONE;
 
         default:
             return MENU_ACTION_NONE;
