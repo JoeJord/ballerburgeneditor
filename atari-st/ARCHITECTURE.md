@@ -21,8 +21,8 @@ provides the menu's `OBJECT` tree and handles the resulting AES messages.
 | `src/ui/toolbar.h` | Declares toolbar lifecycle, input, and layout functions. |
 | `src/ui/about_dialog.c` | Retrieves and displays the `DLG_ABOUT` dialog tree. |
 | `src/ui/about_dialog.h` | Declares the About dialog entry point. |
-| `src/ui/document_window.c` | Owns parsed castle documents, creates document windows, redraws their work areas, removes castles from the active document, and adds new castles. |
-| `src/ui/document_window.h` | Declares document-window creation, message handling, shutdown, castle removal, castle addition, and castle existence queries. |
+| `src/ui/document_window.c` | Owns parsed castle documents, creates document windows, redraws their work areas, removes castles from the active document, adds new castles, handles object selection, and implements drag-and-drop for moving castle objects including polygons. |
+| `src/ui/document_window.h` | Declares document-window creation, message handling, shutdown, castle removal, castle addition, castle existence queries, object selection, and drag handling. |
 | `src/ui/app_resources.c` | Owns the resource filename and load lifecycle, and provides access to resource trees and strings. |
 | `src/ui/app_resources.h` | Declares resource loading, release, and resource-access functions. |
 | `src/ui/app_alerts.c` | Resolves alert fallbacks to RSC free strings when available and displays them through AES. |
@@ -66,7 +66,11 @@ then invokes the corresponding feature module.
    object IDs and edit toolbar icons are conditionally included when present in
    the generated `BALLERED.h`, allowing C-side preparation while the GEM
    resource is being edited. The document-window module processes redraw,
-   close, and top messages in the same event loop.
+   close, and top messages in the same event loop. When an object is selected
+   by clicking, `handle_object_click()` enters a polling loop using `evnt_mouse()`
+   to track mouse movement while the button is held down, updating the selected
+   object's position in real-time and marking the document as modified when the
+   drag completes.
 5. `main()` dispatches New to `document_window_create()`, Open through the GEM
    file selector and `document_window_open_file()`, Close to
    `document_window_close_top()`, About to `about_dialog_show()`, castle

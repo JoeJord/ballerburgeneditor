@@ -112,6 +112,20 @@ static short window_modified[MAX_DOCUMENT_WINDOWS];
 static short window_selected_object_type[MAX_DOCUMENT_WINDOWS];
 /** Index of selected object (for cannons, polygons, etc.) in each document window. */
 static size_t window_selected_object_index[MAX_DOCUMENT_WINDOWS];
+/** Whether an object is currently being dragged in each document window. */
+static short window_dragging[MAX_DOCUMENT_WINDOWS];
+/** Mouse X position where drag started in each document window. */
+static short window_drag_start_x[MAX_DOCUMENT_WINDOWS];
+/** Mouse Y position where drag started in each document window. */
+static short window_drag_start_y[MAX_DOCUMENT_WINDOWS];
+/** Original X coordinate of the dragged object in each document window. */
+static int window_drag_original_x[MAX_DOCUMENT_WINDOWS];
+/** Original Y coordinate of the dragged object in each document window. */
+static int window_drag_original_y[MAX_DOCUMENT_WINDOWS];
+/** Original polygon points for the currently dragged polygon (allocated dynamically). */
+static CastleDataPoint *window_drag_original_polygon[MAX_DOCUMENT_WINDOWS];
+/** Number of points in the currently dragged polygon. */
+static size_t window_drag_polygon_point_count[MAX_DOCUMENT_WINDOWS];
 /** VDI virtual workstation used to clear document work areas. */
 static VdiHdl vdi_handle;
 /** Number used to cascade newly opened windows. */
@@ -185,6 +199,15 @@ static void draw_selection_highlight(
     const CastleDataCastle *castle,
     long long origin_x,
     long long baseline_y
+);
+static short update_object_position(
+    short slot,
+    short mouse_x,
+    short mouse_y,
+    short work_x,
+    short work_y,
+    short work_width,
+    short work_height
 );
 
 /**
@@ -1186,6 +1209,140 @@ static void handle_object_click(
     {
         window_selected_object_type[slot] = CASTLE_OBJECT_NONE;
         window_selected_object_index[slot] = 0;
+        window_dragging[slot] = 0;
+    }
+    else
+    {
+        /* Initialize drag state when an object is selected */
+        window_dragging[slot] = 1;
+        window_drag_start_x[slot] = mouse_x;
+        window_drag_start_y[slot] = mouse_y;
+
+        /* Store original position based on object type */
+        const CastleDataCastle *castle = &window_documents[slot].castles[window_selected_castles[slot]];
+        switch (window_selected_object_type[slot])
+        {
+            case CASTLE_OBJECT_THRONE:
+                window_drag_original_x[slot] = castle->throne.x;
+                window_drag_original_y[slot] = castle->throne.y;
+                break;
+            case CASTLE_OBJECT_CANNON:
+            {
+                size_t cannon_index = window_selected_object_index[slot];
+                if (cannon_index < castle->cannon_count)
+                {
+                    window_drag_original_x[slot] = castle->cannons[cannon_index].x;
+                    window_drag_original_y[slot] = castle->cannons[cannon_index].y;
+                }
+                break;
+            }
+            case CASTLE_OBJECT_WIND_VANE:
+                window_drag_original_x[slot] = castle->wind_vane.x;
+                window_drag_original_y[slot] = castle->wind_vane.y;
+                break;
+            case CASTLE_OBJECT_MONEY:
+                window_drag_original_x[slot] = castle->money.x;
+                window_drag_original_y[slot] = castle->money.y;
+                break;
+            case CASTLE_OBJECT_POWDER:
+                window_drag_original_x[slot] = castle->powder.x;
+                window_drag_original_y[slot] = castle->powder.y;
+                break;
+            case CASTLE_OBJECT_CANNONBALLS:
+                window_drag_original_x[slot] = castle->cannonballs.x;
+                window_drag_original_y[slot] = castle->cannonballs.y;
+                break;
+            case CASTLE_OBJECT_WALL:
+            case CASTLE_OBJECT_ROOF:
+            {
+                /* Store original polygon points for dragging */
+                size_t polygon_index = window_selected_object_index[slot];
+                if (polygon_index < castle->drawing_count
+                    && castle->drawing[polygon_index].type == CASTLE_DATA_DRAW_POLYGON)
+                {
+                    const CastleDataPolygon *polygon = &castle->drawing[polygon_index].value.polygon;
+                    window_drag_polygon_point_count[slot] = polygon->point_count;
+                    window_drag_original_polygon[slot] = (CastleDataPoint *)malloc(
+                        polygon->point_count * sizeof(CastleDataPoint)
+                    );
+                    if (window_drag_original_polygon[slot])
+                    {
+                        size_t i;
+                        for (i = 0; i < polygon->point_count; i++)
+                        {
+                            window_drag_original_polygon[slot][i] = polygon->points[i];
+                        }
+                    }
+                    else
+                    {
+                        window_dragging[slot] = 0;
+                    }
+                }
+                else
+                {
+                    window_dragging[slot] = 0;
+                }
+                break;
+            }
+            default:
+                window_dragging[slot] = 0;
+                break;
+        }
+
+        /* Poll mouse position while button is held down for drag */
+        if (window_dragging[slot])
+        {
+            short current_mouse_x;
+            short current_mouse_y;
+            short current_button;
+            short current_key_state;
+
+            while (window_dragging[slot])
+            {
+                /* Get current mouse state */
+                graf_mkstate(&current_mouse_x, &current_mouse_y, &current_button, &current_key_state);
+
+                /* Check if button is released */
+                if ((current_button & 1) == 0)
+                {
+                    window_dragging[slot] = 0;
+                    /* Free polygon memory if allocated */
+                    if (window_drag_original_polygon[slot])
+                    {
+                        free(window_drag_original_polygon[slot]);
+                        window_drag_original_polygon[slot] = NULL;
+                        window_drag_polygon_point_count[slot] = 0;
+                    }
+                    /* Mark document as modified when drag ends */
+                    window_modified[slot] = 1;
+                    /* Update window title to show modification */
+                    {
+                        char title_buffer[CASTLE_TITLE_BUFFER_SIZE];
+                        format_castle_title(
+                            slot,
+                            window_file_names[slot],
+                            window_selected_castles[slot] + 1,
+                            window_documents[slot].castle_count,
+                            title_buffer,
+                            CASTLE_TITLE_BUFFER_SIZE
+                        );
+                        wind_set_str(window_handles[slot], WF_NAME, title_buffer);
+                    }
+                    break;
+                }
+
+                /* Update object position if mouse moved */
+                if (current_mouse_x != mouse_x || current_mouse_y != mouse_y)
+                {
+                    update_object_position(slot, current_mouse_x, current_mouse_y, work_x, work_y, work_width, work_height);
+                    mouse_x = current_mouse_x;
+                    mouse_y = current_mouse_y;
+                }
+
+                /* Small delay to prevent excessive CPU usage */
+                evnt_timer(50);
+            }
+        }
     }
 
     /* Redraw the window to show selection highlight */
@@ -1382,6 +1539,146 @@ static void draw_selection_highlight(
     /* Always restore VDI state before returning */
     vswr_mode(vdi_handle, MD_REPLACE);
     vsl_type(vdi_handle, 1);
+}
+
+/**
+ * Updates the position of the selected object based on mouse movement during drag.
+ *
+ * @param slot Window slot index.
+ * @param mouse_x Current mouse X coordinate in screen space.
+ * @param mouse_y Current mouse Y coordinate in screen space.
+ * @param work_x Work-area left coordinate.
+ * @param work_y Work-area top coordinate.
+ * @param work_width Work-area width.
+ * @param work_height Work-area height.
+ * @return Non-zero if the object position was updated.
+ */
+static short update_object_position(
+    short slot,
+    short mouse_x,
+    short mouse_y,
+    short work_x,
+    short work_y,
+    short work_width,
+    short work_height
+)
+{
+    CastleDataCastle *castle;
+    int delta_x;
+    int delta_y;
+    short updated;
+
+    if (!window_dragging[slot]
+        || !window_has_castle_document[slot]
+        || window_documents[slot].castle_count == 0)
+    {
+        return 0;
+    }
+
+    castle = &window_documents[slot].castles[window_selected_castles[slot]];
+
+    /* Calculate delta from drag start position */
+    delta_x = mouse_x - window_drag_start_x[slot];
+    delta_y = -(mouse_y - window_drag_start_y[slot]); /* Invert Y for castle coordinates */
+
+    updated = 0;
+
+    switch (window_selected_object_type[slot])
+    {
+        case CASTLE_OBJECT_THRONE:
+            if (castle_data_is_point_set(&castle->throne))
+            {
+                castle->throne.x = window_drag_original_x[slot] + delta_x;
+                castle->throne.y = window_drag_original_y[slot] + delta_y;
+                updated = 1;
+            }
+            break;
+
+        case CASTLE_OBJECT_CANNON:
+        {
+            size_t cannon_index = window_selected_object_index[slot];
+            if (cannon_index < castle->cannon_count
+                && castle_data_is_point_set(&castle->cannons[cannon_index]))
+            {
+                castle->cannons[cannon_index].x = window_drag_original_x[slot] + delta_x;
+                castle->cannons[cannon_index].y = window_drag_original_y[slot] + delta_y;
+                updated = 1;
+            }
+            break;
+        }
+
+        case CASTLE_OBJECT_WIND_VANE:
+            if (castle_data_is_point_set(&castle->wind_vane))
+            {
+                castle->wind_vane.x = window_drag_original_x[slot] + delta_x;
+                castle->wind_vane.y = window_drag_original_y[slot] + delta_y;
+                updated = 1;
+            }
+            break;
+
+        case CASTLE_OBJECT_MONEY:
+            if (castle_data_is_point_set(&castle->money))
+            {
+                castle->money.x = window_drag_original_x[slot] + delta_x;
+                castle->money.y = window_drag_original_y[slot] + delta_y;
+                updated = 1;
+            }
+            break;
+
+        case CASTLE_OBJECT_POWDER:
+            if (castle_data_is_point_set(&castle->powder))
+            {
+                castle->powder.x = window_drag_original_x[slot] + delta_x;
+                castle->powder.y = window_drag_original_y[slot] + delta_y;
+                updated = 1;
+            }
+            break;
+
+        case CASTLE_OBJECT_CANNONBALLS:
+            if (castle_data_is_point_set(&castle->cannonballs))
+            {
+                castle->cannonballs.x = window_drag_original_x[slot] + delta_x;
+                castle->cannonballs.y = window_drag_original_y[slot] + delta_y;
+                updated = 1;
+            }
+            break;
+
+        case CASTLE_OBJECT_WALL:
+        case CASTLE_OBJECT_ROOF:
+        {
+            size_t polygon_index = window_selected_object_index[slot];
+            if (polygon_index < castle->drawing_count
+                && castle->drawing[polygon_index].type == CASTLE_DATA_DRAW_POLYGON
+                && window_drag_original_polygon[slot])
+            {
+                CastleDataPolygon *polygon = &castle->drawing[polygon_index].value.polygon;
+                size_t i;
+                for (i = 0; i < polygon->point_count; i++)
+                {
+                    polygon->points[i].x = window_drag_original_polygon[slot][i].x + delta_x;
+                    polygon->points[i].y = window_drag_original_polygon[slot][i].y + delta_y;
+                }
+                updated = 1;
+            }
+            break;
+        }
+        default:
+            /* Other objects are not draggable */
+            break;
+    }
+
+    if (updated)
+    {
+        /* Redraw the window to show the updated position */
+        GRECT redraw_area;
+        redraw_area.g_x = work_x;
+        redraw_area.g_y = work_y;
+        redraw_area.g_w = work_width;
+        redraw_area.g_h = work_height;
+        redraw_window(window_handles[slot], &redraw_area);
+    }
+
+    return updated;
 }
 
 /**
