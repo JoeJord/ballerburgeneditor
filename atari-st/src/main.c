@@ -238,6 +238,7 @@ int main(void)
 
             case MENU_ACTION_ADD_THRONE:
                 app_logger_write("Edit action requested: add throne.");
+                document_window_add_throne();
                 break;
 
             case MENU_ACTION_ADD_MONEY_STORAGE:
@@ -325,6 +326,12 @@ int main(void)
         if (!menu_set_delete_element_enabled(document_window_has_selected_object()))
         {
             app_logger_write("Unable to update delete element menu item.");
+        }
+        if (!menu_set_add_throne_enabled(
+            document_window_has_castle() && !document_window_has_throne()
+        ))
+        {
+            app_logger_write("Unable to update add throne menu item.");
         }
     }
 

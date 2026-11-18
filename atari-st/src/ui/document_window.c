@@ -2611,6 +2611,104 @@ short document_window_has_castle(void)
 }
 
 /**
+ * Checks whether the active castle has a throne.
+ *
+ * @return Non-zero if the active castle has a throne set.
+ */
+short document_window_has_throne(void)
+{
+    short active_handle;
+    short slot;
+    const CastleDataCastle *castle;
+
+    slot = find_active_document(&active_handle);
+    if (slot < 0 || !window_has_castle_document[slot])
+    {
+        return 0;
+    }
+
+    if (window_documents[slot].castle_count == 0)
+    {
+        return 0;
+    }
+
+    castle = &window_documents[slot].castles[window_selected_castles[slot]];
+    return castle_data_is_point_set(&castle->throne);
+}
+
+/**
+ * Adds a throne to the active castle at position (0, 0).
+ *
+ * @return Non-zero if the throne was added successfully.
+ */
+short document_window_add_throne(void)
+{
+    short active_handle;
+    short slot;
+    CastleDataCastle *castle;
+
+    slot = find_active_document(&active_handle);
+    if (slot < 0 || !window_has_castle_document[slot])
+    {
+        return 0;
+    }
+
+    if (window_documents[slot].castle_count == 0)
+    {
+        return 0;
+    }
+
+    castle = &window_documents[slot].castles[window_selected_castles[slot]];
+
+    /* Only add if throne is not already set */
+    if (castle_data_is_point_set(&castle->throne))
+    {
+        return 0;
+    }
+
+    /* Set throne at position (0, 0) */
+    castle->throne.x = 0;
+    castle->throne.y = 0;
+
+    /* Mark document as modified */
+    window_modified[slot] = 1;
+
+    /* Update window title to show modification */
+    {
+        char title_buffer[CASTLE_TITLE_BUFFER_SIZE];
+        format_castle_title(
+            slot,
+            window_file_names[slot],
+            window_selected_castles[slot] + 1,
+            window_documents[slot].castle_count,
+            title_buffer,
+            CASTLE_TITLE_BUFFER_SIZE
+        );
+        wind_set_str(window_handles[slot], WF_NAME, title_buffer);
+    }
+
+    /* Redraw the window */
+    {
+        short work_x;
+        short work_y;
+        short work_width;
+        short work_height;
+        GRECT redraw_area;
+
+        if (wind_get(window_handles[slot], WF_WORKXYWH, &work_x, &work_y, &work_width, &work_height))
+        {
+            redraw_area.g_x = work_x;
+            redraw_area.g_y = work_y;
+            redraw_area.g_w = work_width;
+            redraw_area.g_h = work_height;
+            redraw_window(window_handles[slot], &redraw_area);
+        }
+    }
+
+    return 1;
+}
+
+/**
  * Checks whether the active document has unsaved changes.
  *
  * @return Non-zero if the active document has been modified.

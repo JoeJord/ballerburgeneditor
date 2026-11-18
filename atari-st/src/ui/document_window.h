@@ -74,6 +74,20 @@ short document_window_has_capacity(void);
 short document_window_has_castle(void);
 
 /**
+ * Checks whether the active castle has a throne.
+ *
+ * @return Non-zero if the active castle has a throne set.
+ */
+short document_window_has_throne(void);
+
+/**
+ * Adds a throne to the active castle at position (0, 0).
+ *
+ * @return Non-zero if the throne was added successfully.
+ */
+short document_window_add_throne(void);
+
+/**
  * Checks whether the active document has unsaved changes.
  *
  * @return Non-zero if the active document has been modified.

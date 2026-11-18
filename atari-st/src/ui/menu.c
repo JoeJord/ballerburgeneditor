@@ -51,6 +51,8 @@ static short save_enabled;
 static short save_as_enabled;
 /** Current enabled state of the Edit > Delete menu item. */
 static short delete_element_enabled;
+/** Current enabled state of the Add Throne menu item. */
+static short add_throne_enabled;
 
 /**
  * Loads the menu resource and installs its MAIN tree with AES.
@@ -99,6 +101,7 @@ short menu_show(void)
     save_enabled = -1;
     save_as_enabled = -1;
     delete_element_enabled = -1;
+    add_throne_enabled = -1;
     if (!menu_set_castle_navigation_enabled(0, 0))
     {
         app_logger_write("Unable to disable castle navigation menu items.");
@@ -427,6 +430,36 @@ short menu_set_delete_element_enabled(short enabled)
         new_state
             ? "Edit > Delete menu item enabled."
             : "Edit > Delete menu item disabled."
+    );
+    return 1;
+}
+
+/**
+ * Enables or disables the Add Throne menu item.
+ *
+ * @param enabled Non-zero to enable the item.
+ * @return Non-zero if AES updated the menu item successfully.
+ */
+short menu_set_add_throne_enabled(short enabled)
+{
+    short new_state;
+
+    new_state = enabled != 0;
+    if (new_state == add_throne_enabled)
+    {
+        return 1;
+    }
+
+    if (!menu_ienable(menu_tree, MENU_THRONE_ADD, new_state))
+    {
+        return 0;
+    }
+
+    add_throne_enabled = new_state;
+    app_logger_write(
+        new_state
+            ? "Add Throne menu item enabled."
+            : "Add Throne menu item disabled."
     );
     return 1;
 }
