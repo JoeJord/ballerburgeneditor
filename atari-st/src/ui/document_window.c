@@ -126,6 +126,8 @@ static int window_drag_original_y[MAX_DOCUMENT_WINDOWS];
 static CastleDataPoint *window_drag_original_polygon[MAX_DOCUMENT_WINDOWS];
 /** Number of points in the currently dragged polygon. */
 static size_t window_drag_polygon_point_count[MAX_DOCUMENT_WINDOWS];
+/** Index of the vertex being dragged within the selected polygon, or -1 for whole-polygon drag. */
+static short window_drag_vertex_index[MAX_DOCUMENT_WINDOWS];
 /** VDI virtual workstation used to clear document work areas. */
 static VdiHdl vdi_handle;
 /** Number used to cascade newly opened windows. */
@@ -1204,12 +1206,46 @@ static void handle_object_click(
         }
     }
 
+    /* If a polygon is already selected, check if click is on a vertex marker */
+    if (!found && window_selected_object_type[slot] == CASTLE_OBJECT_WALL)
+    {
+        size_t polygon_index = window_selected_object_index[slot];
+        if (polygon_index < castle->drawing_count
+            && castle->drawing[polygon_index].type == CASTLE_DATA_DRAW_POLYGON)
+        {
+            const CastleDataPolygon *polygon = &castle->drawing[polygon_index].value.polygon;
+            short marker_size = 4; /* Must match draw_selection_highlight() */
+            size_t i;
+
+            for (i = 0; i < polygon->point_count; i++)
+            {
+                long long screen_x = origin_x + polygon->points[i].x;
+                long long screen_y = baseline_y - polygon->points[i].y;
+
+                if (point_in_rectangle(
+                    mouse_x, mouse_y,
+                    screen_x - marker_size / 2,
+                    screen_y - marker_size / 2,
+                    marker_size,
+                    marker_size
+                ))
+                {
+                    /* Vertex marker clicked - keep polygon selected but mark vertex for drag */
+                    window_drag_vertex_index[slot] = (short)i;
+                    found = 1;
+                    break;
+                }
+            }
+        }
+    }
+
     /* If no object was clicked, clear selection */
     if (!found)
     {
         window_selected_object_type[slot] = CASTLE_OBJECT_NONE;
         window_selected_object_index[slot] = 0;
         window_dragging[slot] = 0;
+        window_drag_vertex_index[slot] = -1;
     }
     else
     {
@@ -1217,6 +1253,13 @@ static void handle_object_click(
         window_dragging[slot] = 1;
         window_drag_start_x[slot] = mouse_x;
         window_drag_start_y[slot] = mouse_y;
+
+        /* Reset vertex index if not dragging a vertex */
+        if (window_selected_object_type[slot] != CASTLE_OBJECT_WALL
+            && window_selected_object_type[slot] != CASTLE_OBJECT_ROOF)
+        {
+            window_drag_vertex_index[slot] = -1;
+        }
 
         /* Store original position based on object type */
         const CastleDataCastle *castle = &window_documents[slot].castles[window_selected_castles[slot]];
@@ -1272,6 +1315,11 @@ static void handle_object_click(
                         {
                             window_drag_original_polygon[slot][i] = polygon->points[i];
                         }
+                        /* Initialize vertex index to -1 for whole-polygon drag */
+                        if (window_drag_vertex_index[slot] < 0)
+                        {
+                            window_drag_vertex_index[slot] = -1;
+                        }
                     }
                     else
                     {
@@ -1306,6 +1354,7 @@ static void handle_object_click(
                 if ((current_button & 1) == 0)
                 {
                     window_dragging[slot] = 0;
+                    window_drag_vertex_index[slot] = -1;
                     /* Free polygon memory if allocated */
                     if (window_drag_original_polygon[slot])
                     {
@@ -1652,11 +1701,25 @@ static short update_object_position(
                 && window_drag_original_polygon[slot])
             {
                 CastleDataPolygon *polygon = &castle->drawing[polygon_index].value.polygon;
-                size_t i;
-                for (i = 0; i < polygon->point_count; i++)
+
+                /* Check if dragging a single vertex or the whole polygon */
+                if (window_drag_vertex_index[slot] >= 0
+                    && (size_t)window_drag_vertex_index[slot] < polygon->point_count)
                 {
-                    polygon->points[i].x = window_drag_original_polygon[slot][i].x + delta_x;
-                    polygon->points[i].y = window_drag_original_polygon[slot][i].y + delta_y;
+                    /* Drag only the selected vertex */
+                    size_t vertex_idx = (size_t)window_drag_vertex_index[slot];
+                    polygon->points[vertex_idx].x = window_drag_original_polygon[slot][vertex_idx].x + delta_x;
+                    polygon->points[vertex_idx].y = window_drag_original_polygon[slot][vertex_idx].y + delta_y;
+                }
+                else
+                {
+                    /* Drag the whole polygon */
+                    size_t i;
+                    for (i = 0; i < polygon->point_count; i++)
+                    {
+                        polygon->points[i].x = window_drag_original_polygon[slot][i].x + delta_x;
+                        polygon->points[i].y = window_drag_original_polygon[slot][i].y + delta_y;
+                    }
                 }
                 updated = 1;
             }
