@@ -2637,6 +2637,32 @@ short document_window_has_throne(void)
 }
 
 /**
+ * Returns the cannon count of the active castle.
+ *
+ * @return The cannon count, or zero if no castle is active.
+ */
+size_t document_window_get_cannon_count(void)
+{
+    short active_handle;
+    short slot;
+    const CastleDataCastle *castle;
+
+    slot = find_active_document(&active_handle);
+    if (slot < 0 || !window_has_castle_document[slot])
+    {
+        return 0;
+    }
+
+    if (window_documents[slot].castle_count == 0)
+    {
+        return 0;
+    }
+
+    castle = &window_documents[slot].castles[window_selected_castles[slot]];
+    return castle->cannon_count;
+}
+
+/**
  * Adds a throne to the active castle at position (0, 0).
  *
  * @return Non-zero if the throne was added successfully.
@@ -2706,6 +2732,89 @@ short document_window_add_throne(void)
     }
 
     return 1;
+}
+
+/**
+ * Adds a cannon to the active castle at position (0, 0).
+ *
+ * @return Non-zero if the cannon was added successfully.
+ */
+short document_window_add_cannon(void)
+{
+    short active_handle;
+    short slot;
+    CastleDataCastle *castle;
+    size_t index;
+
+    slot = find_active_document(&active_handle);
+    if (slot < 0 || !window_has_castle_document[slot])
+    {
+        return 0;
+    }
+
+    if (window_documents[slot].castle_count == 0)
+    {
+        return 0;
+    }
+
+    castle = &window_documents[slot].castles[window_selected_castles[slot]];
+
+    /* Check if cannon limit has been reached */
+    if (castle->cannon_count >= CASTLE_DATA_CANNON_POSITION_COUNT)
+    {
+        return 0;
+    }
+
+    /* Find the first unset cannon position */
+    for (index = 0; index < CASTLE_DATA_CANNON_POSITION_COUNT; index++)
+    {
+        if (!castle_data_is_point_set(&castle->cannons[index]))
+        {
+            /* Set cannon at position (0, 0) */
+            castle->cannons[index].x = 0;
+            castle->cannons[index].y = 0;
+            castle->cannon_count++;
+
+            /* Mark document as modified */
+            window_modified[slot] = 1;
+
+            /* Update window title to show modification */
+            {
+                char title_buffer[CASTLE_TITLE_BUFFER_SIZE];
+                format_castle_title(
+                    slot,
+                    window_file_names[slot],
+                    window_selected_castles[slot] + 1,
+                    window_documents[slot].castle_count,
+                    title_buffer,
+                    CASTLE_TITLE_BUFFER_SIZE
+                );
+                wind_set_str(window_handles[slot], WF_NAME, title_buffer);
+            }
+
+            /* Redraw the window */
+            {
+                short work_x;
+                short work_y;
+                short work_width;
+                short work_height;
+                GRECT redraw_area;
+
+                if (wind_get(window_handles[slot], WF_WORKXYWH, &work_x, &work_y, &work_width, &work_height))
+                {
+                    redraw_area.g_x = work_x;
+                    redraw_area.g_y = work_y;
+                    redraw_area.g_w = work_width;
+                    redraw_area.g_h = work_height;
+                    redraw_window(window_handles[slot], &redraw_area);
+                }
+            }
+
+            return 1;
+        }
+    }
+
+    return 0;
 }
 
 /**
@@ -2809,8 +2918,15 @@ short document_window_remove_selected_object(void)
             index = window_selected_object_index[slot];
             if (index < castle->cannon_count)
             {
-                castle->cannons[index].x = CASTLE_DATA_UNSET_COORDINATE;
-                castle->cannons[index].y = CASTLE_DATA_UNSET_COORDINATE;
+                /* Shift subsequent cannons forward */
+                for (size_t i = index; i < castle->cannon_count - 1; i++)
+                {
+                    castle->cannons[i] = castle->cannons[i + 1];
+                }
+                /* Initialize freed position */
+                castle->cannons[castle->cannon_count - 1].x = CASTLE_DATA_UNSET_COORDINATE;
+                castle->cannons[castle->cannon_count - 1].y = CASTLE_DATA_UNSET_COORDINATE;
+                castle->cannon_count--;
                 removed = 1;
             }
             break;

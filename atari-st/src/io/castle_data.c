@@ -102,6 +102,21 @@ static void convert_unset_point(CastleDataPoint *point)
 }
 
 /**
+ * Initializes all cannon positions in a castle to unset coordinates.
+ *
+ * @param castle Castle whose cannon positions should be initialized.
+ */
+static void initialize_cannon_positions(CastleDataCastle *castle)
+{
+    size_t index;
+    for (index = 0; index < CASTLE_DATA_CANNON_POSITION_COUNT; index++)
+    {
+        castle->cannons[index].x = CASTLE_DATA_UNSET_COORDINATE;
+        castle->cannons[index].y = CASTLE_DATA_UNSET_COORDINATE;
+    }
+}
+
+/**
  * Calculates the translation that moves set coordinates to a non-negative origin.
  *
  * @param castle Castle whose set coordinates determine the translation.
@@ -771,6 +786,7 @@ static short read_castle(
     memset(castle, 0, sizeof(*castle));
     drawing_capacity = 0;
     castle->width = width;
+    initialize_cannon_positions(castle);
     for (index = 0; index < CASTLE_DATA_CANNON_POSITION_COUNT; index++)
     {
         if (!read_point(parser, &point))
@@ -931,6 +947,7 @@ short castle_data_add_castle(CastleDataDocument *document)
     memset(&castle, 0, sizeof(castle));
     castle.width = 100;
     castle.cannon_count = 0;
+    initialize_cannon_positions(&castle);
     castle.throne.x = CASTLE_DATA_UNSET_COORDINATE;
     castle.throne.y = CASTLE_DATA_UNSET_COORDINATE;
     castle.wind_vane.x = CASTLE_DATA_UNSET_COORDINATE;
@@ -996,6 +1013,7 @@ short castle_data_insert_castle(CastleDataDocument *document, size_t index)
     memset(&castle, 0, sizeof(castle));
     castle.width = 100;
     castle.cannon_count = 0;
+    initialize_cannon_positions(&castle);
     castle.throne.x = CASTLE_DATA_UNSET_COORDINATE;
     castle.throne.y = CASTLE_DATA_UNSET_COORDINATE;
     castle.wind_vane.x = CASTLE_DATA_UNSET_COORDINATE;

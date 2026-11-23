@@ -1,6 +1,7 @@
 #ifndef BALLERBURGENEDITOR_ATARI_ST_DOCUMENT_WINDOW_H
 #define BALLERBURGENEDITOR_ATARI_ST_DOCUMENT_WINDOW_H
 
+#include <stddef.h>
 #include <gem.h>
 
 /**
@@ -81,11 +82,25 @@ short document_window_has_castle(void);
 short document_window_has_throne(void);
 
 /**
+ * Returns the cannon count of the active castle.
+ *
+ * @return The cannon count, or zero if no castle is active.
+ */
+size_t document_window_get_cannon_count(void);
+
+/**
  * Adds a throne to the active castle at position (0, 0).
  *
  * @return Non-zero if the throne was added successfully.
  */
 short document_window_add_throne(void);
+
+/**
+ * Adds a cannon to the active castle at position (0, 0).
+ *
+ * @return Non-zero if the cannon was added successfully.
+ */
+short document_window_add_cannon(void);
 
 /**
  * Checks whether the active document has unsaved changes.

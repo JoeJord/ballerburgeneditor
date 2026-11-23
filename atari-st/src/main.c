@@ -1,10 +1,12 @@
 #include <gem.h>
 #include <osbind.h>
+#include <stdio.h>
 
 #include "about_dialog.h"
 #include "app_alerts.h"
 #include "app_logger.h"
 #include "app_resources.h"
+#include "castle_data.h"
 #include "document_window.h"
 #include "file_open.h"
 #include "menu.h"
@@ -255,6 +257,7 @@ int main(void)
 
             case MENU_ACTION_ADD_CANNON:
                 app_logger_write("Edit action requested: add cannon.");
+                document_window_add_cannon();
                 break;
 
             case MENU_ACTION_ADD_WIND_VANE:
@@ -332,6 +335,13 @@ int main(void)
         ))
         {
             app_logger_write("Unable to update add throne menu item.");
+        }
+        if (!menu_set_add_cannon_enabled(
+            document_window_has_castle()
+            && document_window_get_cannon_count() < CASTLE_DATA_CANNON_POSITION_COUNT
+        ))
+        {
+            app_logger_write("Unable to update add cannon menu item.");
         }
     }
 

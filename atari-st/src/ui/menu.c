@@ -53,6 +53,8 @@ static short save_as_enabled;
 static short delete_element_enabled;
 /** Current enabled state of the Add Throne menu item. */
 static short add_throne_enabled;
+/** Current enabled state of the Add Cannon menu item. */
+static short add_cannon_enabled;
 
 /**
  * Loads the menu resource and installs its MAIN tree with AES.
@@ -102,6 +104,7 @@ short menu_show(void)
     save_as_enabled = -1;
     delete_element_enabled = -1;
     add_throne_enabled = -1;
+    add_cannon_enabled = -1;
     if (!menu_set_castle_navigation_enabled(0, 0))
     {
         app_logger_write("Unable to disable castle navigation menu items.");
@@ -137,6 +140,14 @@ short menu_show(void)
     }
     save_enabled = 0;
     save_as_enabled = 0;
+    if (!menu_ienable(menu_tree, MENU_CANNON_ADD, 0))
+    {
+        app_alerts_show(APP_ALERT_DOCUMENT_MENU_UPDATE_FAILED);
+        app_resources_release();
+        menu_tree = 0;
+        return 0;
+    }
+    add_cannon_enabled = 0;
 
     if (!menu_bar(menu_tree, 1))
     {
@@ -172,6 +183,7 @@ void menu_hide(void)
     save_enabled = 0;
     save_as_enabled = 0;
     delete_element_enabled = 0;
+    add_cannon_enabled = 0;
 }
 
 /**
@@ -460,6 +472,36 @@ short menu_set_add_throne_enabled(short enabled)
         new_state
             ? "Add Throne menu item enabled."
             : "Add Throne menu item disabled."
+    );
+    return 1;
+}
+
+/**
+ * Enables or disables the Add Cannon menu item.
+ *
+ * @param enabled Non-zero to enable the item.
+ * @return Non-zero if AES updated the menu item successfully.
+ */
+short menu_set_add_cannon_enabled(short enabled)
+{
+    short new_state;
+
+    new_state = enabled != 0;
+    if (new_state == add_cannon_enabled)
+    {
+        return 1;
+    }
+
+    if (!menu_ienable(menu_tree, MENU_CANNON_ADD, new_state))
+    {
+        return 0;
+    }
+
+    add_cannon_enabled = new_state;
+    app_logger_write(
+        new_state
+            ? "Add Cannon menu item enabled."
+            : "Add Cannon menu item disabled."
     );
     return 1;
 }
