@@ -10,6 +10,7 @@ enum
 {
     MENU_KEYBOARD_CTRL_MASK = 0x0004, /**< Control modifier bit from evnt_multi(). */
     MENU_KEYBOARD_ALT_MASK = 0x0008, /**< Alt modifier bit from evnt_multi(). */
+    MENU_KEYBOARD_SHIFT_MASK = 0x0003, /**< Shift modifier bits from evnt_multi(). */
     MENU_SCAN_Q = 0x10, /**< Atari ST scan code for Q. */
     MENU_SCAN_W = 0x11, /**< Atari ST scan code for W. */
     MENU_SCAN_O = 0x18, /**< Atari ST scan code for O. */
@@ -27,6 +28,17 @@ enum
 static short is_ctrl_pressed(short key_state)
 {
     return (key_state & MENU_KEYBOARD_CTRL_MASK) != 0;
+}
+
+/**
+ * Checks whether the Shift modifier is present in the keyboard state.
+ *
+ * @param key_state GEM modifier state returned by evnt_multi().
+ * @return Non-zero if Shift is pressed, zero otherwise.
+ */
+static short is_shift_pressed(short key_state)
+{
+    return (key_state & MENU_KEYBOARD_SHIFT_MASK) != 0;
 }
 
 /** Loaded menu tree owned by the resource system. */
@@ -683,6 +695,12 @@ MenuAction menu_handle_key(short key, short key_state)
                 : MENU_ACTION_NONE;
 
         case MENU_SCAN_S:
+            if (is_ctrl_pressed(key_state) && is_shift_pressed(key_state))
+            {
+                return save_as_enabled
+                    ? MENU_ACTION_SAVE_AS
+                    : MENU_ACTION_NONE;
+            }
             return is_ctrl_pressed(key_state) && save_enabled
                 ? MENU_ACTION_SAVE
                 : MENU_ACTION_NONE;
