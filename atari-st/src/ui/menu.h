@@ -149,6 +149,14 @@ short menu_set_add_throne_enabled(short enabled);
 short menu_set_add_cannon_enabled(short enabled);
 
 /**
+ * Enables or disables the Add Wind Vane menu item.
+ *
+ * @param enabled Non-zero to enable the item.
+ * @return Non-zero if AES updated the menu item successfully.
+ */
+short menu_set_add_wind_vane_enabled(short enabled);
+
+/**
  * Handles a message from the application's AES event loop.
  *
  * @param message Eight-word AES message buffer.

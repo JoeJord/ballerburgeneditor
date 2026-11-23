@@ -262,6 +262,7 @@ int main(void)
 
             case MENU_ACTION_ADD_WIND_VANE:
                 app_logger_write("Edit action requested: add wind vane.");
+                document_window_add_wind_vane();
                 break;
 
             case MENU_ACTION_ADD_WALL:
@@ -342,6 +343,12 @@ int main(void)
         ))
         {
             app_logger_write("Unable to update add cannon menu item.");
+        }
+        if (!menu_set_add_wind_vane_enabled(
+            document_window_has_castle() && !document_window_has_wind_vane()
+        ))
+        {
+            app_logger_write("Unable to update add wind vane menu item.");
         }
     }
 

@@ -82,6 +82,13 @@ short document_window_has_castle(void);
 short document_window_has_throne(void);
 
 /**
+ * Checks whether the active castle has a wind vane.
+ *
+ * @return Non-zero if the active castle has a wind vane set.
+ */
+short document_window_has_wind_vane(void);
+
+/**
  * Returns the cannon count of the active castle.
  *
  * @return The cannon count, or zero if no castle is active.
@@ -94,6 +101,13 @@ size_t document_window_get_cannon_count(void);
  * @return Non-zero if the throne was added successfully.
  */
 short document_window_add_throne(void);
+
+/**
+ * Adds a wind vane to the active castle at position (0, 0).
+ *
+ * @return Non-zero if the wind vane was added successfully.
+ */
+short document_window_add_wind_vane(void);
 
 /**
  * Adds a cannon to the active castle at position (0, 0).

@@ -55,6 +55,8 @@ static short delete_element_enabled;
 static short add_throne_enabled;
 /** Current enabled state of the Add Cannon menu item. */
 static short add_cannon_enabled;
+/** Current enabled state of the Add Wind Vane menu item. */
+static short add_wind_vane_enabled;
 
 /**
  * Loads the menu resource and installs its MAIN tree with AES.
@@ -105,6 +107,7 @@ short menu_show(void)
     delete_element_enabled = -1;
     add_throne_enabled = -1;
     add_cannon_enabled = -1;
+    add_wind_vane_enabled = -1;
     if (!menu_set_castle_navigation_enabled(0, 0))
     {
         app_logger_write("Unable to disable castle navigation menu items.");
@@ -184,6 +187,7 @@ void menu_hide(void)
     save_as_enabled = 0;
     delete_element_enabled = 0;
     add_cannon_enabled = 0;
+    add_wind_vane_enabled = 0;
 }
 
 /**
@@ -502,6 +506,36 @@ short menu_set_add_cannon_enabled(short enabled)
         new_state
             ? "Add Cannon menu item enabled."
             : "Add Cannon menu item disabled."
+    );
+    return 1;
+}
+
+/**
+ * Enables or disables the Add Wind Vane menu item.
+ *
+ * @param enabled Non-zero to enable the item.
+ * @return Non-zero if AES updated the menu item successfully.
+ */
+short menu_set_add_wind_vane_enabled(short enabled)
+{
+    short new_state;
+
+    new_state = enabled != 0;
+    if (new_state == add_wind_vane_enabled)
+    {
+        return 1;
+    }
+
+    if (!menu_ienable(menu_tree, MENU_VANE_ADD, new_state))
+    {
+        return 0;
+    }
+
+    add_wind_vane_enabled = new_state;
+    app_logger_write(
+        new_state
+            ? "Add Wind Vane menu item enabled."
+            : "Add Wind Vane menu item disabled."
     );
     return 1;
 }
