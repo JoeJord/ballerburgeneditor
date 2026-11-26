@@ -1344,6 +1344,7 @@ static void handle_object_click(
             short current_mouse_y;
             short current_button;
             short current_key_state;
+            short object_moved = 0;
 
             while (window_dragging[slot])
             {
@@ -1362,20 +1363,23 @@ static void handle_object_click(
                         window_drag_original_polygon[slot] = NULL;
                         window_drag_polygon_point_count[slot] = 0;
                     }
-                    /* Mark document as modified when drag ends */
-                    window_modified[slot] = 1;
-                    /* Update window title to show modification */
+                    /* Mark document as modified only if object was actually moved */
+                    if (object_moved)
                     {
-                        char title_buffer[CASTLE_TITLE_BUFFER_SIZE];
-                        format_castle_title(
-                            slot,
-                            window_file_names[slot],
-                            window_selected_castles[slot] + 1,
-                            window_documents[slot].castle_count,
-                            title_buffer,
-                            CASTLE_TITLE_BUFFER_SIZE
-                        );
-                        wind_set_str(window_handles[slot], WF_NAME, title_buffer);
+                        window_modified[slot] = 1;
+                        /* Update window title to show modification */
+                        {
+                            char title_buffer[CASTLE_TITLE_BUFFER_SIZE];
+                            format_castle_title(
+                                slot,
+                                window_file_names[slot],
+                                window_selected_castles[slot] + 1,
+                                window_documents[slot].castle_count,
+                                title_buffer,
+                                CASTLE_TITLE_BUFFER_SIZE
+                            );
+                            wind_set_str(window_handles[slot], WF_NAME, title_buffer);
+                        }
                     }
                     break;
                 }
@@ -1386,6 +1390,7 @@ static void handle_object_click(
                     update_object_position(slot, current_mouse_x, current_mouse_y, work_x, work_y, work_width, work_height);
                     mouse_x = current_mouse_x;
                     mouse_y = current_mouse_y;
+                    object_moved = 1;
                 }
 
                 /* Small delay to prevent excessive CPU usage */
